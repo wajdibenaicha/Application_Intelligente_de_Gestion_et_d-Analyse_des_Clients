@@ -1,0 +1,34 @@
+package com.example.backend.service;
+import com.example.backend.Repository.AdministrateurRepository;
+import com.example.backend.models.Administrateur;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+
+@Service
+
+public class AdministrateurService {
+    @Autowired
+    private AdministrateurRepository administrateurRepository ;
+    public List<Administrateur> getAllAdministrateurs(){
+        return administrateurRepository.findAll();
+    } 
+    public Administrateur getAdministrateurById(long id){
+        return administrateurRepository.findById(id).orElse(null);
+    }
+    public Administrateur addAdministrateur(Administrateur administrateur){
+        return administrateurRepository.save(administrateur);
+    }
+    public Administrateur updateAdministrateur(long id , Administrateur administrateur){
+        Administrateur exAd = getAdministrateurById(id);
+        if(exAd!=null){
+            administrateur.setId(id);
+            return administrateurRepository.save(administrateur);
+        }
+        else{
+            return null ;
+        }
+    }
+
+}
