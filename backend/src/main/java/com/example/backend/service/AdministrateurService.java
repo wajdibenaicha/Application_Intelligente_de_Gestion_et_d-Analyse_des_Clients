@@ -30,5 +30,15 @@ public class AdministrateurService {
             return null ;
         }
     }
+    public Administrateur deleteAdministrateur(long id){
+        Administrateur exAd = getAdministrateurById(id);
+        if(exAd!=null){
+            administrateurRepository.deleteById(id);
+            return exAd ;
+        }
+        else{
+            return null ;
+        }
+    }
 
 }

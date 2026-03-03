@@ -1,10 +1,11 @@
 package com.example.backend.service;
-import com.example.backend.Repository.ClientRepository;
-import com.example.backend.models.Client;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.example.backend.Repository.ClientRepository;
+import com.example.backend.models.Client;
 
 @Service
 
@@ -23,18 +24,18 @@ public class ClientService {
         return clientRepository.save(client);
      } 
      public Client updateClient(long id , Client client){
-        Client existingClient = getClientById(id);
-        if(existingClient != null){
+        Client exist = getClientById(id);
+        if(exist!= null){
             client.setId(id);
             return clientRepository.save(client);
         }
         return null;
      }
      public Client deleteClient(long id){
-         Client existingClient = getClientById(id);
-        if(existingClient != null){
-            clientRepository.delete(existingClient);
-            return existingClient;
+         Client exist = getClientById(id);
+        if(exist!= null){
+            clientRepository.delete(exist);
+            return exist;
         }
         else{
             return null ;
