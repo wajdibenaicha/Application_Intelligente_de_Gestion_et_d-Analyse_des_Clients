@@ -23,7 +23,7 @@ public class OffreController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Offre> getOffreById(@PathVariable long id) {
+    public ResponseEntity<Offre> getOffreById(@PathVariable Long id) {
         Offre offre = offreService.getOffreById(id);
         if (offre != null) {
             return ResponseEntity.ok(offre);
@@ -38,7 +38,7 @@ public class OffreController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Offre> updateOffre(@PathVariable long id, @RequestBody Offre offre) {
+    public ResponseEntity<Offre> updateOffre(@PathVariable Long id, @RequestBody Offre offre) {
         Offre updatedOffre = offreService.updateOffre(id, offre);
         if (updatedOffre != null) {
             return ResponseEntity.ok(updatedOffre);
@@ -47,7 +47,7 @@ public class OffreController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Offre> deleteOffre(@PathVariable long id) {
+    public ResponseEntity<Offre> deleteOffre(@PathVariable Long id) {
         Offre deletedOffre = offreService.deleteOffre(id);
         if (deletedOffre != null) {
             return ResponseEntity.ok(deletedOffre);

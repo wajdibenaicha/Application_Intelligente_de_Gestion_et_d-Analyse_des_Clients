@@ -14,13 +14,13 @@ public class AdministrateurService {
     public List<Administrateur> getAllAdministrateurs(){
         return administrateurRepository.findAll();
     } 
-    public Administrateur getAdministrateurById(long id){
+    public Administrateur getAdministrateurById(Long id){
         return administrateurRepository.findById(id).orElse(null);
     }
     public Administrateur addAdministrateur(Administrateur administrateur){
         return administrateurRepository.save(administrateur);
     }
-    public Administrateur updateAdministrateur(long id , Administrateur administrateur){
+    public Administrateur updateAdministrateur(Long id , Administrateur administrateur){
         Administrateur exAd = getAdministrateurById(id);
         if(exAd!=null){
             administrateur.setId(id);
@@ -30,7 +30,7 @@ public class AdministrateurService {
             return null ;
         }
     }
-    public Administrateur deleteAdministrateur(long id){
+    public Administrateur deleteAdministrateur(Long id){
         Administrateur exAd = getAdministrateurById(id);
         if(exAd!=null){
             administrateurRepository.deleteById(id);

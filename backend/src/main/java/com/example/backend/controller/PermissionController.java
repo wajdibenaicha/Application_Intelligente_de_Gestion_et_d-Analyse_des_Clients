@@ -23,7 +23,7 @@ public class PermissionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Permission> getPermissionById(@PathVariable long id) {
+    public ResponseEntity<Permission> getPermissionById(@PathVariable Long id) {
         Permission permission = permissionService.getPermissionById(id);
         if (permission != null) {
             return ResponseEntity.ok(permission);
@@ -38,7 +38,7 @@ public class PermissionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Permission> updatePermission(@PathVariable long id, @RequestBody Permission permission) {
+    public ResponseEntity<Permission> updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
         Permission updatedPermission = permissionService.updatePermission(id, permission);
         if (updatedPermission != null) {
             return ResponseEntity.ok(updatedPermission);
@@ -47,7 +47,7 @@ public class PermissionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Permission> deletePermission(@PathVariable long id) {
+    public ResponseEntity<Permission> deletePermission(@PathVariable Long id) {
         Permission deletedPermission = permissionService.deletePermission(id);
         if (deletedPermission != null) {
             return ResponseEntity.ok(deletedPermission);

@@ -3,16 +3,16 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "role")
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    long id ;
+    Long id ;
     String name ;
      @ManyToOne
     @JoinColumn(name = "idPermission")
@@ -20,7 +20,7 @@ public class Role {
     public Role(){
 
     }
-    public long getId(){
+    public Long getId(){
         return id;
 
     }
@@ -30,7 +30,7 @@ public class Role {
     public Permission getPermission(){
         return permission;
     }
-    public void setId(long id){
+    public void setId(Long id){
         this.id=id;
     }
     public void setPermission (Permission permission){

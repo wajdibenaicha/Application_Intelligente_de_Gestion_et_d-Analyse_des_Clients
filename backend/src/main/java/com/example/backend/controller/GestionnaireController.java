@@ -23,7 +23,7 @@ public class GestionnaireController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Gestionnaire> getGestionnaireById(@PathVariable long id) {
+    public ResponseEntity<Gestionnaire> getGestionnaireById(@PathVariable Long id) {
         Gestionnaire gestionnaire = gestionnaireService.getGestionnaireById(id);
         if (gestionnaire != null) {
             return ResponseEntity.ok(gestionnaire);
@@ -38,7 +38,7 @@ public class GestionnaireController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Gestionnaire> updateGestionnaire(@PathVariable long id, @RequestBody Gestionnaire gestionnaire) {
+    public ResponseEntity<Gestionnaire> updateGestionnaire(@PathVariable Long id, @RequestBody Gestionnaire gestionnaire) {
         Gestionnaire updatedGestionnaire = gestionnaireService.updateGestionnaire(id, gestionnaire);
         if (updatedGestionnaire != null) {
             return ResponseEntity.ok(updatedGestionnaire);
@@ -47,7 +47,7 @@ public class GestionnaireController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Gestionnaire> deleteGestionnaire(@PathVariable long id) {
+    public ResponseEntity<Gestionnaire> deleteGestionnaire(@PathVariable Long id) {
         Gestionnaire deletedGestionnaire = gestionnaireService.deleteGestionnaire(id);
         if (deletedGestionnaire != null) {
             return ResponseEntity.ok(deletedGestionnaire);

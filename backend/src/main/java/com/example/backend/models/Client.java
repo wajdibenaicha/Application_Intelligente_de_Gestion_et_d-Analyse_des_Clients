@@ -11,17 +11,17 @@ import jakarta.persistence.GenerationType;
 public class Client {
      @Id
      @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id ;
+    private Long id ;
     private String mail;
     private String tel ;
      public Client() {
     }
-    public Client (long id , String mail , String tel){
+    public Client (Long id , String mail , String tel){
         this.id=id;
         this.mail=mail;
         this.tel=tel;
     }
-    public long getId(){
+    public Long getId(){
         return id ;
     }
     public String getMail(){
@@ -30,7 +30,7 @@ public class Client {
     public String getTel(){
         return tel ;
     }
-    public void setId(long id){
+    public void setId(Long id){
         this.id=id ;
     }
      public void setMail(String mail){

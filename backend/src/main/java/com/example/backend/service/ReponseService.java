@@ -16,7 +16,7 @@ public class ReponseService {
         return reponseRepository.findAll();
     }
 
-    public Reponse getReponseById(long id) {
+    public Reponse getReponseById(Long id) {
         return reponseRepository.findById(id).orElse(null);
     }
 
@@ -24,7 +24,7 @@ public class ReponseService {
         return reponseRepository.save(reponse);
     }
 
-    public Reponse updateReponse(long id, Reponse reponse) {
+    public Reponse updateReponse(Long id, Reponse reponse) {
         Reponse existing = getReponseById(id);
         if (existing != null) {
             reponse.setId(id);
@@ -33,7 +33,7 @@ public class ReponseService {
         return null;
     }
 
-    public Reponse deleteReponse(long id) {
+    public Reponse deleteReponse(Long id) {
         Reponse existing = getReponseById(id);
         if (existing != null) {
             reponseRepository.delete(existing);

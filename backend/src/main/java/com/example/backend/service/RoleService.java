@@ -16,7 +16,7 @@ public class RoleService {
         return roleRepository.findAll();
     }
 
-    public Role getRoleById(long id) {
+    public Role getRoleById(Long id) {
         return roleRepository.findById(id).orElse(null);
     }
 
@@ -24,7 +24,7 @@ public class RoleService {
         return roleRepository.save(role);
     }
 
-    public Role updateRole(long id, Role role) {
+    public Role updateRole(Long id, Role role) {
         Role existing = getRoleById(id);
         if (existing != null) {
             role.setId(id);
@@ -33,7 +33,7 @@ public class RoleService {
         return null;
     }
 
-    public Role deleteRole(long id) {
+    public Role deleteRole(Long id) {
         Role existing = getRoleById(id);
         if (existing != null) {
             roleRepository.delete(existing);
