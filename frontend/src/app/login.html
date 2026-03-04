@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Page de Login</title>
+        <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <form>
+            <fieldset>
+                <label>Nom Complet : </label>
+                <input [(ngModel)]="full_name" placeholder="Nom Complet">
+                <label>Mot de passe : </label>
+                <input [(ngModel)]="password" placeholder="Mot de Passe">
+                <label>Je ne suis pas un robot</label>
+                <div class="verif_robot">
+                    <input type="checkbox" (click)="verifRobot()">
+                </div>
+                <button (click)="verifUser()">Se Connecter</button>
+            </fieldset>
+        </form>
+        
+        
+
+    </body>
+</html>
