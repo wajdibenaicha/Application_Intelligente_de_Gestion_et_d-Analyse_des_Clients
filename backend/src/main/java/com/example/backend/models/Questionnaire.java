@@ -6,10 +6,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
-import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "questionnaire")
@@ -17,7 +17,7 @@ import jakarta.persistence.JoinColumn;
 public class Questionnaire {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id ;
+    private Long id ;
     private String titre ;
      @ManyToMany
          @JoinTable(
@@ -29,7 +29,7 @@ public class Questionnaire {
     public Questionnaire(){
 
     }
-    public long getId(){
+    public Long getId(){
         return id ;
     }
     public String getTitre(){
@@ -38,7 +38,7 @@ public class Questionnaire {
     public List<Question> getQuestions(){
         return questions ;
     }
-    public void setId(long id){
+    public void setId(Long id){
         this.id=id;
     }
     public void setTitre(String titre){

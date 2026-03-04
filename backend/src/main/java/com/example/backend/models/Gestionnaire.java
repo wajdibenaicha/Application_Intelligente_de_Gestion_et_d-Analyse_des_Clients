@@ -13,7 +13,7 @@ import jakarta.persistence.Table;
 public class Gestionnaire {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id ;
+    private Long id ;
     @ManyToOne
     @JoinColumn(name = "idRole")
     private Role role;
@@ -22,7 +22,7 @@ public class Gestionnaire {
     public Gestionnaire (){
 
     }
-    public long getId(){
+    public Long getId(){
         return id ;
     }
     public Role getRole(){
@@ -35,7 +35,7 @@ public class Gestionnaire {
     public String getPassword(){
         return password;
     }
-    public void setId (long id){
+    public void setId (Long id){
         this.id=id;
     }
     public void setRole(Role role){

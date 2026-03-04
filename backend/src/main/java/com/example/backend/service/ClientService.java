@@ -17,13 +17,13 @@ public class ClientService {
         
     }
 
-      public Client getClientById(long id){
+      public Client getClientById(Long id){
         return clientRepository.findById(id).orElse(null);
       }
      public Client addClient(Client client){
         return clientRepository.save(client);
      } 
-     public Client updateClient(long id , Client client){
+     public Client updateClient(Long id , Client client){
         Client exist = getClientById(id);
         if(exist!= null){
             client.setId(id);
@@ -31,7 +31,7 @@ public class ClientService {
         }
         return null;
      }
-     public Client deleteClient(long id){
+     public Client deleteClient(Long id){
          Client exist = getClientById(id);
         if(exist!= null){
             clientRepository.delete(exist);

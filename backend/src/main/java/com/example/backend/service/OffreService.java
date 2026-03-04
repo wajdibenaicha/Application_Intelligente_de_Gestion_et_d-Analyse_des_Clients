@@ -16,7 +16,7 @@ public class OffreService {
         return offreRepository.findAll();
     }
 
-    public Offre getOffreById(long id) {
+    public Offre getOffreById(Long id) {
         return offreRepository.findById(id).orElse(null);
     }
 
@@ -24,7 +24,7 @@ public class OffreService {
         return offreRepository.save(offre);
     }
 
-    public Offre updateOffre(long id, Offre offre) {
+    public Offre updateOffre(Long id, Offre offre) {
         Offre existing = getOffreById(id);
         if (existing != null) {
             offre.setId(id);
@@ -33,7 +33,7 @@ public class OffreService {
         return null;
     }
 
-    public Offre deleteOffre(long id) {
+    public Offre deleteOffre(Long id) {
         Offre existing = getOffreById(id);
         if (existing != null) {
             offreRepository.delete(existing);

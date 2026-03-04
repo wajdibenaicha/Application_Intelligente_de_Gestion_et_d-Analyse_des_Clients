@@ -23,7 +23,7 @@ public class AdministrateurController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Administrateur> getAdministrateurById(@PathVariable long id) {
+    public ResponseEntity<Administrateur> getAdministrateurById(@PathVariable Long id) {
         Administrateur administrateur = administrateurService.getAdministrateurById(id);
         if (administrateur != null) {
             return ResponseEntity.ok(administrateur);
@@ -38,7 +38,7 @@ public class AdministrateurController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Administrateur> updateAdministrateur(@PathVariable long id, @RequestBody Administrateur administrateur) {
+    public ResponseEntity<Administrateur> updateAdministrateur(@PathVariable Long id, @RequestBody Administrateur administrateur) {
         Administrateur updatedAdministrateur = administrateurService.updateAdministrateur(id, administrateur);
         if (updatedAdministrateur != null) {
             return ResponseEntity.ok(updatedAdministrateur);
@@ -47,7 +47,7 @@ public class AdministrateurController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Administrateur> deleteAdministrateur(@PathVariable long id) {
+    public ResponseEntity<Administrateur> deleteAdministrateur(@PathVariable Long id) {
         Administrateur existingAdministrateur = administrateurService.getAdministrateurById(id);
         if (existingAdministrateur != null) {
             administrateurService.deleteAdministrateur(id);

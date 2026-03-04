@@ -10,18 +10,18 @@ import jakarta.persistence.Table;
 public class Permission {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public long id ;
+    public Long id ;
     public String description ;
     public Permission(){
 
     }
-    public long getId(){
+    public Long getId(){
         return id ;
     }
     public String getDescription(){
         return description ; 
     }
-    public void setId(long id){
+    public void setId(Long id){
         this.id=id;
     }
     public void setDescription(String description){

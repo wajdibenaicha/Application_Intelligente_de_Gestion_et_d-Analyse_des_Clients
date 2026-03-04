@@ -1,10 +1,10 @@
 package com.example.backend.models;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "administrateur")
@@ -12,19 +12,19 @@ import jakarta.persistence.GenerationType;
 public class Administrateur {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id ;
+    private Long id ;
     private String full_name ;
     private String password ;
     public Administrateur(){
 
     }
-    public Administrateur( long id , String full_name , String password){
+    public Administrateur( Long id , String full_name , String password){
         this.id=id;
         this.full_name=full_name;
         this.password=password;
     }
 
-    public long getId(){
+    public Long getId(){
         return id;
     }
     public String getFull_name(){
@@ -33,7 +33,7 @@ public class Administrateur {
     public String getPassword(){
         return password;
     } 
-     public void setId(long id){
+     public void setId(Long id){
         this.id=id ;
     }
      public void setPassword(String  password){

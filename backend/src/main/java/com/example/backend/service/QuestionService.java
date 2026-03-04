@@ -15,13 +15,13 @@ public class QuestionService {
     public List<Question> getAllQuestions(){
         return questionRepository.findAll();
     }
-    public Question getQuestionById(long id){
+    public Question getQuestionById(Long id){
         return questionRepository.findById(id).orElse(null);
     }
     public Question addQuestion(Question question){
         return questionRepository.save(question);
     }
-    public Question updateQuestion(long id , Question question){
+    public Question updateQuestion(Long id , Question question){
         Question exQ=getQuestionById(id);
         if(exQ!=null){
             question.setId(id);
@@ -31,7 +31,7 @@ public class QuestionService {
             return null ;
         }
     }
-    public Question deleteQuestion(long id){
+    public Question deleteQuestion(Long id){
         Question exQ=getQuestionById(id);
         if(exQ!=null){
             questionRepository.delete(exQ);

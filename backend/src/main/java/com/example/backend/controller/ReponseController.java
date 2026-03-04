@@ -23,7 +23,7 @@ public class ReponseController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Reponse> getReponseById(@PathVariable long id) {
+    public ResponseEntity<Reponse> getReponseById(@PathVariable Long id) {
         Reponse reponse = reponseService.getReponseById(id);
         if (reponse != null) {
             return ResponseEntity.ok(reponse);
@@ -38,7 +38,7 @@ public class ReponseController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Reponse> updateReponse(@PathVariable long id, @RequestBody Reponse reponse) {
+    public ResponseEntity<Reponse> updateReponse(@PathVariable Long id, @RequestBody Reponse reponse) {
         Reponse updatedReponse = reponseService.updateReponse(id, reponse);
         if (updatedReponse != null) {
             return ResponseEntity.ok(updatedReponse);
@@ -47,7 +47,7 @@ public class ReponseController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Reponse> deleteReponse(@PathVariable long id) {
+    public ResponseEntity<Reponse> deleteReponse(@PathVariable Long id) {
         Reponse deletedReponse = reponseService.deleteReponse(id);
         if (deletedReponse != null) {
             return ResponseEntity.ok(deletedReponse);

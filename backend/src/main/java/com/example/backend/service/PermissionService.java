@@ -16,7 +16,7 @@ public class PermissionService {
         return permissionRepository.findAll();
     }
 
-    public Permission getPermissionById(long id) {
+    public Permission getPermissionById(Long id) {
         return permissionRepository.findById(id).orElse(null);
     }
 
@@ -24,7 +24,7 @@ public class PermissionService {
         return permissionRepository.save(permission);
     }
 
-    public Permission updatePermission(long id, Permission permission) {
+    public Permission updatePermission(Long id, Permission permission) {
         Permission existing = getPermissionById(id);
         if (existing != null) {
             permission.setId(id);
@@ -33,7 +33,7 @@ public class PermissionService {
         return null;
     }
 
-    public Permission deletePermission(long id) {
+    public Permission deletePermission(Long id) {
         Permission existing = getPermissionById(id);
         if (existing != null) {
             permissionRepository.delete(existing);

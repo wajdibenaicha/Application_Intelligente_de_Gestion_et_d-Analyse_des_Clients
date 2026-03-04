@@ -16,7 +16,7 @@ public class GestionnaireService {
         return gestionnaireRepository.findAll();
     }
 
-    public Gestionnaire getGestionnaireById(long id) {
+    public Gestionnaire getGestionnaireById(Long id) {
         return gestionnaireRepository.findById(id).orElse(null);
     }
 
@@ -24,7 +24,7 @@ public class GestionnaireService {
         return gestionnaireRepository.save(gestionnaire);
     }
 
-    public Gestionnaire updateGestionnaire(long id, Gestionnaire gestionnaire) {
+    public Gestionnaire updateGestionnaire(Long id, Gestionnaire gestionnaire) {
         Gestionnaire existing = getGestionnaireById(id);
         if (existing != null) {
             gestionnaire.setId(id);
@@ -33,7 +33,7 @@ public class GestionnaireService {
         return null;
     }
 
-    public Gestionnaire deleteGestionnaire(long id) {
+    public Gestionnaire deleteGestionnaire(Long id) {
         Gestionnaire existing = getGestionnaireById(id);
         if (existing != null) {
             gestionnaireRepository.delete(existing);
