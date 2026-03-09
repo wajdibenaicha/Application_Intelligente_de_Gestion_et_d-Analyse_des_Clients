@@ -10,37 +10,44 @@ import jakarta.persistence.Table;
 @Table(name = "administrateur")
 
 public class Administrateur {
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id ;
-    private String email ;
-    private String password ;
-    public Administrateur(){
+    private Long id;
+    private String full_name;
+    private String password;
+
+    public Administrateur() {
 
     }
-    public Administrateur( Long id , String email , String password){
-        this.id=id;
-        this.email=email;
-        this.password=password;
+
+    public Administrateur(Long id, String full_name, String password) {
+        this.id = id;
+        this.full_name = full_name;
+        this.password = password;
     }
 
-    public Long getId(){
+    public Long getId() {
         return id;
     }
-    public String getEmail(){
-        return email;
+
+    public String getFull_name() {
+        return full_name;
     }
-    public String getPassword(){
+
+    public String getPassword() {
         return password;
-    } 
-     public void setId(Long id){
-        this.id=id ;
     }
-     public void setPassword(String  password){
-        this.password=password ;
+
+    public void setId(Long id) {
+        this.id = id;
     }
-     public void setEmail(String email){
-        this.email=email ;
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setFull_name(String full_name) {
+        this.full_name = full_name;
     }
 
 }
