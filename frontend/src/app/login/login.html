@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAR Assurances - Connexion</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+
+
+            <div class="logo-container">
+                <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="logo">
+            </div>
+
+            <h1>STAR Assurances</h1>
+            
+            <form>
+                <div class="form-group">
+                    <label>Nom Complet :</label>
+                    <input 
+                        type="text" [(ngModel)]="full_name" name="full_name" placeholder="Nom Complet"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Mot de passe :</label>
+                    <input 
+                        type="password" 
+                        [(ngModel)]="password" 
+                        name="password"
+                        placeholder="Mot de Passe"
+                    >
+                </div>
+
+                <div class="robot-check">
+                    <input 
+                        type="checkbox" 
+                        (click)="verifRobot()"
+                        [checked]="isRobot"
+                        id="robot"
+                    >
+                    <label for="robot">Je ne suis pas un robot</label>
+                </div>
+
+                <button type="button" (click)="verifUser()">Se Connecter</button>
+
+                <div class="forgot-password">
+                    <a href="#">Mot de passe oublié ?</a>
+                </div>
+            </form>
+        </div>
+        
+        <div class="footer">
+            © 2026 STAR Assurances - Tous droits réservés
+        </div>
+    </div>
+</body>
+</html>
