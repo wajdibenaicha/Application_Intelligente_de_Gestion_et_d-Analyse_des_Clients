@@ -1,10 +1,12 @@
 package com.example.backend.Repository;
-import com.example.backend.models.Administrateur;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.example.backend.models.Administrateur;
 
 @Repository
 
 public interface AdministrateurRepository extends JpaRepository<Administrateur, Long> {
-    
+        Administrateur findByEmailAndPassword(String email, String password);
+
 }

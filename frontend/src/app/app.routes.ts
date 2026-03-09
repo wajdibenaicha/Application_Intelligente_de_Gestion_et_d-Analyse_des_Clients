@@ -1,3 +1,7 @@
 import { Routes } from '@angular/router';
 
-export const routes: Routes = [];
+import { AdminDashboardComponent } from './features/admin/admin-dashboard/admin-dashboard';
+
+export const routes: Routes = [
+  { path: 'admin-dashboard', component: AdminDashboardComponent },
+];

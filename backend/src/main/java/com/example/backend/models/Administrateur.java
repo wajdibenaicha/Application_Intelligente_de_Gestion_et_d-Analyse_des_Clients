@@ -13,22 +13,22 @@ public class Administrateur {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id ;
-    private String full_name ;
+    private String email ;
     private String password ;
     public Administrateur(){
 
     }
-    public Administrateur( Long id , String full_name , String password){
+    public Administrateur( Long id , String email , String password){
         this.id=id;
-        this.full_name=full_name;
+        this.email=email;
         this.password=password;
     }
 
     public Long getId(){
         return id;
     }
-    public String getFull_name(){
-        return full_name;
+    public String getEmail(){
+        return email;
     }
     public String getPassword(){
         return password;
@@ -39,8 +39,8 @@ public class Administrateur {
      public void setPassword(String  password){
         this.password=password ;
     }
-     public void setFull_name(String full_name){
-        this.full_name=full_name ;
+     public void setEmail(String email){
+        this.email=email ;
     }
 
 }

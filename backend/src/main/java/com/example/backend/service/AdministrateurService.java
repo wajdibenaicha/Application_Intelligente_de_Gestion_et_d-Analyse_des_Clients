@@ -40,5 +40,8 @@ public class AdministrateurService {
             return null ;
         }
     }
+    public Administrateur login(String email, String password) {
+        return administrateurRepository.findByEmailAndPassword(email, password);
+    }
 
 }
