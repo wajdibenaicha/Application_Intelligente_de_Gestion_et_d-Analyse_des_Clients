@@ -45,9 +45,11 @@ public class AdministrateurController {
         Administrateur savedAdministrateur = administrateurService.addAdministrateur(administrateur);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedAdministrateur);
     }
+
     @PostMapping("/login")
     public ResponseEntity<Administrateur> login(@RequestBody Administrateur administrateur) {
-        Administrateur loggedInAdministrateur = administrateurService.login(administrateur.getEmail(), administrateur.getPassword());
+        Administrateur loggedInAdministrateur = administrateurService.login(administrateur.getFull_name(),
+                administrateur.getPassword());
         if (loggedInAdministrateur != null) {
             return ResponseEntity.ok(loggedInAdministrateur);
         }
@@ -55,7 +57,8 @@ public class AdministrateurController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Administrateur> updateAdministrateur(@PathVariable Long id, @RequestBody Administrateur administrateur) {
+    public ResponseEntity<Administrateur> updateAdministrateur(@PathVariable Long id,
+            @RequestBody Administrateur administrateur) {
         Administrateur updatedAdministrateur = administrateurService.updateAdministrateur(id, administrateur);
         if (updatedAdministrateur != null) {
             return ResponseEntity.ok(updatedAdministrateur);
