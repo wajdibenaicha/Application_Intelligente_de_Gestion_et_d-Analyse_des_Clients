@@ -1,5 +1,7 @@
+
 package com.example.backend.controller;
 
+import com.example.backend.service.AdministrateurService;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.models.Administrateur;
-import com.example.backend.service.AdministrateurService;
 
 @RestController
 @RequestMapping("/api/administrateurs")
@@ -48,10 +49,10 @@ public class AdministrateurController {
 
     @PostMapping("/login")
     public ResponseEntity<Administrateur> login(@RequestBody Administrateur administrateur) {
-        Administrateur loggedInAdministrateur = administrateurService.login(administrateur.getFull_name(),
-                administrateur.getPassword());
-        if (loggedInAdministrateur != null) {
-            return ResponseEntity.ok(loggedInAdministrateur);
+        Administrateur loggedIn = administrateurService.login(
+                administrateur.getFullName(), administrateur.getPassword());
+        if (loggedIn != null) {
+            return ResponseEntity.ok(loggedIn);
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
