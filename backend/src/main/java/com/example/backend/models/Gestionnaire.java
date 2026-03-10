@@ -19,18 +19,12 @@ public class Gestionnaire {
     @ManyToOne
     @JoinColumn(name = "idRole")
     private Role role;
-<<<<<<< HEAD
     private String full_name;
     private String password;
     @Column(name = "email")
     private String email;
 
     public Gestionnaire() {
-=======
-    private String email ;
-    private String password ;
-    public Gestionnaire (){
->>>>>>> 93cfe3b8d5b899c9183aa8b5d20abae756475c56
 
     }
 
@@ -41,14 +35,9 @@ public class Gestionnaire {
     public Role getRole() {
         return role;
     }
-<<<<<<< HEAD
 
     public String getFull_name() {
         return full_name;
-=======
-    public String getEmail(){
-        return email;
->>>>>>> 93cfe3b8d5b899c9183aa8b5d20abae756475c56
     }
 
     public String getPassword() {
@@ -62,14 +51,9 @@ public class Gestionnaire {
     public void setRole(Role role) {
         this.role = role;
     }
-<<<<<<< HEAD
 
     public void setFull_name(String full_name) {
         this.full_name = full_name;
-=======
-    public void setEmail(String email){
-        this.email=email;
->>>>>>> 93cfe3b8d5b899c9183aa8b5d20abae756475c56
     }
 
     public void setPassword(String password) {
