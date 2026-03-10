@@ -1,12 +1,10 @@
 package com.example.backend.service;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.example.backend.Repository.GestionnaireRepository;
 import com.example.backend.models.Gestionnaire;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class GestionnaireService {
@@ -42,11 +40,5 @@ public class GestionnaireService {
             return existing;
         }
         return null;
-    }
-
-}
-
-    public Gestionnaire login(String email, String password) {
-        return gestionnaireRepository.findByEmailAndPassword(email, password);
     }
 }
