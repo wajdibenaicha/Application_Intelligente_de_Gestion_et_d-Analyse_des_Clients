@@ -1,10 +1,12 @@
 package com.example.backend.service;
 
-import com.example.backend.Repository.AdministrateurRepository;
-import com.example.backend.models.Administrateur;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.List;
+
+import com.example.backend.Repository.AdministrateurRepository;
+import com.example.backend.models.Administrateur;
 
 @Service
 public class AdministrateurService {
