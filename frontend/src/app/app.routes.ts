@@ -9,3 +9,4 @@ export const routes: Routes = [
   { path: 'dashboard-gestionnaire', component: DashboardGestionnaire },
   { path: '', redirectTo: 'login', pathMatch: 'full' }
 ];
+
