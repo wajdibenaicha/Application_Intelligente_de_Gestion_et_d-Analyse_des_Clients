@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-
 public class AdministrateurService {
+
     @Autowired
     private AdministrateurRepository administrateurRepository;
 
@@ -44,8 +44,7 @@ public class AdministrateurService {
         }
     }
 
-    public Administrateur login(String full_name, String password) {
-        return administrateurRepository.findByFull_nameAndPassword(full_name, password);
+    public Administrateur login(String fullName, String password) {
+        return administrateurRepository.findByFullNameAndPassword(fullName, password);
     }
-
 }

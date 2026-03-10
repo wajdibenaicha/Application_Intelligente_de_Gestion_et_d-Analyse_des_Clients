@@ -1,5 +1,6 @@
 package com.example.backend.models;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,16 +14,19 @@ public class Administrateur {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String full_name;
+    @Column(name = "full_name")
+    private String fullName;
     private String password;
+    @Column(name = "email")
+    private String email;
 
     public Administrateur() {
 
     }
 
-    public Administrateur(Long id, String full_name, String password) {
+    public Administrateur(Long id, String fullName, String password) {
         this.id = id;
-        this.full_name = full_name;
+        this.fullName = fullName;
         this.password = password;
     }
 
@@ -30,8 +34,8 @@ public class Administrateur {
         return id;
     }
 
-    public String getFull_name() {
-        return full_name;
+    public String getFullName() {
+        return fullName;
     }
 
     public String getPassword() {
@@ -46,8 +50,16 @@ public class Administrateur {
         this.password = password;
     }
 
-    public void setFull_name(String full_name) {
-        this.full_name = full_name;
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
 }
