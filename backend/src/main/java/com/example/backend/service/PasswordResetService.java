@@ -22,22 +22,18 @@ public class PasswordResetService {
     private JavaMailSender mailSender;
 
     public boolean sendResetEmail(String email) {
-
-        // Cherche dans la table administrateur
         Administrateur admin = administrateurRepository.findByEmail(email);
         if (admin != null) {
             sendEmail(email, admin.getFullName());
             return true;
         }
-
-        // Cherche dans la table gestionnaire
         Gestionnaire gestionnaire = gestionnaireRepository.findByEmail(email);
         if (gestionnaire != null) {
-            sendEmail(email, gestionnaire.getFull_name());
+            sendEmail(email, gestionnaire.getFullName());
             return true;
         }
 
-        return false; // Email non trouvé
+        return false;
     }
 
     private void sendEmail(String toEmail, String name) {

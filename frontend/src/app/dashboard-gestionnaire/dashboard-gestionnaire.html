@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <title>Mot de passe oubliée</title>
+  </head>
     <body>
         <div class="dashboard">
-
 
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
     <div class="sidebar-header">
@@ -23,22 +25,25 @@
 
     <nav class="sidebar-nav">
       <button class="nav-item" [class.active]="activeSection === 'home'" (click)="setSection('home')">
+        <span class="nav-icon">🏠</span>
         <span class="nav-label">Accueil</span>
       </button>
       <button class="nav-item" [class.active]="activeSection === 'questionnaires'" (click)="setSection('questionnaires')">
+        <span class="nav-icon">📋</span>
         <span class="nav-label">Questionnaires</span>
       </button>
       <button class="nav-item" [class.active]="activeSection === 'reponses'" (click)="setSection('reponses')">
+        <span class="nav-icon">💬</span>
         <span class="nav-label">Réponses clients</span>
       </button>
       <button class="nav-item" [class.active]="activeSection === 'offres'" (click)="setSection('offres')">
-
+        <span class="nav-icon">🤖</span>
         <span class="nav-label">Recommandations IA</span>
       </button>
     </nav>
 
     <button class="logout-btn" (click)="logout()">
-      <span class="nav-icon"></span>
+      <span class="nav-icon">🚪</span>
       <span class="nav-label">Déconnexion</span>
     </button>
   </aside>
@@ -51,68 +56,66 @@
       </div>
       <div class="topbar-right">
         <span class="date-badge">{{ today | date:'dd MMM yyyy' }}</span>
-        <div class="notif-btn"> <span class="notif-badge" *ngIf="pendingCount > 0">{{ pendingCount }}</span></div>
+        <div class="notif-btn">🔔 <span class="notif-badge" *ngIf="pendingCount > 0">{{ pendingCount }}</span></div>
       </div>
     </header>
 
     <section *ngIf="activeSection === 'home'" class="content-section">
       <div class="stats-grid">
         <div class="stat-card">
-
+          <div class="stat-icon">📋</div>
           <div class="stat-info">
             <span class="stat-value">{{ totalQuestionnaires }}</span>
             <span class="stat-label">Questionnaires</span>
           </div>
         </div>
         <div class="stat-card">
-
+          <div class="stat-icon">⏳</div>
           <div class="stat-info">
             <span class="stat-value">{{ pendingCount }}</span>
             <span class="stat-label">En attente publication</span>
           </div>
         </div>
         <div class="stat-card">
-
+          <div class="stat-icon">💬</div>
           <div class="stat-info">
             <span class="stat-value">{{ totalReponses }}</span>
             <span class="stat-label">Réponses reçues</span>
           </div>
         </div>
         <div class="stat-card">
-
+          <div class="stat-icon">✅</div>
           <div class="stat-info">
             <span class="stat-value">{{ publishedCount }}</span>
             <span class="stat-label">Publiés</span>
           </div>
         </div>
       </div>
-
       <div class="quick-actions">
         <h3>Actions rapides</h3>
         <div class="actions-grid">
           <button class="action-card" (click)="openCreateQuestionnaire()">
-
+            <span class="action-icon">➕</span>
             <span>Nouveau questionnaire</span>
           </button>
           <button class="action-card" (click)="setSection('reponses')">
-
+            <span class="action-icon">👁</span>
             <span>Voir les réponses</span>
           </button>
           <button class="action-card" (click)="setSection('offres')">
-
+            <span class="action-icon">🤖</span>
             <span>Recommandations IA</span>
           </button>
         </div>
       </div>
     </section>
 
-    <!-- ===================== SECTION QUESTIONNAIRES ===================== -->
     <section *ngIf="activeSection === 'questionnaires'" class="content-section">
       <div class="section-toolbar">
         <button class="btn-primary" (click)="openCreateQuestionnaire()">➕ Nouveau questionnaire</button>
       </div>
 
-      <div class="table-wrapper" *ngIf="!showCreateForm && !showEditForm">
+      <div class="table-wrapper" *ngIf="!showCreateForm && !showEditForm && !showQuestionsView">
         <table class="data-table">
           <thead>
             <tr>
@@ -143,7 +146,6 @@
         </table>
       </div>
 
-      <!-- FORMULAIRE CRÉATION -->
       <div class="form-card" *ngIf="showCreateForm">
         <div class="form-card-header">
           <h3>Nouveau questionnaire</h3>
@@ -157,27 +159,26 @@
           <label>Description</label>
           <textarea [(ngModel)]="newQuestionnaire.description" placeholder="Description du questionnaire..." rows="3"></textarea>
         </div>
-
         <div class="questions-section">
           <div class="questions-header">
             <h4>Questions ({{ newQuestionnaire.questions.length }})</h4>
-            <button class="btn-secondary" (click)="addNewQuestion()"> Ajouter une question</button>
+            <button class="btn-secondary" (click)="addNewQuestion()">➕ Ajouter une question</button>
           </div>
           <div class="question-item" *ngFor="let q of newQuestionnaire.questions; let i = index">
             <div class="question-number">Q{{ i + 1 }}</div>
             <div class="question-inputs">
-              <input type="text" [(ngModel)]="q.texte" placeholder="Texte de la question">
+              <input type="text" [(ngModel)]="q.titre" placeholder="Texte de la question">
               <select [(ngModel)]="q.type">
-                <option value="TEXTE">Texte libre</option>
-                <option value="QCM">Choix multiple</option>
-                <option value="OUI_NON">Oui / Non</option>
-                <option value="NOTE">Note (1-5)</option>
+                <option value="input">Texte libre</option>
+                <option value="radio">Choix multiple</option>
+                <option value="checkbox">Cases à cocher</option>
+                <option value="select">Liste déroulante</option>
               </select>
             </div>
             <button class="btn-icon btn-delete" (click)="removeQuestion(i)">🗑</button>
           </div>
+          <div class="empty-row" *ngIf="newQuestionnaire.questions.length === 0">Aucune question ajoutée</div>
         </div>
-
         <div class="form-actions">
           <button class="btn-outline" (click)="cancelForm()">Annuler</button>
           <button class="btn-primary" (click)="saveQuestionnaire()" [disabled]="isLoading">
@@ -185,7 +186,6 @@
           </button>
         </div>
       </div>
-
 
       <div class="form-card" *ngIf="showEditForm">
         <div class="form-card-header">
@@ -200,27 +200,25 @@
           <label>Description</label>
           <textarea [(ngModel)]="editingQuestionnaire.description" rows="3"></textarea>
         </div>
-
         <div class="questions-section">
           <div class="questions-header">
             <h4>Questions</h4>
-            <button class="btn-secondary" (click)="addQuestionToEdit()"> Ajouter</button>
+            <button class="btn-secondary" (click)="addQuestionToEdit()">➕ Ajouter</button>
           </div>
           <div class="question-item" *ngFor="let q of editingQuestionnaire.questions; let i = index">
             <div class="question-number">Q{{ i + 1 }}</div>
             <div class="question-inputs">
-              <input type="text" [(ngModel)]="q.texte" placeholder="Texte de la question">
+              <input type="text" [(ngModel)]="q.titre" placeholder="Texte de la question">
               <select [(ngModel)]="q.type">
-                <option value="TEXTE">Texte libre</option>
-                <option value="QCM">Choix multiple</option>
-                <option value="OUI_NON">Oui / Non</option>
-                <option value="NOTE">Note (1-5)</option>
+                <option value="input">Texte libre</option>
+                <option value="radio">Choix multiple</option>
+                <option value="checkbox">Cases à cocher</option>
+                <option value="select">Liste déroulante</option>
               </select>
             </div>
             <button class="btn-icon btn-delete" (click)="removeQuestionEdit(i)">🗑</button>
           </div>
         </div>
-
         <div class="form-actions">
           <button class="btn-outline" (click)="cancelForm()">Annuler</button>
           <button class="btn-primary" (click)="updateQuestionnaire()" [disabled]="isLoading">
@@ -228,7 +226,6 @@
           </button>
         </div>
       </div>
-
 
       <div class="form-card" *ngIf="showQuestionsView">
         <div class="form-card-header">
@@ -238,7 +235,7 @@
         <div class="question-view-item" *ngFor="let q of selectedQuestionnaire?.questions; let i = index">
           <span class="q-num">{{ i + 1 }}</span>
           <div class="q-content">
-            <p class="q-text">{{ q.texte }}</p>
+            <p class="q-text">{{ q.titre }}</p>
             <span class="q-type-badge">{{ q.type }}</span>
           </div>
           <button class="btn-icon btn-delete" (click)="deleteQuestion(q.id, selectedQuestionnaire)">🗑</button>
@@ -247,7 +244,6 @@
       </div>
     </section>
 
-    
     <section *ngIf="activeSection === 'reponses'" class="content-section">
       <div class="filter-bar">
         <label>Questionnaire :</label>
@@ -261,91 +257,73 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Client</th>
-              <th>Date</th>
-              <th>Réponses</th>
-              <th>Classification IA</th>
+              <th>Client (email)</th>
+              <th>Téléphone</th>
+              <th>Question</th>
+              <th>Réponse</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let r of reponses">
-              <td>{{ r.clientNom }}</td>
-              <td>{{ r.date | date:'dd/MM/yyyy' }}</td>
-              <td><button class="btn-secondary btn-sm" (click)="viewReponseDetail(r)">Voir détail</button></td>
-              <td><span class="badge badge-ia">{{ r.classificationIA || 'En attente' }}</span></td>
+              <td>{{ r.client?.mail }}</td>
+              <td>{{ r.client?.tel }}</td>
+              <td>{{ r.question?.titre }}</td>
+              <td>{{ r.reponse }}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="empty-state" *ngIf="reponses.length === 0 && selectedQuestionnaireId">
-        
+        <span>💬</span>
         <p>Aucune réponse reçue pour ce questionnaire</p>
       </div>
       <div class="empty-state" *ngIf="!selectedQuestionnaireId">
-        
+        <span>📋</span>
         <p>Sélectionnez un questionnaire pour voir les réponses</p>
-      </div>
-
-      <!-- Détail réponse -->
-      <div class="modal-overlay" *ngIf="showReponseDetail" (click)="showReponseDetail = false">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>Réponses de {{ selectedReponse?.clientNom }}</h3>
-            <button class="btn-close" (click)="showReponseDetail = false">✕</button>
-          </div>
-          <div class="reponse-detail" *ngFor="let item of selectedReponse?.details">
-            <p class="q-text">❓ {{ item.question }}</p>
-            <p class="a-text">💬 {{ item.reponse }}</p>
-          </div>
-        </div>
       </div>
     </section>
 
-    <!-- ===================== SECTION OFFRES IA ===================== -->
     <section *ngIf="activeSection === 'offres'" class="content-section">
-
       <div class="offres-grid">
         <div class="offre-card" *ngFor="let offre of offresIA">
           <div class="offre-header">
             <div class="offre-client">
-              <span class="client-avatar">{{ offre.clientNom[0] }}</span>
+              <span class="client-avatar">{{ offre.client?.mail?.[0]?.toUpperCase() || 'C' }}</span>
               <div>
-                <p class="client-name">{{ offre.clientNom }}</p>
-                <p class="client-date">{{ offre.date | date:'dd/MM/yyyy' }}</p>
+                <p class="client-name">{{ offre.client?.mail }}</p>
+                <p class="client-date">{{ offre.dateCreation | date:'dd/MM/yyyy' }}</p>
               </div>
             </div>
-            <span class="badge" [class]="offre.statut === 'ACCEPTE' ? 'badge-success' : offre.statut === 'REJETE' ? 'badge-danger' : 'badge-pending'">
+            <span class="badge"
+              [class.badge-success]="offre.statut === 'ACCEPTE'"
+              [class.badge-danger]="offre.statut === 'REJETE'"
+              [class.badge-pending]="offre.statut === 'EN_ATTENTE'">
               {{ offre.statut }}
             </span>
           </div>
-
           <div class="offre-body">
-            <p class="offre-label"> Recommandation IA :</p>
-            <p class="offre-text">{{ offre.recommandationIA }}</p>
+            <p class="offre-label">🤖 Recommandation IA :</p>
+            <p class="offre-text">{{ offre.recommandationIA || offre.description }}</p>
           </div>
-
           <div class="offre-actions" *ngIf="offre.statut === 'EN_ATTENTE'">
             <button class="btn-success" (click)="accepterOffre(offre)">✅ Accepter</button>
             <button class="btn-danger" (click)="rejeterOffre(offre)">❌ Rejeter & faire ma propre offre</button>
           </div>
-
           <div class="offre-manuelle" *ngIf="offre.showManualForm">
-            <p class="offre-label"> Votre offre personnalisée :</p>
+            <p class="offre-label">✏️ Votre offre personnalisée :</p>
             <textarea [(ngModel)]="offre.offreManuelle" placeholder="Décrivez votre offre personnalisée..." rows="4"></textarea>
             <div class="form-actions">
               <button class="btn-outline" (click)="offre.showManualForm = false">Annuler</button>
               <button class="btn-primary" (click)="soumettreManualle(offre)">Soumettre</button>
             </div>
           </div>
-
           <div class="offre-manuelle-result" *ngIf="offre.statut === 'REJETE' && offre.offreManuelle && !offre.showManualForm">
-            <p class="offre-label"> Votre offre :</p>
+            <p class="offre-label">✏️ Votre offre :</p>
             <p class="offre-text">{{ offre.offreManuelle }}</p>
           </div>
         </div>
-
         <div class="empty-state" *ngIf="offresIA.length === 0">
-          <span></span>
+          <span>🤖</span>
           <p>Aucune recommandation IA disponible</p>
         </div>
       </div>
@@ -353,7 +331,6 @@
 
   </main>
 </div>
-
 
 <div class="toast" [class.show]="showToast" [class.toast-error]="toastType === 'error'">
   {{ toastMessage }}

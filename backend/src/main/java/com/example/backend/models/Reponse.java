@@ -1,37 +1,33 @@
 package com.example.backend.models;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import jakarta.persistence.*;
+
 @Entity
 @Table(name = "reponse")
 public class Reponse {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id ;
-    private String reponse ;
-    @ManyToOne 
-    @JoinColumn(name = "question_id")
-    private Question question;  
-    @ManyToOne 
+    private Long id;
+
+    @ManyToOne
     @JoinColumn(name = "client_id")
+    @JsonIgnoreProperties({ "reponses" })
     private Client client;
+
+    @ManyToOne
+    @JoinColumn(name = "question_id")
+    @JsonIgnoreProperties({ "reponses" })
+    private Question question;
+
     @ManyToOne
     @JoinColumn(name = "questionnaire_id")
+    @JsonIgnoreProperties({ "questions", "gestionnaire" })
     private Questionnaire questionnaire;
 
-    public Reponse() {
-    }
-
-    public Reponse(String reponse, Question question, Client client, Questionnaire questionnaire) {
-        this.reponse = reponse;
-        this.question = question;
-        this.client = client;
-        this.questionnaire = questionnaire;
-    }
+    private String reponse;
 
     public Long getId() {
         return id;
@@ -39,22 +35,6 @@ public class Reponse {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public String getReponse() {
-        return reponse;
-    }
-
-    public void setReponse(String reponse) {
-        this.reponse = reponse;
-    }
-
-    public Question getQuestion() {
-        return question;
-    }
-
-    public void setQuestion(Question question) {
-        this.question = question;
     }
 
     public Client getClient() {
@@ -65,6 +45,14 @@ public class Reponse {
         this.client = client;
     }
 
+    public Question getQuestion() {
+        return question;
+    }
+
+    public void setQuestion(Question question) {
+        this.question = question;
+    }
+
     public Questionnaire getQuestionnaire() {
         return questionnaire;
     }
@@ -73,4 +61,11 @@ public class Reponse {
         this.questionnaire = questionnaire;
     }
 
+    public String getReponse() {
+        return reponse;
+    }
+
+    public void setReponse(String reponse) {
+        this.reponse = reponse;
+    }
 }

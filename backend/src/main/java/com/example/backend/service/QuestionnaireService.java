@@ -1,40 +1,42 @@
 package com.example.backend.service;
-import com.example.backend.models.Questionnaire;
+
 import com.example.backend.Repository.QuestionnaireRepository;
+import com.example.backend.models.Questionnaire;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class QuestionnaireService {
+
     @Autowired
-    private QuestionnaireRepository questionnaireRepository ;
-    public List<Questionnaire> getQuestionnaireRepository() {
+    private QuestionnaireRepository questionnaireRepository;
+
+    public List<Questionnaire> getAll() {
         return questionnaireRepository.findAll();
     }
-    public Questionnaire getQuestionnaireById(Long id){
-        return questionnaireRepository.findById(id).orElse(null);
+
+    public List<Questionnaire> getByGestionnaire(Long gestionnaireId) {
+        return questionnaireRepository.findByGestionnaireId(gestionnaireId);
     }
-    public Questionnaire ADDQuestionnaire(Questionnaire quest){
-        return questionnaireRepository.save(quest);
+
+    public Questionnaire save(Questionnaire q) {
+        return questionnaireRepository.save(q);
     }
-    public Questionnaire updateQuestionnaire(Long id , Questionnaire quest){
-        Questionnaire exist = getQuestionnaireById(id);
-        if(exist != null){
-            quest.setId(id);
-            return questionnaireRepository.save(quest);
-        }
-        return null;
-     }
-     public Questionnaire deleteQuestionnaire(Long id){
-         Questionnaire exist= getQuestionnaireById(id);
-        if(exist!= null){
-            questionnaireRepository.delete(exist);
-            return exist;
-        }
-        else{
-            return null ;
-        }
-     }
-    
+
+    public Optional<Questionnaire> findById(Long id) {
+        return questionnaireRepository.findById(id);
+    }
+
+    public void delete(Long id) {
+        questionnaireRepository.deleteById(id);
+    }
+
+    public Questionnaire demanderPublication(Long id) {
+        return questionnaireRepository.findById(id).map(q -> {
+            q.setStatut("EN_ATTENTE");
+            return questionnaireRepository.save(q);
+        }).orElseThrow();
+    }
 }

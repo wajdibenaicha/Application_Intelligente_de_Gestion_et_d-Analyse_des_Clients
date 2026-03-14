@@ -3,10 +3,8 @@ package com.example.backend.controller;
 import com.example.backend.models.Questionnaire;
 import com.example.backend.service.QuestionnaireService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -18,40 +16,38 @@ public class QuestionnaireController {
     private QuestionnaireService questionnaireService;
 
     @GetMapping
-    public ResponseEntity<List<Questionnaire>> getAllQuestionnaires() {
-        return ResponseEntity.ok(questionnaireService.getQuestionnaireRepository());
+    public List<Questionnaire> getAll() {
+        return questionnaireService.getAll();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Questionnaire> getQuestionnaireById(@PathVariable Long id) {
-        Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
-        if (questionnaire != null) {
-            return ResponseEntity.ok(questionnaire);
-        }
-        return ResponseEntity.notFound().build();
+    @GetMapping("/gestionnaire/{id}")
+    public List<Questionnaire> getByGestionnaire(@PathVariable Long id) {
+        return questionnaireService.getByGestionnaire(id);
     }
 
     @PostMapping
-    public ResponseEntity<Questionnaire> addQuestionnaire(@RequestBody Questionnaire questionnaire) {
-        Questionnaire savedQuestionnaire = questionnaireService.ADDQuestionnaire(questionnaire);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedQuestionnaire);
+    public Questionnaire create(@RequestBody Questionnaire questionnaire) {
+        return questionnaireService.save(questionnaire);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Questionnaire> updateQuestionnaire(@PathVariable Long id, @RequestBody Questionnaire questionnaire) {
-        Questionnaire updatedQuestionnaire = questionnaireService.updateQuestionnaire(id, questionnaire);
-        if (updatedQuestionnaire != null) {
-            return ResponseEntity.ok(updatedQuestionnaire);
-        }
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<Questionnaire> update(@PathVariable Long id, @RequestBody Questionnaire questionnaire) {
+        return questionnaireService.findById(id).map(existing -> {
+            existing.setTitre(questionnaire.getTitre());
+            existing.setDescription(questionnaire.getDescription());
+            existing.setQuestions(questionnaire.getQuestions());
+            return ResponseEntity.ok(questionnaireService.save(existing));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Questionnaire> deleteQuestionnaire(@PathVariable Long id) {
-        Questionnaire deletedQuestionnaire = questionnaireService.deleteQuestionnaire(id);
-        if (deletedQuestionnaire != null) {
-            return ResponseEntity.ok(deletedQuestionnaire);
-        }
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        questionnaireService.delete(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/demander-publication")
+    public ResponseEntity<Questionnaire> demanderPublication(@PathVariable Long id) {
+        return ResponseEntity.ok(questionnaireService.demanderPublication(id));
     }
 }

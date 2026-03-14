@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { Login } from './login/login';
 import { ForgotPassword } from './forgot-password/forgot-password';
-import {DashboardGestionnaire} from './dashboard-gestionnaire/dashboard-gestionnaire';
+import { DashboardGestionnaire } from './dashboard-gestionnaire/dashboard-gestionnaire';
 
 export const routes: Routes = [
   { path: 'login', component: Login },

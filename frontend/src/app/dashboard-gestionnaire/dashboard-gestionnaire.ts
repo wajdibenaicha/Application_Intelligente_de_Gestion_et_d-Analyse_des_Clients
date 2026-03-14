@@ -13,9 +13,8 @@ import { Router } from '@angular/router';
 })
 export class DashboardGestionnaire implements OnInit {
 
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = 'http://localhost:8081/api';
 
-  // UI state
   activeSection = 'home';
   sidebarCollapsed = false;
   isLoading = false;
@@ -24,10 +23,8 @@ export class DashboardGestionnaire implements OnInit {
   toastType = 'success';
   today = new Date();
 
-  // User
   gestionnaire: any = null;
 
-  // Questionnaires
   questionnaires: any[] = [];
   showCreateForm = false;
   showEditForm = false;
@@ -35,22 +32,13 @@ export class DashboardGestionnaire implements OnInit {
   selectedQuestionnaire: any = null;
   editingQuestionnaire: any = null;
 
-  newQuestionnaire = {
-    titre: '',
-    description: '',
-    questions: [] as any[]
-  };
+  newQuestionnaire: any = { titre: '', description: '', questions: [] };
 
-  // Réponses
   reponses: any[] = [];
   selectedQuestionnaireId = '';
-  showReponseDetail = false;
-  selectedReponse: any = null;
 
-  // Offres IA
   offresIA: any[] = [];
 
-  // Stats
   totalQuestionnaires = 0;
   pendingCount = 0;
   publishedCount = 0;
@@ -64,20 +52,16 @@ export class DashboardGestionnaire implements OnInit {
 
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
-
     const user = sessionStorage.getItem('user');
     const role = sessionStorage.getItem('role');
-
     if (!user || role !== 'gestionnaire') {
       this.router.navigate(['/login']);
       return;
     }
-
     this.gestionnaire = JSON.parse(user);
     this.loadQuestionnaires();
     this.loadOffresIA();
   }
-
 
   setSection(section: string) {
     this.activeSection = section;
@@ -98,12 +82,7 @@ export class DashboardGestionnaire implements OnInit {
 
   getInitials(): string {
     if (!this.gestionnaire?.fullName) return 'G';
-    return this.gestionnaire.fullName
-      .split(' ')
-      .map((n: string) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return this.gestionnaire.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   }
 
   logout() {
@@ -111,9 +90,8 @@ export class DashboardGestionnaire implements OnInit {
     this.router.navigate(['/login']);
   }
 
-  // ===== QUESTIONNAIRES =====
   loadQuestionnaires() {
-    this.http.get<any[]>(`${this.apiUrl}/questionnaires`).subscribe({
+    this.http.get<any[]>(`${this.apiUrl}/questionnaires/gestionnaire/${this.gestionnaire.id}`).subscribe({
       next: (data) => {
         this.questionnaires = data;
         this.totalQuestionnaires = data.length;
@@ -133,7 +111,7 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   addNewQuestion() {
-    this.newQuestionnaire.questions.push({ texte: '', type: 'TEXTE' });
+    this.newQuestionnaire.questions.push({ titre: '', type: 'input' });
   }
 
   removeQuestion(index: number) {
@@ -141,27 +119,23 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   saveQuestionnaire() {
-    if (!this.newQuestionnaire.titre) {
-      this.toast('Veuillez saisir un titre', 'error');
-      return;
-    }
+    if (!this.newQuestionnaire.titre) { this.toast('Veuillez saisir un titre', 'error'); return; }
     this.isLoading = true;
     const payload = {
-      ...this.newQuestionnaire,
+      titre: this.newQuestionnaire.titre,
+      description: this.newQuestionnaire.description,
+      statut: 'BROUILLON',
       gestionnaire: { id: this.gestionnaire.id },
-      statut: 'BROUILLON'
+      questions: this.newQuestionnaire.questions
     };
     this.http.post(`${this.apiUrl}/questionnaires`, payload).subscribe({
       next: () => {
         this.isLoading = false;
         this.showCreateForm = false;
         this.loadQuestionnaires();
-        this.toast('Questionnaire créé avec succès ✅');
+        this.toast('Questionnaire créé ');
       },
-      error: () => {
-        this.isLoading = false;
-        this.toast('Erreur création', 'error');
-      }
+      error: () => { this.isLoading = false; this.toast('Erreur création', 'error'); }
     });
   }
 
@@ -173,7 +147,7 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   addQuestionToEdit() {
-    this.editingQuestionnaire.questions.push({ texte: '', type: 'TEXTE' });
+    this.editingQuestionnaire.questions.push({ titre: '', type: 'input' });
   }
 
   removeQuestionEdit(index: number) {
@@ -187,34 +161,25 @@ export class DashboardGestionnaire implements OnInit {
         this.isLoading = false;
         this.showEditForm = false;
         this.loadQuestionnaires();
-        this.toast('Questionnaire mis à jour ✅');
+        this.toast('Questionnaire mis à jour ');
       },
-      error: () => {
-        this.isLoading = false;
-        this.toast('Erreur mise à jour', 'error');
-      }
+      error: () => { this.isLoading = false; this.toast('Erreur mise à jour', 'error'); }
     });
   }
 
   deleteQuestionnaire(id: number) {
     if (!confirm('Supprimer ce questionnaire ?')) return;
     this.http.delete(`${this.apiUrl}/questionnaires/${id}`).subscribe({
-      next: () => {
-        this.loadQuestionnaires();
-        this.toast('Questionnaire supprimé');
-      },
+      next: () => { this.loadQuestionnaires(); this.toast('Questionnaire supprimé'); },
       error: () => this.toast('Erreur suppression', 'error')
     });
   }
 
   demanderPublication(q: any) {
-    if (!confirm(`Envoyer une demande de publication pour "${q.titre}" ?`)) return;
+    if (!confirm(`Envoyer une demande pour "${q.titre}" ?`)) return;
     this.http.put(`${this.apiUrl}/questionnaires/${q.id}/demander-publication`, {}).subscribe({
-      next: () => {
-        this.loadQuestionnaires();
-        this.toast("Demande envoyée à l'administrateur 📤");
-      },
-      error: () => this.toast('Erreur envoi demande', 'error')
+      next: () => { this.loadQuestionnaires(); this.toast("Demande envoyée à l'administrateur 📤"); },
+      error: () => this.toast('Erreur', 'error')
     });
   }
 
@@ -230,7 +195,6 @@ export class DashboardGestionnaire implements OnInit {
     this.http.delete(`${this.apiUrl}/questions/${questionId}`).subscribe({
       next: () => {
         questionnaire.questions = questionnaire.questions.filter((q: any) => q.id !== questionId);
-        this.loadQuestionnaires();
         this.toast('Question supprimée');
       },
       error: () => this.toast('Erreur suppression question', 'error')
@@ -244,48 +208,28 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   getBadgeClass(statut: string): string {
-    const classes: any = {
-      'BROUILLON': 'badge-brouillon',
-      'EN_ATTENTE': 'badge-pending',
-      'PUBLIE': 'badge-published',
-      'REJETE': 'badge-danger'
-    };
-    return classes[statut] || 'badge-brouillon';
+    const map: any = { 'BROUILLON': 'badge-brouillon', 'EN_ATTENTE': 'badge-pending', 'PUBLIE': 'badge-published', 'REJETE': 'badge-danger' };
+    return map[statut] || 'badge-brouillon';
   }
 
-  // ===== RÉPONSES =====
   loadReponses() {
     if (!this.selectedQuestionnaireId) return;
     this.http.get<any[]>(`${this.apiUrl}/reponses/questionnaire/${this.selectedQuestionnaireId}`).subscribe({
-      next: (data) => {
-        this.reponses = data;
-        this.totalReponses = data.length;
-      },
+      next: (data) => { this.reponses = data; this.totalReponses = data.length; },
       error: () => this.toast('Erreur chargement réponses', 'error')
     });
   }
 
-  viewReponseDetail(r: any) {
-    this.selectedReponse = r;
-    this.showReponseDetail = true;
-  }
-
-  // ===== OFFRES IA =====
   loadOffresIA() {
     this.http.get<any[]>(`${this.apiUrl}/offres`).subscribe({
-      next: (data) => {
-        this.offresIA = data.map(o => ({ ...o, showManualForm: false }));
-      },
+      next: (data) => { this.offresIA = data.map(o => ({ ...o, showManualForm: false })); },
       error: () => {}
     });
   }
 
   accepterOffre(offre: any) {
     this.http.put(`${this.apiUrl}/offres/${offre.id}/accepter`, {}).subscribe({
-      next: () => {
-        offre.statut = 'ACCEPTE';
-        this.toast('Offre acceptée ✅');
-      },
+      next: () => { offre.statut = 'ACCEPTE'; this.toast('Offre acceptée ✅'); },
       error: () => this.toast('Erreur', 'error')
     });
   }
@@ -297,20 +241,13 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   soumettreManualle(offre: any) {
-    if (!offre.offreManuelle) {
-      this.toast('Veuillez saisir votre offre', 'error');
-      return;
-    }
+    if (!offre.offreManuelle) { this.toast('Veuillez saisir votre offre', 'error'); return; }
     this.http.put(`${this.apiUrl}/offres/${offre.id}/manuelle`, { offreManuelle: offre.offreManuelle }).subscribe({
-      next: () => {
-        offre.showManualForm = false;
-        this.toast('Votre offre a été soumise ✅');
-      },
-      error: () => this.toast('Erreur soumission', 'error')
+      next: () => { offre.showManualForm = false; this.toast('Offre soumise ✅'); },
+      error: () => this.toast('Erreur', 'error')
     });
   }
 
-  // ===== TOAST =====
   toast(message: string, type = 'success') {
     this.toastMessage = message;
     this.toastType = type;
