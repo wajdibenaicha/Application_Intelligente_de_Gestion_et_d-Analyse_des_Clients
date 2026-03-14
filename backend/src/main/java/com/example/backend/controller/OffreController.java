@@ -1,13 +1,12 @@
 package com.example.backend.controller;
 
+import com.example.backend.Repository.OffreRepository;
 import com.example.backend.models.Offre;
-import com.example.backend.service.OffreService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/offres")
@@ -15,43 +14,34 @@ import java.util.List;
 public class OffreController {
 
     @Autowired
-    private OffreService offreService;
+    private OffreRepository offreRepository;
 
     @GetMapping
-    public ResponseEntity<List<Offre>> getAllOffres() {
-        return ResponseEntity.ok(offreService.getAllOffres());
+    public List<Offre> getAll() {
+        return offreRepository.findAll();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Offre> getOffreById(@PathVariable Long id) {
-        Offre offre = offreService.getOffreById(id);
-        if (offre != null) {
-            return ResponseEntity.ok(offre);
-        }
-        return ResponseEntity.notFound().build();
+    @PutMapping("/{id}/accepter")
+    public ResponseEntity<Offre> accepter(@PathVariable Long id) {
+        return offreRepository.findById(id).map(o -> {
+            o.setStatut("ACCEPTE");
+            return ResponseEntity.ok(offreRepository.save(o));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
-    public ResponseEntity<Offre> addOffre(@RequestBody Offre offre) {
-        Offre savedOffre = offreService.addOffre(offre);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedOffre);
+    @PutMapping("/{id}/rejeter")
+    public ResponseEntity<Offre> rejeter(@PathVariable Long id) {
+        return offreRepository.findById(id).map(o -> {
+            o.setStatut("REJETE");
+            return ResponseEntity.ok(offreRepository.save(o));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Offre> updateOffre(@PathVariable Long id, @RequestBody Offre offre) {
-        Offre updatedOffre = offreService.updateOffre(id, offre);
-        if (updatedOffre != null) {
-            return ResponseEntity.ok(updatedOffre);
-        }
-        return ResponseEntity.notFound().build();
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Offre> deleteOffre(@PathVariable Long id) {
-        Offre deletedOffre = offreService.deleteOffre(id);
-        if (deletedOffre != null) {
-            return ResponseEntity.ok(deletedOffre);
-        }
-        return ResponseEntity.notFound().build();
+    @PutMapping("/{id}/manuelle")
+    public ResponseEntity<Offre> manuelle(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return offreRepository.findById(id).map(o -> {
+            o.setOffreManuelle(body.get("offreManuelle"));
+            return ResponseEntity.ok(offreRepository.save(o));
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

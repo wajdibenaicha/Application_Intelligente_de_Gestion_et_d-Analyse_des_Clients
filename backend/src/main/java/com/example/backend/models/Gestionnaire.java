@@ -1,59 +1,44 @@
 package com.example.backend.models;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "gestionnaire")
-
 public class Gestionnaire {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne
-    @JoinColumn(name = "idRole")
-    private Role role;
-    private String full_name;
+
+    @Column(name = "full_name")
+    private String fullName;
+
     private String password;
-    @Column(name = "email")
     private String email;
 
-    public Gestionnaire() {
-
-    }
+    @ManyToOne
+    @JoinColumn(name = "id_role")
+    private Role role;
 
     public Long getId() {
         return id;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public String getFull_name() {
-        return full_name;
-    }
-
-    public String getPassword() {
-        return password;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setRole(Role role) {
-        this.role = role;
+    public String getFullName() {
+        return fullName;
     }
 
-    public void setFull_name(String full_name) {
-        this.full_name = full_name;
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPassword() {
+        return password;
     }
 
     public void setPassword(String password) {
@@ -68,4 +53,11 @@ public class Gestionnaire {
         this.email = email;
     }
 
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
 }
