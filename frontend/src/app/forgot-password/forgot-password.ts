@@ -15,6 +15,7 @@ export class ForgotPassword {
 
   email: string = '';
   errorMessage: string = '';
+  successMessage: string = '';
   isLoading: boolean = false;
   emailSent: boolean = false;
 
@@ -22,8 +23,8 @@ export class ForgotPassword {
 
   sendResetEmail() {
     this.errorMessage = '';
+    this.successMessage = '';
 
-    // Validation email
     if (!this.email) {
       this.errorMessage = 'Veuillez saisir votre adresse email.';
       return;
@@ -37,23 +38,27 @@ export class ForgotPassword {
 
     this.isLoading = true;
 
-    // Appel API backend - essaie d'abord administrateur, puis gestionnaire
-    this.http.post('http://localhost:8080/api/password/forgot', { email: this.email })
-      .subscribe({
-        next: () => {
-          this.isLoading = false;
+    this.http.post('http://localhost:8081/api/password/forgot', { email: this.email },
+      { observe: 'response' }
+    ).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        if (response.status === 200) {
           this.emailSent = true;
-        },
-        error: (err: HttpErrorResponse) => {
-          this.isLoading = false;
-          if (err.status === 404) {
-            this.errorMessage = 'Aucun compte trouvé avec cette adresse email.';
-          } else if (err.status === 0) {
-            this.errorMessage = 'Impossible de contacter le serveur.';
-          } else {
-            this.errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
-          }
+        } else {
+          this.errorMessage = 'Une erreur est survenue.';
         }
-      });
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isLoading = false;
+        if (err.status === 404) {
+          this.errorMessage = 'Aucun compte trouvé avec cette adresse email.';
+        } else if (err.status === 0) {
+          this.errorMessage = 'Impossible de contacter le serveur.';
+        } else {
+          this.errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+        }
+      }
+    });
   }
 }

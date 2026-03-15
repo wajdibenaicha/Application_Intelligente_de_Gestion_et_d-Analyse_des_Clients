@@ -1,10 +1,8 @@
 package com.example.backend.models;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
@@ -16,18 +14,8 @@ public class Questionnaire {
     private Long id;
 
     private String titre;
-    private String description;
-    private String statut = "BROUILLON";
 
-    @Column(name = "date_creation")
-    private LocalDateTime dateCreation = LocalDateTime.now();
-
-    @ManyToOne
-    @JoinColumn(name = "gestionnaire_id")
-    @JsonIgnoreProperties({ "password", "role", "email" })
-    private Gestionnaire gestionnaire;
-
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(name = "questionnaire_questions", joinColumns = @JoinColumn(name = "questionnaire_id"), inverseJoinColumns = @JoinColumn(name = "question_id"))
     private List<Question> questions = new ArrayList<>();
 
@@ -45,38 +33,6 @@ public class Questionnaire {
 
     public void setTitre(String titre) {
         this.titre = titre;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getStatut() {
-        return statut;
-    }
-
-    public void setStatut(String statut) {
-        this.statut = statut;
-    }
-
-    public LocalDateTime getDateCreation() {
-        return dateCreation;
-    }
-
-    public void setDateCreation(LocalDateTime dateCreation) {
-        this.dateCreation = dateCreation;
-    }
-
-    public Gestionnaire getGestionnaire() {
-        return gestionnaire;
-    }
-
-    public void setGestionnaire(Gestionnaire gestionnaire) {
-        this.gestionnaire = gestionnaire;
     }
 
     public List<Question> getQuestions() {

@@ -17,10 +17,6 @@ public class QuestionnaireService {
         return questionnaireRepository.findAll();
     }
 
-    public List<Questionnaire> getByGestionnaire(Long gestionnaireId) {
-        return questionnaireRepository.findByGestionnaireId(gestionnaireId);
-    }
-
     public Questionnaire save(Questionnaire q) {
         return questionnaireRepository.save(q);
     }
@@ -31,12 +27,5 @@ public class QuestionnaireService {
 
     public void delete(Long id) {
         questionnaireRepository.deleteById(id);
-    }
-
-    public Questionnaire demanderPublication(Long id) {
-        return questionnaireRepository.findById(id).map(q -> {
-            q.setStatut("EN_ATTENTE");
-            return questionnaireRepository.save(q);
-        }).orElseThrow();
     }
 }

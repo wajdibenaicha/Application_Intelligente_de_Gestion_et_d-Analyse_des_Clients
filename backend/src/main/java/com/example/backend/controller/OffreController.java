@@ -23,25 +23,19 @@ public class OffreController {
 
     @PutMapping("/{id}/accepter")
     public ResponseEntity<Offre> accepter(@PathVariable Long id) {
-        return offreRepository.findById(id).map(o -> {
-            o.setStatut("ACCEPTE");
-            return ResponseEntity.ok(offreRepository.save(o));
-        }).orElse(ResponseEntity.notFound().build());
+        return offreRepository.findById(id).map(o -> ResponseEntity.ok(offreRepository.save(o)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}/rejeter")
     public ResponseEntity<Offre> rejeter(@PathVariable Long id) {
-        return offreRepository.findById(id).map(o -> {
-            o.setStatut("REJETE");
-            return ResponseEntity.ok(offreRepository.save(o));
-        }).orElse(ResponseEntity.notFound().build());
+        return offreRepository.findById(id).map(o -> ResponseEntity.ok(offreRepository.save(o)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}/manuelle")
     public ResponseEntity<Offre> manuelle(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return offreRepository.findById(id).map(o -> {
-            o.setOffreManuelle(body.get("offreManuelle"));
-            return ResponseEntity.ok(offreRepository.save(o));
-        }).orElse(ResponseEntity.notFound().build());
+        return offreRepository.findById(id).map(o -> ResponseEntity.ok(offreRepository.save(o)))
+                .orElse(ResponseEntity.notFound().build());
     }
 }

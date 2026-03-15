@@ -1,7 +1,7 @@
 package com.example.backend.models;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "gestionnaire")
@@ -19,6 +19,7 @@ public class Gestionnaire {
 
     @ManyToOne
     @JoinColumn(name = "id_role")
+    @JsonIgnoreProperties({ "gestionnaires" })
     private Role role;
 
     public Long getId() {
