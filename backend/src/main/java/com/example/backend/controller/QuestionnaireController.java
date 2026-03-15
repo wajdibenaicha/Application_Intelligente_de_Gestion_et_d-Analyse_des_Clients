@@ -22,19 +22,26 @@ public class QuestionnaireController {
 
     @GetMapping("/gestionnaire/{id}")
     public List<Questionnaire> getByGestionnaire(@PathVariable Long id) {
-        return questionnaireService.getByGestionnaire(id);
+        return questionnaireService.getAll();
     }
 
     @PostMapping
-    public Questionnaire create(@RequestBody Questionnaire questionnaire) {
-        return questionnaireService.save(questionnaire);
+    public ResponseEntity<Questionnaire> create(@RequestBody Questionnaire questionnaire) {
+        try {
+            questionnaire.setId(null);
+            if (questionnaire.getQuestions() != null) {
+                questionnaire.getQuestions().forEach(q -> q.setId(null));
+            }
+            return ResponseEntity.ok(questionnaireService.save(questionnaire));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Questionnaire> update(@PathVariable Long id, @RequestBody Questionnaire questionnaire) {
         return questionnaireService.findById(id).map(existing -> {
             existing.setTitre(questionnaire.getTitre());
-            existing.setDescription(questionnaire.getDescription());
             existing.setQuestions(questionnaire.getQuestions());
             return ResponseEntity.ok(questionnaireService.save(existing));
         }).orElse(ResponseEntity.notFound().build());
@@ -48,6 +55,7 @@ public class QuestionnaireController {
 
     @PutMapping("/{id}/demander-publication")
     public ResponseEntity<Questionnaire> demanderPublication(@PathVariable Long id) {
-        return ResponseEntity.ok(questionnaireService.demanderPublication(id));
+        return questionnaireService.findById(id).map(q -> ResponseEntity.ok(questionnaireService.save(q)))
+                .orElse(ResponseEntity.notFound().build());
     }
 }

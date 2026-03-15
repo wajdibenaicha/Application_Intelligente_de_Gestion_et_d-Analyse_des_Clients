@@ -122,7 +122,6 @@
               <th>Titre</th>
               <th>Questions</th>
               <th>Statut</th>
-              <th>Date création</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -131,7 +130,6 @@
               <td>{{ q.titre }}</td>
               <td>{{ q.questions?.length || 0 }}</td>
               <td><span class="badge" [class]="getBadgeClass(q.statut)">{{ q.statut }}</span></td>
-              <td>{{ q.dateCreation | date:'dd/MM/yyyy' }}</td>
               <td class="actions-cell">
                 <button class="btn-icon btn-view" title="Voir questions" (click)="viewQuestions(q)">👁</button>
                 <button class="btn-icon btn-edit" title="Modifier" (click)="editQuestionnaire(q)" *ngIf="q.statut === 'BROUILLON'">✏️</button>

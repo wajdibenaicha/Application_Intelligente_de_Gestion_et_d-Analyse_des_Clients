@@ -1,6 +1,7 @@
 package com.example.backend.models;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "role")
@@ -11,6 +12,11 @@ public class Role {
     private Long id;
 
     private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "id_permission")
+    @JsonIgnoreProperties({ "roles" })
+    private Permission permission;
 
     public Long getId() {
         return id;
@@ -26,5 +32,13 @@ public class Role {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Permission getPermission() {
+        return permission;
+    }
+
+    public void setPermission(Permission permission) {
+        this.permission = permission;
     }
 }
