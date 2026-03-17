@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -18,21 +18,31 @@ export class Login {
   errorMessage: string = '';
   isLoading: boolean = false;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
 
-  verifRobot() { this.isRobot = !this.isRobot; }
+  verifRobot() {
+    this.isRobot = !this.isRobot;
+    this.cdr.detectChanges();
+  }
 
   verifUser() {
     this.errorMessage = '';
     if (!this.full_name || !this.password) {
       this.errorMessage = 'Veuillez remplir tous les champs.';
+      this.cdr.detectChanges();
       return;
     }
     if (!this.isRobot) {
       this.errorMessage = 'Veuillez cocher "Je ne suis pas un robot".';
+      this.cdr.detectChanges();
       return;
     }
     this.isLoading = true;
+    this.cdr.detectChanges();
 
     this.http.post<any>('http://localhost:8081/api/administrateurs/login', {
       fullName: this.full_name,
@@ -58,6 +68,7 @@ export class Login {
           error: () => {
             this.isLoading = false;
             this.errorMessage = 'Nom complet ou mot de passe incorrect.';
+            this.cdr.detectChanges();
           }
         });
       }

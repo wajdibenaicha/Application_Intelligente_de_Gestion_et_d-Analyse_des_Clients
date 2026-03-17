@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
@@ -19,7 +19,7 @@ export class ForgotPassword {
   isLoading: boolean = false;
   emailSent: boolean = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   sendResetEmail() {
     this.errorMessage = '';
@@ -37,6 +37,7 @@ export class ForgotPassword {
     }
 
     this.isLoading = true;
+    this.cdr.detectChanges();
 
     this.http.post('http://localhost:8081/api/password/forgot', { email: this.email },
       { observe: 'response' }
@@ -48,6 +49,7 @@ export class ForgotPassword {
         } else {
           this.errorMessage = 'Une erreur est survenue.';
         }
+        this.cdr.detectChanges();
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading = false;
@@ -58,6 +60,7 @@ export class ForgotPassword {
         } else {
           this.errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
         }
+        this.cdr.detectChanges();
       }
     });
   }

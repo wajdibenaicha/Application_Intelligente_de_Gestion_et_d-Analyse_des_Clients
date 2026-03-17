@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
 import com.example.backend.Repository.QuestionRepository;
+import com.example.backend.Repository.QuestionnaireRepository;
 import com.example.backend.models.Question;
+import com.example.backend.models.Questionnaire;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,9 @@ public class QuestionController {
 
     @Autowired
     private QuestionRepository questionRepository;
+
+    @Autowired
+    private QuestionnaireRepository questionnaireRepository;
 
     @GetMapping
     public List<Question> getAll() {
@@ -37,6 +42,11 @@ public class QuestionController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+        List<Questionnaire> questionnaires = questionnaireRepository.findAll();
+        for (Questionnaire q : questionnaires) {
+            q.getQuestions().removeIf(question -> question.getId().equals(id));
+            questionnaireRepository.save(q);
+        }
         questionRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }

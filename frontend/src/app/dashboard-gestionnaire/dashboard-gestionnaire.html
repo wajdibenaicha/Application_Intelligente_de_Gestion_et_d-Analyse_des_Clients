@@ -8,12 +8,15 @@
 
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
     <div class="sidebar-header">
-      <div class="logo-wrapper">
-        <span class="logo-icon">⭐</span>
-        <span class="logo-text">STAR</span>
-      </div>
-      <button class="collapse-btn" (click)="toggleSidebar()">☰</button>
-    </div>
+  <div class="logo-wrapper">
+    <img src="images/LOGO-STAR-Assurances_page-0001.jpg" 
+         alt="STAR" 
+         class="sidebar-logo"
+         *ngIf="!sidebarCollapsed">
+    <span class="logo-icon" *ngIf="sidebarCollapsed">⭐</span>
+  </div>
+  <button class="collapse-btn" (click)="toggleSidebar()">☰</button>
+</div>
 
     <div class="user-info">
       <div class="avatar">{{ getInitials() }}</div>
