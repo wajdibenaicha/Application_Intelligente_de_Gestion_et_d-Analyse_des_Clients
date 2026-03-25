@@ -1,0 +1,398 @@
+<div class="dashboard">
+  <aside class="sidebar">
+    <div class="logo-box">
+      <img src="assets/images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="logo-img" />
+    </div>
+    <nav>
+      <a class="nav-item" [class.active]="activeTab==='gestionnaires'"  (click)="activeTab='gestionnaires'">👤 Gestionnaires</a>
+      <a class="nav-item" [class.active]="activeTab==='questionnaires'" (click)="activeTab='questionnaires'">📋 Questionnaires</a>
+      <a class="nav-item" [class.active]="activeTab==='reponses'"       (click)="activeTab='reponses'">💬 Réponses</a>
+      <a class="nav-item" [class.active]="activeTab==='offres'"         (click)="activeTab='offres'">🎁 Offres</a>
+      <a class="nav-item" [class.active]="activeTab==='roles'"          (click)="activeTab='roles'">🔑 Rôles</a>
+      <a class="nav-item" [class.active]="activeTab==='permissions'"    (click)="activeTab='permissions'">🛡️ Permissions</a>
+    </nav>
+    <div class="sidebar-footer">© 2026 STAR Assurances</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1>
+        <span *ngIf="activeTab==='gestionnaires'">Gestionnaires</span>
+        <span *ngIf="activeTab==='questionnaires'">Questionnaires</span>
+        <span *ngIf="activeTab==='reponses'">Réponses Clients</span>
+        <span *ngIf="activeTab==='offres'">Offres</span>
+        <span *ngIf="activeTab==='roles'">Rôles</span>
+        <span *ngIf="activeTab==='permissions'">Permissions</span>
+      </h1>
+      <div class="topbar-actions">
+        <button class="btn-add" *ngIf="activeTab==='gestionnaires'"  (click)="openaddgestionnaire()">+ Ajouter</button>
+        <button class="btn-add" *ngIf="activeTab==='questionnaires'" (click)="openaddquestionnaire()">+ Créer</button>
+        <button class="btn-add" *ngIf="activeTab==='offres'"         (click)="openaddoffre()">+ Ajouter offre</button>
+        <button class="btn-add" *ngIf="activeTab==='roles'"          (click)="openaddrole()">+ Ajouter rôle</button>
+        <button class="btn-add" *ngIf="activeTab==='permissions'"    (click)="openaddpermission()">+ Ajouter permission</button>
+        <div class="admin-badge">👨‍💼 Admin</div>
+      </div>
+    </header>
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">👤</div>
+        <div><div class="stat-value">{{ gestionnaire.length }}</div><div class="stat-label">Gestionnaires</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div><div class="stat-value">{{ questionnaires.length }}</div><div class="stat-label">Questionnaires</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💬</div>
+        <div><div class="stat-value">{{ responses.length }}</div><div class="stat-label">Réponses</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🎁</div>
+        <div><div class="stat-value">{{ offres.length }}</div><div class="stat-label">Offres</div></div>
+      </div>
+      <div class="stat-card pending-card">
+        <div class="stat-icon">⏳</div>
+        <div><div class="stat-value">{{ unconfirmedCount }}</div><div class="stat-label">Non confirmés</div></div>
+      </div>
+    </div>
+
+    <!-- ── GESTIONNAIRES ── -->
+    <div *ngIf="activeTab==='gestionnaires'" class="card">
+      <div class="card-header"><h2>Liste des Gestionnaires</h2></div>
+      <table>
+        <thead>
+          <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let g of gestionnaire">
+            <td>{{ g.full_name }}</td>
+            <td>{{ g.email }}</td>
+            <td><span class="role-chip">{{ g.role?.name || '—' }}</span></td>
+            <td>
+              <button class="btn-edit"   (click)="openeditgestionnaire(g)">✏️ Modifier</button>
+              <button class="btn-delete" (click)="deletegestionnaire(g.id)">🗑️ Supprimer</button>
+            </td>
+          </tr>
+          <tr *ngIf="gestionnaire.length===0">
+            <td colspan="4" class="empty">Aucun gestionnaire</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── QUESTIONNAIRES ── -->
+    <div *ngIf="activeTab==='questionnaires'" class="card">
+      <div class="card-header"><h2>Liste des Questionnaires</h2></div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Titre</th><th>Questions</th><th>Statut</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let q of questionnaires">
+            <td>{{ q.id }}</td>
+            <td>{{ q.titre }}</td>
+            <td>{{ q.questions?.length || 0 }}</td>
+            <td>
+              <span class="badge confirmed" *ngIf="q.confirmed">✓ Confirmé</span>
+              <span class="badge pending"   *ngIf="!q.confirmed">⏳ En attente</span>
+            </td>
+            <td>
+              <button class="btn-edit"    *ngIf="!q.confirmed" (click)="oppeneditquestionnaire(q)">✏️</button>
+              <button class="btn-confirm" *ngIf="!q.confirmed" (click)="confirmquestionnaire(q.id)">✅ Confirmer</button>
+              <button class="btn-delete"                       (click)="deletequestionnaire(q.id)">🗑️</button>
+              <span class="locked" *ngIf="q.confirmed">🔒</span>
+            </td>
+          </tr>
+          <tr *ngIf="questionnaires.length===0">
+            <td colspan="5" class="empty">Aucun questionnaire</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── REPONSES ── -->
+    <div *ngIf="activeTab==='reponses'" class="card">
+      <div class="card-header"><h2>Réponses des Clients</h2></div>
+      <div *ngFor="let group of groupresponses() let i=index" class="reponse-group">
+        <div class="group-title">📋 {{ group.questionnaire?.titre || 'Questionnaire inconnu' }}</div>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Question</th><th>Réponse</th><th>Client</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of group.reponses">
+              <td>{{ r.id }}</td>
+              <td>{{ r.question?.titre || '—' }}</td>
+              <td>{{ r.reponse }}</td>
+              <td>{{ r.client?.full_name || r.client?.name || '—' }}</td>
+              <td>
+                <button class="btn-confirm" (click)="opensendoffres(r)">🎁 Envoyer offre</button>
+                <button class="btn-delete"  (click)="deletereponse(r.id)">🗑️</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div *ngIf="responses.length===0" class="empty">Aucune réponse disponible</div>
+    </div>
+
+    <!-- ── OFFRES ── -->
+    <div *ngIf="activeTab==='offres'" class="card">
+      <div class="card-header"><h2>Liste des Offres</h2></div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Titre</th><th>Description</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let o of offres">
+            <td>{{ o.id }}</td>
+            <td>{{ o.title }}</td>
+            <td>{{ o.description }}</td>
+            <td>
+              <button class="btn-edit"   (click)="openeditoffre(o)">✏️ Modifier</button>
+              <button class="btn-delete" (click)="deleteoffre(o.id)">🗑️ Supprimer</button>
+            </td>
+          </tr>
+          <tr *ngIf="offres.length===0">
+            <td colspan="4" class="empty">Aucune offre</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── ROLES ── -->
+    <div *ngIf="activeTab==='roles'" class="card">
+      <div class="card-header"><h2>Liste des Rôles</h2></div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of roles">
+            <td>{{ r.id }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.permission?.description || r.permissions?.description || '—' }}</td>
+            <td>
+              <button class="btn-edit"   (click)="openeditrole(r)">✏️ Modifier</button>
+              <button class="btn-delete" (click)="deleterole(r.id)">🗑️ Supprimer</button>
+            </td>
+          </tr>
+          <tr *ngIf="roles.length===0">
+            <td colspan="4" class="empty">Aucun rôle</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── PERMISSIONS ── -->
+    <div *ngIf="activeTab==='permissions'" class="card">
+      <div class="card-header"><h2>Liste des Permissions</h2></div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Nom</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of permissions">
+            <td>{{ p.id }}</td>
+            <td>{{ p.name }}</td>
+            <td>
+              <button class="btn-edit"   (click)="openeditpermission(p)">✏️ Modifier</button>
+              <button class="btn-delete" (click)="deletepermission(p.id)">🗑️ Supprimer</button>
+            </td>
+          </tr>
+          <tr *ngIf="permissions.length===0">
+            <td colspan="3" class="empty">Aucune permission</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL GESTIONNAIRE
+════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showgestform" (click)="showgestform=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editinggest ? '✏️ Modifier Gestionnaire' : '👤 Ajouter Gestionnaire' }}</h2>
+    </div>
+    <label>Nom Complet</label>
+    <input [(ngModel)]="gestform.full_name" placeholder="Nom complet" />
+    <label>Email</label>
+    <input [(ngModel)]="gestform.email" placeholder="Email" type="email" />
+    <label>Mot de passe</label>
+    <input [(ngModel)]="gestform.password" placeholder="Mot de passe" type="password" />
+    <label>Rôle</label>
+    <select [(ngModel)]="gestform.role">
+      <option [ngValue]="null">— Aucun rôle —</option>
+      <option *ngFor="let r of roles" [ngValue]="r">{{ r.name }}</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showgestform=false">Annuler</button>
+      <button class="btn-save"   (click)="savegestionnaire()">{{ editinggest ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL QUESTIONNAIRE
+════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showquestform" (click)="showquestform=false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingquest ? '✏️ Modifier Questionnaire' : '📋 Nouveau Questionnaire' }}</h2>
+    </div>
+    <label>Titre</label>
+    <input [(ngModel)]="questform.title" placeholder="Titre du questionnaire" />
+    <label>Description</label>
+    <input [(ngModel)]="questform.description" placeholder="Description" />
+
+    <div class="questions-section">
+      <!-- LEFT: pool -->
+      <div class="questions-pool">
+        <div class="section-title">📚 Questions existantes</div>
+        <div class="search-hint">Cliquez pour ajouter / retirer</div>
+        <div class="questions-list">
+          <div *ngFor="let q of questions"
+               class="q-chip"
+               [class.selected]="isselectedquestion(q.id)"
+               (click)="changequestion(q.id)">
+            <span class="q-type-badge">{{ q.type }}</span>
+            {{ q.titre || q.title }}
+            <span class="q-check" *ngIf="isselectedquestion(q.id)">✓</span>
+          </div>
+          <div *ngIf="questions.length===0" class="empty-pool">Aucune question disponible</div>
+        </div>
+        <button class="btn-new-q" (click)="showaddquestion=!showaddquestion">+ Créer nouvelle question</button>
+        <div *ngIf="showaddquestion" class="new-q-form">
+          <input [(ngModel)]="newquest.title" placeholder="Titre de la question" />
+          <select [(ngModel)]="newquest.type">
+            <option value="text">Texte libre</option>
+            <option value="radio">Choix unique</option>
+            <option value="checkbox">Choix multiple</option>
+            <option value="select">Liste déroulante</option>
+          </select>
+          <input *ngIf="newquest.type!=='text'" [(ngModel)]="newquest.options" placeholder="Options séparées par virgule" />
+          <button class="btn-save-q" (click)="createaddquestion()">✓ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: selected -->
+      <div class="questions-selected">
+        <div class="section-title">📋 Questions sélectionnées</div>
+        <div class="search-hint">Glissez pour réorganiser</div>
+        <div class="drop-zone">
+          <div *ngFor="let q of selectedquestion; let i=index"
+               class="selected-chip"
+               draggable="true"
+               [class.drag-over]="dragoverIndex===i"
+               (dragstart)="dragStart(i,$event)"
+               (dragover)="dragover(i,$event)"
+               (drop)="drop(i,$event)">
+            <span class="drag-handle">⠿</span>
+            <span class="q-num">{{ i+1 }}</span>
+            <span class="q-type-badge">{{ q.type }}</span>
+            {{ q.titre || q.title }}
+            <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
+          </div>
+          <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showquestform=false">Annuler</button>
+      <button class="btn-save"   (click)="savequestionnaire()">{{ editingquest ? 'Modifier' : 'Créer' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL OFFRE
+════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showoffreform" (click)="showoffreform=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingoffre ? '✏️ Modifier Offre' : '🎁 Ajouter Offre' }}</h2>
+    </div>
+    <label>Titre</label>
+    <input [(ngModel)]="offreform.title" placeholder="Titre de l'offre" />
+    <label>Description</label>
+    <textarea [(ngModel)]="offreform.description" placeholder="Description de l'offre..." rows="4"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showoffreform=false">Annuler</button>
+      <button class="btn-save"   (click)="saveoffre()">{{ editingoffre ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL ROLE
+════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showroleform" (click)="showroleform=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingrole ? '✏️ Modifier Rôle' : '🔑 Ajouter Rôle' }}</h2>
+    </div>
+    <label>Nom du rôle</label>
+    <input [(ngModel)]="roleform.name" placeholder="Nom du rôle" />
+    <label>Permission associée</label>
+    <select [(ngModel)]="roleform.permissions">
+      <option [ngValue]="null">— Aucune permission —</option>
+      <option *ngFor="let p of permissions" [ngValue]="p">{{ p.name }}</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showroleform=false">Annuler</button>
+      <button class="btn-save"   (click)="saverole()">{{ editingrole ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL PERMISSION
+════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showpermissionform" (click)="showpermissionform=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingpermission ? '✏️ Modifier Permission' : '🛡️ Ajouter Permission' }}</h2>
+    </div>
+    <label>Nom de la permission</label>
+    <input [(ngModel)]="permissionform.name" placeholder="Nom de la permission" />
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showpermissionform=false">Annuler</button>
+      <button class="btn-save"   (click)="savepermission()">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL ENVOYER OFFRE
+════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showsendoffreform" (click)="showsendoffreform=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>🎁 Envoyer une Offre</h2>
+    </div>
+    <div class="reponse-info">
+      <div><strong>Question:</strong> {{ selectdreponse?.question?.titre }}</div>
+      <div><strong>Réponse client:</strong> {{ selectdreponse?.reponse }}</div>
+    </div>
+    <label>Choisir une offre</label>
+    <select [(ngModel)]="selectedoffreid">
+      <option [ngValue]="null">— Sélectionner une offre —</option>
+      <option *ngFor="let o of offres" [ngValue]="o.id">{{ o.title }} — {{ o.description }}</option>
+    </select>
+    <div class="or-divider">— ou —</div>
+    <button class="btn-new-q" (click)="showsendoffreform=false; activeTab='offres'; openaddoffre()">
+      + Créer une nouvelle offre
+    </button>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showsendoffreform=false">Annuler</button>
+      <button class="btn-save" [disabled]="!selectedoffreid" (click)="sendoffre()">📤 Envoyer</button>
+    </div>
+  </div>
+</div>
