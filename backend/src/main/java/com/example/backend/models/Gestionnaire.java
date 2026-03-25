@@ -22,6 +22,8 @@ public class Gestionnaire {
     @JsonIgnoreProperties({ "gestionnaires" })
     private Role role;
 
+    public Gestionnaire() {}
+
     public Long getId() {
         return id;
     }

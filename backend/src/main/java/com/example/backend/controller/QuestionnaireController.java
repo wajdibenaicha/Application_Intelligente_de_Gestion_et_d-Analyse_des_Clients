@@ -1,11 +1,13 @@
 package com.example.backend.controller;
 
-import com.example.backend.models.Questionnaire;
-import com.example.backend.service.QuestionnaireService;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
+
+import com.example.backend.models.Questionnaire;
+import com.example.backend.service.QuestionnaireService;
 
 @RestController
 @RequestMapping("/api/questionnaires")
@@ -23,6 +25,15 @@ public class QuestionnaireController {
     @GetMapping("/gestionnaire/{id}")
     public List<Questionnaire> getByGestionnaire(@PathVariable Long id) {
         return questionnaireService.getAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Questionnaire> getQuestionnaireById(@PathVariable Long id) {
+        Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
+        if (questionnaire != null) {
+            return ResponseEntity.ok(questionnaire);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping
@@ -57,5 +68,12 @@ public class QuestionnaireController {
     public ResponseEntity<Questionnaire> demanderPublication(@PathVariable Long id) {
         return questionnaireService.findById(id).map(q -> ResponseEntity.ok(questionnaireService.save(q)))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/confirm")
+    public ResponseEntity<Questionnaire> confirmQuestionnaire(@PathVariable Long id) {
+        Questionnaire q = questionnaireService.confirmQuestionnaire(id);
+        if (q != null) return ResponseEntity.ok(q);
+        return ResponseEntity.notFound().build();
     }
 }
