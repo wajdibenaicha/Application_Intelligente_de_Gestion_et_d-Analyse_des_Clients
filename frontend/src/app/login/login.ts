@@ -52,7 +52,7 @@ export class Login {
         this.isLoading = false;
         sessionStorage.setItem('user', JSON.stringify(admin));
         sessionStorage.setItem('role', 'administrateur');
-        this.router.navigate(['/dashboard-admin']);
+        this.router.navigate(['/dashbord-admin']);
       },
       error: () => {
         this.http.post<any>('http://localhost:8081/api/gestionnaires/login', {

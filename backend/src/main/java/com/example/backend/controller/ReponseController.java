@@ -14,6 +14,11 @@ public class ReponseController {
     @Autowired
     private ReponseRepository reponseRepository;
 
+    @GetMapping
+    public List<Reponse> getAll() {
+        return reponseRepository.findAll();
+    }
+
     @GetMapping("/questionnaire/{id}")
     public List<Reponse> getByQuestionnaire(@PathVariable Long id) {
         return reponseRepository.findByQuestionnaireId(id);
@@ -22,5 +27,10 @@ public class ReponseController {
     @PostMapping
     public Reponse create(@RequestBody Reponse reponse) {
         return reponseRepository.save(reponse);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        reponseRepository.deleteById(id);
     }
 }

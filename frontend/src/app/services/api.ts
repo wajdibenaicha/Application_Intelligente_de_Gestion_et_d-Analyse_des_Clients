@@ -17,7 +17,7 @@ private base = 'http://localhost:8081/api';
   addQuestionnaire(questionnaire: any): Observable<any> { return this.http.post<any>(`${this.base}/questionnaires`, questionnaire);}
   deleteQuestionnaire(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/questionnaires/${id}`);}
   updateQuestionnaire(id: number, questionnaire: any): Observable<any> { return this.http.put<any>(`${this.base}/questionnaires/${id}`, questionnaire);}
-  confirmQuestionnaire(id: number): Observable<any> { return this.http.post<any>(`${this.base}/questionnaires/${id}/confirm`, {});}
+  confirmQuestionnaire(id: number): Observable<any> { return this.http.patch<any>(`${this.base}/questionnaires/${id}/confirm`, {});}
 
   getQuestions(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/questions`);}
   addQuestion(question: any): Observable<any> { return this.http.post<any>(`${this.base}/questions`, question);}

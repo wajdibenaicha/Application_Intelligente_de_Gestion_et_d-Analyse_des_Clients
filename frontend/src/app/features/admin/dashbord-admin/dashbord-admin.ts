@@ -39,7 +39,7 @@ selectedoffreid: number | null = null;
 
   showquestform = false;
   editingquest: any = null;
-  newquest: any = { title: '', type: 'text', options: '' };
+  newquest: any = { titre: '', type: 'text', options: '' };
   showaddquestion = false;
 selectedquestion: any[] = [];
   questform: any = {
@@ -177,26 +177,32 @@ savegestionnaire() {
     this.questform = {
       titre: quest.titre,
       description: quest.description,
-      questions: quest.questions  
+      questions: quest.questions.map((q: any) => q.id)
     };
-    this.selectedquestion = this.questions.filter(q => quest.questions.includes(q.id));
+    this.selectedquestion = this.questions.filter(q => quest.questions.some((qq: any) => qq.id === q.id));
     this.showquestform = true;
   }
 
   savequestionnaire() {
-      this.questform.questions = this.selectedquestion.map(q => q.id);
+      this.questform.questions = this.selectedquestion;
       if (this.editingquest) {
-        this.api.updateQuestionnaire(this.editingquest.id, this.questform).subscribe((updated: any) => {
-          const index = this.questionnaires.findIndex(q => q.id === this.editingquest.id);
-          if (index !== -1) {
-            this.questionnaires[index] = updated;
-          }
-          this.showquestform = false;
+        this.api.updateQuestionnaire(this.editingquest.id, this.questform).subscribe({
+          next: (updated: any) => {
+            const index = this.questionnaires.findIndex(q => q.id === this.editingquest.id);
+            if (index !== -1) {
+              this.questionnaires[index] = updated;
+            }
+            this.showquestform = false;
+          },
+          error: () => { this.showquestform = false; }
         });
       } else {
-        this.api.addQuestionnaire(this.questform).subscribe((newquest: any) => {
-          this.questionnaires.push(newquest);
-          this.showquestform = false;
+        this.api.addQuestionnaire(this.questform).subscribe({
+          next: (newquest: any) => {
+            this.questionnaires.push(newquest);
+            this.showquestform = false;
+          },
+          error: () => { this.showquestform = false; }
         });
       }
     }
