@@ -247,7 +247,7 @@
       <h2>{{ editingquest ? '✏️ Modifier Questionnaire' : '📋 Nouveau Questionnaire' }}</h2>
     </div>
     <label>Titre</label>
-    <input [(ngModel)]="questform.title" placeholder="Titre du questionnaire" />
+    <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
     <label>Description</label>
     <input [(ngModel)]="questform.description" placeholder="Description" />
 
@@ -269,7 +269,7 @@
         </div>
         <button class="btn-new-q" (click)="showaddquestion=!showaddquestion">+ Créer nouvelle question</button>
         <div *ngIf="showaddquestion" class="new-q-form">
-          <input [(ngModel)]="newquest.title" placeholder="Titre de la question" />
+          <input [(ngModel)]="newquest.titre" placeholder="Titre de la question" />
           <select [(ngModel)]="newquest.type">
             <option value="text">Texte libre</option>
             <option value="radio">Choix unique</option>
