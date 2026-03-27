@@ -1,22 +1,12 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Mot de passe oubliée</title>
-  </head>
-    <body>
-        <div class="dashboard">
-
+<div class="dashboard">
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
     <div class="sidebar-header">
-  <div class="logo-wrapper">
-    <img src="images/LOGO-STAR-Assurances_page-0001.jpg" 
-         alt="STAR" 
-         class="sidebar-logo"
-         *ngIf="!sidebarCollapsed">
-    <span class="logo-icon" *ngIf="sidebarCollapsed">⭐</span>
-  </div>
-  <button class="collapse-btn" (click)="toggleSidebar()">☰</button>
-</div>
+      <div class="logo-wrapper">
+        <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="sidebar-logo" *ngIf="!sidebarCollapsed">
+        <span class="logo-icon" *ngIf="sidebarCollapsed">⭐</span>
+      </div>
+      <button class="collapse-btn" (click)="toggleSidebar()">☰</button>
+    </div>
 
     <div class="user-info">
       <div class="avatar">{{ getInitials() }}</div>
@@ -52,7 +42,6 @@
   </aside>
 
   <main class="main-content">
-
     <header class="topbar">
       <div class="topbar-left">
         <h2 class="section-title">{{ getSectionTitle() }}</h2>
@@ -329,12 +318,9 @@
         </div>
       </div>
     </section>
-
   </main>
 </div>
 
 <div class="toast" [class.show]="showToast" [class.toast-error]="toastType === 'error'">
   {{ toastMessage }}
 </div>
-    </body>
-</html>
