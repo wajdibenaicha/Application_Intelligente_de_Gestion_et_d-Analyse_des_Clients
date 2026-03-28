@@ -19,6 +19,10 @@ public class QuestionnaireService {
         return questionnaireRepository.findAll();
     }
 
+    public List<Questionnaire> getByGestionnaireId(Long gestionnaireId) {
+        return questionnaireRepository.findByGestionnaireIdOrGestionnaireIsNull(gestionnaireId);
+    }
+
     public Questionnaire save(Questionnaire q) {
         return questionnaireRepository.save(q);
     }
@@ -35,11 +39,29 @@ public class QuestionnaireService {
         questionnaireRepository.deleteById(id);
     }
 
+    public Questionnaire demanderPublication(Long id) {
+        Questionnaire q = getQuestionnaireById(id);
+        if (q != null) {
+            q.setStatut("EN_ATTENTE");
+            return questionnaireRepository.save(q);
+        }
+        return null;
+    }
+
     public Questionnaire confirmQuestionnaire(Long id) {
-        Questionnaire exist = getQuestionnaireById(id);
-        if (exist != null) {
-            exist.setConfirmed(true);
-            return questionnaireRepository.save(exist);
+        Questionnaire q = getQuestionnaireById(id);
+        if (q != null) {
+            q.setStatut("PUBLIE");
+            return questionnaireRepository.save(q);
+        }
+        return null;
+    }
+
+    public Questionnaire rejeterQuestionnaire(Long id) {
+        Questionnaire q = getQuestionnaireById(id);
+        if (q != null) {
+            q.setStatut("REJETE");
+            return questionnaireRepository.save(q);
         }
         return null;
     }

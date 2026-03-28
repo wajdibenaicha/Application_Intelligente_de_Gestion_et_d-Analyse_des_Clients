@@ -1,8 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Login } from './login';
-
-/*import monLogo from 'src/assets/images/LOGO-STAR-Assurances_page-0001.jpg';*/
 describe('Login', () => {
   let component: Login;
   let fixture: ComponentFixture<Login>;

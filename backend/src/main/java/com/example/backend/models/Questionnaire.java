@@ -3,6 +3,7 @@ package com.example.backend.models;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "questionnaire")
@@ -13,12 +14,20 @@ public class Questionnaire {
     private Long id;
 
     private String titre;
+    private String description;
+    private String statut = "BROUILLON";
 
-    private boolean confirmed = false;
+    @ManyToOne
+    @JoinColumn(name = "gestionnaire_id")
+    @JsonIgnoreProperties({ "role", "password" })
+    private Gestionnaire gestionnaire;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(name = "questionnaire_questions", joinColumns = @JoinColumn(name = "questionnaire_id"), inverseJoinColumns = @JoinColumn(name = "question_id"))
     private List<Question> questions = new ArrayList<>();
+
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean confirmed = false;
 
     public Long getId() {
         return id;
@@ -36,12 +45,28 @@ public class Questionnaire {
         this.titre = titre;
     }
 
-    public boolean isConfirmed() {
-        return confirmed;
+    public String getDescription() {
+        return description;
     }
 
-    public void setConfirmed(boolean confirmed) {
-        this.confirmed = confirmed;
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
+    }
+
+    public Gestionnaire getGestionnaire() {
+        return gestionnaire;
+    }
+
+    public void setGestionnaire(Gestionnaire gestionnaire) {
+        this.gestionnaire = gestionnaire;
     }
 
     public List<Question> getQuestions() {
@@ -52,11 +77,11 @@ public class Questionnaire {
         this.questions = questions;
     }
 
-    public void addQuestion(Question question) {
-        this.questions.add(question);
+    public Boolean getConfirmed() {
+        return confirmed;
     }
 
-    public void removeQuestion(Question question) {
-        this.questions.remove(question);
+    public void setConfirmed(Boolean confirmed) {
+        this.confirmed = confirmed;
     }
 }
