@@ -20,12 +20,12 @@ export class DashbordAdmin implements OnInit {
     isLoading = true;
 
     questionnaires: any[] = [];
-    questions : any[] = [];
-    gestionnaire: any [] = [];
-    responses : any [] = [];
-    roles : any [] = [];
-    permissions : any [] = [];
-    offres : any [] = [];
+    questions: any[] = [];
+    gestionnaire: any[] = [];
+    responses: any[] = [];
+    roles: any[] = [];
+    permissions: any[] = [];
+    offres: any[] = [];
 
     selectdreponse: any = null;
     selectedoffreid: number | null = null;
@@ -35,7 +35,7 @@ export class DashbordAdmin implements OnInit {
     gestform: any = {
         full_name: '',
         email: '',
-        password: '' , 
+        password: '',
         role: null
     };
 
@@ -45,7 +45,8 @@ export class DashbordAdmin implements OnInit {
     showaddquestion = false;
     selectedquestion: any[] = [];
     questform: any = {
-        title: '',
+        titre: '',
+        description: '',
         questions: []
     };
     dragoverIndex = -1;
@@ -66,20 +67,8 @@ export class DashbordAdmin implements OnInit {
     showoffreform = false;
     editingoffre: any = null;
     offreform: any = {
+        title: '',
         description: ''
-    };
-
-    showresponseform = false;
-    editingresponse: any = null
-    responseform: any = {
-        questionnaireId: null,
-        answers: []
-    };
-
-    showsendquestform = false;
-    sendform: any = {
-        questionnaireId: null,
-        email: ''
     };
 
     showsendoffreform = false;
@@ -137,8 +126,8 @@ export class DashbordAdmin implements OnInit {
         this.gestform = {
             full_name: '',
             email: '',
-            password: '' ,
-            role: null 
+            password: '',
+            role: null
         };
         this.showgestform = true;
     }
@@ -146,10 +135,10 @@ export class DashbordAdmin implements OnInit {
     openeditgestionnaire(gest: any) {
         this.editinggest = gest;
         this.gestform = {
-            name: gest.full_name,
+            full_name: gest.fullName,
             email: gest.email,
-            password: '' ,
-            role : gest.role
+            password: '',
+            role: gest.role
         };
         this.showgestform = true;
     }
@@ -172,7 +161,7 @@ export class DashbordAdmin implements OnInit {
     }
 
     deletegestionnaire(id: number) {
-        if(confirm('supprimer ce gestionnaire ?')){
+        if (confirm('Supprimer ce gestionnaire ?')) {
             this.api.deleteGestionnaire(id).subscribe(() => {
                 this.gestionnaire = this.gestionnaire.filter(g => g.id !== id);
             });
@@ -181,6 +170,7 @@ export class DashbordAdmin implements OnInit {
 
     openaddquestionnaire() {
         this.editingquest = null;
+        this.selectedquestion = [];
         this.questform = {
             titre: '',
             description: '',
@@ -194,9 +184,9 @@ export class DashbordAdmin implements OnInit {
         this.questform = {
             titre: quest.titre,
             description: quest.description,
-            questions: quest.questions.map((q: any) => q.id)
+            questions: quest.questions ? quest.questions.map((q: any) => q.id) : []
         };
-        this.selectedquestion = this.questions.filter(q => quest.questions.some((qq: any) => qq.id === q.id));
+        this.selectedquestion = quest.questions ? [...quest.questions] : [];
         this.showquestform = true;
     }
 
@@ -225,7 +215,7 @@ export class DashbordAdmin implements OnInit {
     }
 
     deletequestionnaire(id: number) {
-        if(confirm('supprimer ce questionnaire ?')){
+        if (confirm('Supprimer ce questionnaire ?')) {
             this.api.deleteQuestionnaire(id).subscribe(() => {
                 this.questionnaires = this.questionnaires.filter(q => q.id !== id);
             });
@@ -235,79 +225,115 @@ export class DashbordAdmin implements OnInit {
     confirmquestionnaire(id: number) {
         this.api.confirmQuestionnaire(id).subscribe((updated: any) => {
             const index = this.questionnaires.findIndex(q => q.id === id);
-            if (index !== -1){
+            if (index !== -1) {
                 this.questionnaires[index] = updated;
             }
         });
     }
 
     isselectedquestion(id: number): boolean {
-        return this.questform.questions.includes(id);
+        for (let i = 0; i < this.questform.questions.length; i++) {
+            if (this.questform.questions[i] === id) return true;
+        }
+        return false;
     }
 
     changequestion(id: number) {
-        if (this.isselectedquestion(id)) {
-            this.questform.questions = this.questform.questions.filter((qId: number) => qId !== id);
-            this.selectedquestion = this.selectedquestion.filter(q => q.id !== id);
+        let found = false;
+        for (let i = 0; i < this.questform.questions.length; i++) {
+            if (this.questform.questions[i] === id) {
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            const newIds = [];
+            for (let i = 0; i < this.questform.questions.length; i++) {
+                if (this.questform.questions[i] !== id) {
+                    newIds.push(this.questform.questions[i]);
+                }
+            }
+            this.questform.questions = newIds;
+
+            const newSelected = [];
+            for (let i = 0; i < this.selectedquestion.length; i++) {
+                if (this.selectedquestion[i].id !== id) {
+                    newSelected.push(this.selectedquestion[i]);
+                }
+            }
+            this.selectedquestion = newSelected;
         } else {
             this.questform.questions.push(id);
-            const question = this.questions.find(q => q.id === id);
-            if (question) this.selectedquestion.push(question);
+            for (let i = 0; i < this.questions.length; i++) {
+                if (this.questions[i].id === id) {
+                    this.selectedquestion.push(this.questions[i]);
+                    break;
+                }
+            }
         }
     }
 
     removeselectedquestion(id: number) {
-        this.questform.questions = this.questform.questions.filter((qId: number) => qId !== id);
-        this.selectedquestion = this.selectedquestion.filter(q => q.id !== id);
+        const newIds = [];
+        for (let i = 0; i < this.questform.questions.length; i++) {
+            if (this.questform.questions[i] !== id) {
+                newIds.push(this.questform.questions[i]);
+            }
+        }
+        this.questform.questions = newIds;
+
+        const newSelected = [];
+        for (let i = 0; i < this.selectedquestion.length; i++) {
+            if (this.selectedquestion[i].id !== id) {
+                newSelected.push(this.selectedquestion[i]);
+            }
+        }
+        this.selectedquestion = newSelected;
     }
 
     createaddquestion() {
-        if (!this.newquest.titre) return ; 
+        if (!this.newquest.titre) return;
         this.api.addQuestion(this.newquest).subscribe((c: any) => {
             this.selectedquestion.push(c);
             this.questions.push(c);
-            this.newquest = {
-                titre: '',
-                type: 'text',
-                options: []
-            };
+            this.newquest = { titre: '', type: 'text', options: [] };
             this.showaddquestion = false;
-        });  
+        });
     }
 
-    dragStart(i: number, e: DragEvent) { 
-        e.dataTransfer?.setData('text/plain', i.toString()); 
+    dragStart(i: number, e: DragEvent) {
+        e.dataTransfer?.setData('text/plain', i.toString());
     }
 
-    dragover(i : number, e: DragEvent){
+    dragover(i: number, e: DragEvent) {
         e.preventDefault();
         this.dragoverIndex = i;
     }
 
-    drop(toindex : number, e: DragEvent) {
+    drop(toindex: number, e: DragEvent) {
         e.preventDefault();
         const from = parseInt(e.dataTransfer?.getData('text/plain') || '0');
         const item = this.selectedquestion.splice(from, 1)[0];
         this.selectedquestion.splice(toindex, 0, item);
         this.dragoverIndex = -1;
-        this.questform.questions = this.selectedquestion.map(q => q.id);
+
+        const newIds = [];
+        for (let i = 0; i < this.selectedquestion.length; i++) {
+            newIds.push(this.selectedquestion[i].id);
+        }
+        this.questform.questions = newIds;
     }
 
     openaddoffre() {
         this.editingoffre = null;
-        this.offreform = {
-            title: '',
-            description: ''
-        };
+        this.offreform = { title: '', description: '' };
         this.showoffreform = true;
     }
 
     openeditoffre(offre: any) {
         this.editingoffre = offre;
-        this.offreform = {
-            title: offre.title,
-            description: offre.description
-        };
+        this.offreform = { title: offre.title, description: offre.description };
         this.showoffreform = true;
     }
 
@@ -329,22 +355,22 @@ export class DashbordAdmin implements OnInit {
     }
 
     deleteoffre(id: number) {
-        if(confirm('supprimer cette offre ?')){
+        if (confirm('Supprimer cette offre ?')) {
             this.api.deleteoffre(id).subscribe(() => {
                 this.offres = this.offres.filter(o => o.id !== id);
-            }); 
+            });
         }
     }
 
     deletereponse(id: number) {
-        if(confirm('supprimer cette réponse ?')){
+        if (confirm('Supprimer cette réponse ?')) {
             this.api.deleteResponse(id).subscribe(() => {
                 this.responses = this.responses.filter(r => r.id !== id);
-            }); 
+            });
         }
     }
 
-    opensendoffres(r : any) {
+    opensendoffres(r: any) {
         this.selectdreponse = r;
         this.selectedoffreid = null;
         this.showsendoffreform = true;
@@ -352,36 +378,51 @@ export class DashbordAdmin implements OnInit {
 
     sendoffre() {
         if (!this.selectedoffreid) return;
-        const offre = this.offres.find(o => o.id === this.selectedoffreid);
-        alert(`Offre "${offre.title}" envoyée à ${this.selectdreponse.email}`);
+
+        let offreTitle = '';
+        for (let i = 0; i < this.offres.length; i++) {
+            if (this.offres[i].id === this.selectedoffreid) {
+                offreTitle = this.offres[i].title;
+                break;
+            }
+        }
+
+        alert('Offre "' + offreTitle + '" envoyée à ' + this.selectdreponse.email);
         this.showsendoffreform = false;
     }
 
-    groupresponses() : any[] {
+    groupresponses(): any[] {
         const grouped: any = {};
-        this.responses.forEach(r => {
-            const key = r.questionnaire?.id  || 'unknown';
-            if (!grouped[key]) grouped[key] = { questionnaire: r.questionnaire, reponses: [] };
+
+        for (let i = 0; i < this.responses.length; i++) {
+            const r = this.responses[i];
+            const key = r.questionnaire ? r.questionnaire.id : 'unknown';
+
+            if (!grouped[key]) {
+                grouped[key] = { questionnaire: r.questionnaire, reponses: [] };
+            }
+
             grouped[key].reponses.push(r);
-        });
-        return Object.values(grouped);
+        }
+
+        const result = [];
+        const keys = Object.keys(grouped);
+        for (let i = 0; i < keys.length; i++) {
+            result.push(grouped[keys[i]]);
+        }
+
+        return result;
     }
 
     openaddrole() {
         this.editingrole = null;
-        this.roleform = {
-            name: '',
-            permissions: []
-        };
+        this.roleform = { name: '', permissions: [] };
         this.showroleform = true;
     }
 
     openeditrole(role: any) {
         this.editingrole = role;
-        this.roleform = {
-            name: role.name,
-            permissions: role.permissions
-        };
+        this.roleform = { name: role.name, permissions: role.permissions };
         this.showroleform = true;
     }
 
@@ -403,55 +444,57 @@ export class DashbordAdmin implements OnInit {
     }
 
     deleterole(id: number) {
-        if(confirm('supprimer ce rôle ?')){
+        if (confirm('Supprimer ce rôle ?')) {
             this.api.deleterole(id).subscribe(() => {
                 this.roles = this.roles.filter(r => r.id !== id);
-            }); 
+            });
         }
     }
 
     openaddpermission() {
         this.editingpermission = null;
-        this.permissionform = {
-            name: ''
-        };
+        this.permissionform = { name: '' };
         this.showpermissionform = true;
     }
 
     openeditpermission(permission: any) {
         this.editingpermission = permission;
-        this.permissionform = {
-            name: permission.name
-        };
+        this.permissionform = { name: permission.name };
         this.showpermissionform = true;
     }
 
-    savepermission() {    
+    savepermission() {
         if (this.editingpermission) {
             this.api.updatepermission(this.editingpermission.id, this.permissionform).subscribe((updated: any) => {
                 const index = this.permissions.findIndex(p => p.id === this.editingpermission.id);
                 if (index !== -1) {
                     this.permissions[index] = updated;
-                } 
+                }
                 this.showpermissionform = false;
             });
         } else {
             this.api.addpermission(this.permissionform).subscribe((newpermission: any) => {
                 this.permissions.push(newpermission);
                 this.showpermissionform = false;
-            }); 
+            });
         }
     }
 
-    deletepermission(id: number) {  
-        if(confirm('supprimer cette permission ?')){
+    deletepermission(id: number) {
+        if (confirm('Supprimer cette permission ?')) {
             this.api.deletepermission(id).subscribe(() => {
                 this.permissions = this.permissions.filter(p => p.id !== id);
             });
         }
     }
 
-    get unconfirmedCount() { 
-        return this.questionnaires.filter(q => !q.confirmed).length; 
+    get unconfirmedCount() {
+        let count = 0;
+        for (let i = 0; i < this.questionnaires.length; i++) {
+            if (this.questionnaires[i].statut === 'EN_ATTENTE') {
+                count++;
+            }
+        }
+        return count;
     }
 }

@@ -2,10 +2,7 @@
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
     <div class="sidebar-header">
       <div class="logo-wrapper">
-        <img src="images/LOGO-STAR-Assurances_page-0001.jpg"
-             alt="STAR"
-             class="sidebar-logo"
-             *ngIf="!sidebarCollapsed">
+        <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="sidebar-logo" *ngIf="!sidebarCollapsed">
         <span class="logo-icon" *ngIf="sidebarCollapsed">⭐</span>
       </div>
       <button class="collapse-btn" (click)="toggleSidebar()">☰</button>
@@ -113,7 +110,7 @@
             <div class="stat-icon">⏳</div>
             <div>
               <div class="stat-value">{{ unconfirmedCount }}</div>
-              <div class="stat-label">Non confirmés</div>
+              <div class="stat-label">En attente</div>
             </div>
           </div>
         </div>
@@ -124,10 +121,11 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Actions</th>  </thead>
+              <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Actions</th></tr>
+            </thead>
             <tbody>
               <tr *ngFor="let g of gestionnaire">
-                <td>{{ g.full_name }}</td>
+                <td>{{ g.fullName }}</td>
                 <td>{{ g.email }}</td>
                 <td><span class="role-chip">{{ g.role?.name || '—' }}</span></td>
                 <td class="actions-cell">
@@ -148,21 +146,24 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Titre</th><th>Questions</th><th>Statut</th><th>Actions</th> </thead>
+              <tr><th>Titre</th><th>Gestionnaire</th><th>Questions</th><th>Statut</th><th>Actions</th></tr>
+            </thead>
             <tbody>
               <tr *ngFor="let q of questionnaires">
-                <td>{{ q.id }}</td>
                 <td>{{ q.titre }}</td>
+                <td>{{ q.gestionnaire?.fullName || '—' }}</td>
                 <td>{{ q.questions?.length || 0 }}</td>
                 <td>
-                  <span class="badge badge-confirmed" *ngIf="q.confirmed">✓ Confirmé</span>
-                  <span class="badge badge-pending" *ngIf="!q.confirmed">⏳ En attente</span>
+                  <span class="badge badge-brouillon" *ngIf="q.statut === 'BROUILLON'">Brouillon</span>
+                  <span class="badge badge-pending" *ngIf="q.statut === 'EN_ATTENTE'">⏳ En attente</span>
+                  <span class="badge badge-confirmed" *ngIf="q.statut === 'PUBLIE'">✓ Publié</span>
+                  <span class="badge badge-danger" *ngIf="q.statut === 'REJETE'">Rejeté</span>
                 </td>
                 <td class="actions-cell">
-                  <button class="btn-icon btn-edit" *ngIf="!q.confirmed" (click)="oppeneditquestionnaire(q)">✏️</button>
-                  <button class="btn-icon btn-confirm" *ngIf="!q.confirmed" (click)="confirmquestionnaire(q.id)">✅</button>
+                  <button class="btn-icon btn-edit" *ngIf="q.statut !== 'PUBLIE'" (click)="oppeneditquestionnaire(q)">✏️</button>
+                  <button class="btn-icon btn-confirm" *ngIf="q.statut === 'EN_ATTENTE'" (click)="confirmquestionnaire(q.id)" title="Publier">✅</button>
                   <button class="btn-icon btn-delete" (click)="deletequestionnaire(q.id)">🗑️</button>
-                  <span class="locked" *ngIf="q.confirmed">🔒</span>
+                  <span class="locked" *ngIf="q.statut === 'PUBLIE'">🔒</span>
                 </td>
               </tr>
               <tr *ngIf="questionnaires.length === 0">
@@ -173,18 +174,19 @@
         </div>
 
         <div *ngIf="activeTab === 'reponses'">
-          <div *ngFor="let group of groupresponses() let i=index" class="reponse-group">
+          <div *ngFor="let group of groupresponses()" class="reponse-group">
             <div class="group-title">📋 {{ group.questionnaire?.titre || 'Questionnaire inconnu' }}</div>
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
-                  <tr><th>ID</th><th>Question</th><th>Réponse</th><th>Client</th><th>Actions</th> </thead>
+                  <tr><th>ID</th><th>Question</th><th>Réponse</th><th>Client</th><th>Actions</th></tr>
+                </thead>
                 <tbody>
                   <tr *ngFor="let r of group.reponses">
                     <td>{{ r.id }}</td>
                     <td>{{ r.question?.titre || '—' }}</td>
                     <td>{{ r.reponse }}</td>
-                    <td>{{ r.client?.full_name || r.client?.name || '—' }}</td>
+                    <td>{{ r.client?.fullName || r.client?.full_name || r.client?.mail || '—' }}</td>
                     <td class="actions-cell">
                       <button class="btn-icon btn-confirm" (click)="opensendoffres(r)">🎁</button>
                       <button class="btn-icon btn-delete" (click)="deletereponse(r.id)">🗑️</button>
@@ -203,7 +205,8 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Titre</th><th>Description</th><th>Actions</th> </thead>
+              <tr><th>ID</th><th>Titre</th><th>Description</th><th>Actions</th></tr>
+            </thead>
             <tbody>
               <tr *ngFor="let o of offres">
                 <td>{{ o.id }}</td>
@@ -227,7 +230,8 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th> </thead>
+              <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th></tr>
+            </thead>
             <tbody>
               <tr *ngFor="let r of roles">
                 <td>{{ r.id }}</td>
@@ -251,7 +255,8 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Nom</th><th>Actions</th> </thead>
+              <tr><th>ID</th><th>Nom</th><th>Actions</th></tr>
+            </thead>
             <tbody>
               <tr *ngFor="let p of permissions">
                 <td>{{ p.id }}</td>
