@@ -28,7 +28,7 @@ CREATE TABLE `administrateur` (
   `password` varchar(255) DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -37,7 +37,7 @@ CREATE TABLE `administrateur` (
 
 LOCK TABLES `administrateur` WRITE;
 /*!40000 ALTER TABLE `administrateur` DISABLE KEYS */;
-INSERT INTO `administrateur` VALUES (1,'mohamed mohamed ','mmmm1234','jerbihazem2@gmail.com'),(2,'admin1','123456','rayenmonser@gmail.com');
+INSERT INTO `administrateur` VALUES (1,'mohamed mohamed ','mmmm1234','rayenmonser22@gmail.com'),(2,'admin1','123456','rayenmonser@gmail.com'),(3,'admin','admin123','admin@gmail.com');
 /*!40000 ALTER TABLE `administrateur` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -82,7 +82,7 @@ CREATE TABLE `gestionnaire` (
   PRIMARY KEY (`id`),
   KEY `FK2ppfe1ngidlyescrr2ipi5ykp` (`id_role`),
   CONSTRAINT `FK2ppfe1ngidlyescrr2ipi5ykp` FOREIGN KEY (`id_role`) REFERENCES `role` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -91,7 +91,7 @@ CREATE TABLE `gestionnaire` (
 
 LOCK TABLES `gestionnaire` WRITE;
 /*!40000 ALTER TABLE `gestionnaire` DISABLE KEYS */;
-INSERT INTO `gestionnaire` VALUES (1,1,'ali ali ','ali1234',NULL),(2,NULL,'test1','test','test1@gmail.com');
+INSERT INTO `gestionnaire` VALUES (1,1,NULL,'rayen123','monceurrayen@gmail.com'),(3,NULL,'test1','test','test1@gmail.com');
 /*!40000 ALTER TABLE `gestionnaire` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -139,7 +139,7 @@ CREATE TABLE `permission` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -148,6 +148,7 @@ CREATE TABLE `permission` (
 
 LOCK TABLES `permission` WRITE;
 /*!40000 ALTER TABLE `permission` DISABLE KEYS */;
+INSERT INTO `permission` VALUES (1,NULL),(2,NULL);
 /*!40000 ALTER TABLE `permission` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -164,7 +165,7 @@ CREATE TABLE `question` (
   `type` varchar(255) NOT NULL,
   `options` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -173,7 +174,7 @@ CREATE TABLE `question` (
 
 LOCK TABLES `question` WRITE;
 /*!40000 ALTER TABLE `question` DISABLE KEYS */;
-INSERT INTO `question` VALUES (1,'How satisfied are you?','input','');
+INSERT INTO `question` VALUES (1,'How satisfied are you?','input',''),(6,'gssfsfsfsfs','radio',NULL),(8,'bc','input',NULL),(10,'al','input',NULL),(11,'yy','input',NULL),(12,'pp','input',NULL),(13,'xy','input',NULL),(14,'xyz','input',NULL),(15,'yf','input',NULL),(16,'cscsc','input',NULL),(17,'fbf','input',NULL),(18,'jj','input',NULL),(19,'jjj','input',NULL),(20,'jghjgj','input',NULL),(21,'jlmjkj','input',NULL),(22,'cvcxv','input',NULL),(23,'aa','input',NULL),(24,'qq','input',NULL),(25,'qqc','input',NULL),(26,'vcx','input',NULL),(27,'bvc','input',NULL),(28,'fsdfsd','input',''),(29,'f','input',''),(30,'b','input',''),(31,'bnc','input',''),(32,'pppp','input',''),(33,'a','input',''),(34,'q','input',''),(35,'w','input',''),(36,'aaaaaaaaaaa','input','');
 /*!40000 ALTER TABLE `question` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -191,10 +192,11 @@ CREATE TABLE `questionnaire` (
   `statut` varchar(255) DEFAULT NULL,
   `date_creation` datetime DEFAULT current_timestamp(),
   `gestionnaire_id` bigint(20) DEFAULT NULL,
+  `confirmed` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `FK80qc8yt2sc3qcx1luqrxi83wt` (`gestionnaire_id`),
   CONSTRAINT `FK80qc8yt2sc3qcx1luqrxi83wt` FOREIGN KEY (`gestionnaire_id`) REFERENCES `gestionnaire` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -203,7 +205,7 @@ CREATE TABLE `questionnaire` (
 
 LOCK TABLES `questionnaire` WRITE;
 /*!40000 ALTER TABLE `questionnaire` DISABLE KEYS */;
-INSERT INTO `questionnaire` VALUES (1,'How satisfied are you?',NULL,'BROUILLON','2026-03-14 15:42:41',NULL);
+INSERT INTO `questionnaire` VALUES (1,'How satisfied are you?',NULL,'BROUILLON','2026-03-14 15:42:41',NULL,1),(4,'sdfsfsd',NULL,NULL,'2026-03-15 15:06:18',NULL,1),(5,'yjtyjy',NULL,NULL,'2026-03-15 15:19:08',NULL,1),(6,'aaaaaaaaaaaa',NULL,NULL,'2026-03-17 15:30:54',NULL,1),(7,'av',NULL,NULL,'2026-03-17 15:34:57',NULL,1),(8,'vxb',NULL,NULL,'2026-03-17 15:42:32',NULL,1),(9,'dcdcdc',NULL,NULL,'2026-03-19 16:25:42',NULL,0),(10,'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',NULL,NULL,'2026-03-27 16:58:46',NULL,1),(11,'dgfgfdgd',NULL,NULL,'2026-03-28 18:04:26',NULL,0),(12,'ghfgh','ghkjhkhj','PUBLIE','2026-03-28 19:25:28',3,0);
 /*!40000 ALTER TABLE `questionnaire` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -230,7 +232,7 @@ CREATE TABLE `questionnaire_questions` (
 
 LOCK TABLES `questionnaire_questions` WRITE;
 /*!40000 ALTER TABLE `questionnaire_questions` DISABLE KEYS */;
-INSERT INTO `questionnaire_questions` VALUES (1,1);
+INSERT INTO `questionnaire_questions` VALUES (1,1),(6,5),(8,6),(10,6),(11,6),(12,6),(13,6),(14,6),(15,6),(16,7),(17,7),(18,8),(19,8),(20,9),(21,9),(22,9),(23,10),(24,10),(25,10),(26,10),(27,10),(28,11),(29,11),(30,11),(31,11),(32,11),(34,12),(35,12),(36,12);
 /*!40000 ALTER TABLE `questionnaire_questions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -303,4 +305,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-14 16:07:55
+-- Dump completed on 2026-03-28 19:45:29
