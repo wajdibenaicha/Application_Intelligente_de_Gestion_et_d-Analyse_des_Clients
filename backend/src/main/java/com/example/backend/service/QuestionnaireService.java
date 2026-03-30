@@ -36,22 +36,18 @@ public class QuestionnaireService {
     }
 
     public void delete(Long id) {
-        questionnaireRepository.deleteById(id);
-    }
-
-    public Questionnaire demanderPublication(Long id) {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
-            q.setStatut("EN_ATTENTE");
-            return questionnaireRepository.save(q);
+            q.getQuestions().clear();
+            questionnaireRepository.save(q);
+            questionnaireRepository.deleteById(id);
         }
-        return null;
     }
 
     public Questionnaire confirmQuestionnaire(Long id) {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
-            q.setStatut("PUBLIE");
+            q.setConfirmed(true);
             return questionnaireRepository.save(q);
         }
         return null;
@@ -60,7 +56,7 @@ public class QuestionnaireService {
     public Questionnaire rejeterQuestionnaire(Long id) {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
-            q.setStatut("REJETE");
+            q.setConfirmed(false);
             return questionnaireRepository.save(q);
         }
         return null;

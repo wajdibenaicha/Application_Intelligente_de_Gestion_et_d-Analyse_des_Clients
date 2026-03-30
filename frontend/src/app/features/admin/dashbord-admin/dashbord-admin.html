@@ -151,19 +151,17 @@
             <tbody>
               <tr *ngFor="let q of questionnaires">
                 <td>{{ q.titre }}</td>
-                <td>{{ q.gestionnaire?.fullName || '—' }}</td>
+                <td>{{ q.gestionnaire?.fullName || 'Admin' }}</td>
                 <td>{{ q.questions?.length || 0 }}</td>
                 <td>
-                  <span class="badge badge-brouillon" *ngIf="q.statut === 'BROUILLON'">Brouillon</span>
-                  <span class="badge badge-pending" *ngIf="q.statut === 'EN_ATTENTE'">⏳ En attente</span>
-                  <span class="badge badge-confirmed" *ngIf="q.statut === 'PUBLIE'">✓ Publié</span>
-                  <span class="badge badge-danger" *ngIf="q.statut === 'REJETE'">Rejeté</span>
+                  <span class="badge badge-brouillon" *ngIf="!q.confirmed">Brouillon</span>
+                  <span class="badge badge-confirmed" *ngIf="q.confirmed">✓ Confirmé</span>
                 </td>
                 <td class="actions-cell">
-                  <button class="btn-icon btn-edit" *ngIf="q.statut !== 'PUBLIE'" (click)="oppeneditquestionnaire(q)">✏️</button>
-                  <button class="btn-icon btn-confirm" *ngIf="q.statut === 'EN_ATTENTE'" (click)="confirmquestionnaire(q.id)" title="Publier">✅</button>
+                  <button class="btn-icon btn-edit" *ngIf="!q.confirmed" (click)="oppeneditquestionnaire(q)">✏️</button>
+                  <button class="btn-icon btn-confirm" *ngIf="!q.confirmed" (click)="confirmquestionnaire(q.id)" title="Confirmer">✅</button>
+                  <button class="btn-icon btn-view" *ngIf="q.confirmed" (click)="opendetailsquestionnaire(q)" title="Voir">👁️</button>
                   <button class="btn-icon btn-delete" (click)="deletequestionnaire(q.id)">🗑️</button>
-                  <span class="locked" *ngIf="q.statut === 'PUBLIE'">🔒</span>
                 </td>
               </tr>
               <tr *ngIf="questionnaires.length === 0">
@@ -283,8 +281,9 @@
       <h2>{{ editinggest ? '✏️ Modifier Gestionnaire' : '👤 Ajouter Gestionnaire' }}</h2>
       <button class="btn-close" (click)="showgestform=false">✕</button>
     </div>
-    <label>Nom Complet</label>
-    <input [(ngModel)]="gestform.fullName" placeholder="Nom complet" />
+    <label>Nom Complet <span style="color:red">*</span></label>
+    <input [(ngModel)]="gestform.fullName" placeholder="Nom complet" [readonly]="!!editinggest" [style.background]="editinggest ? '#f0f0f0' : ''" required #nomField="ngModel" />
+    <span style="color:red; font-size:12px" *ngIf="nomField.invalid && nomField.touched">Le nom est obligatoire</span>
     <label>Email</label>
     <input [(ngModel)]="gestform.email" placeholder="Email" type="email" />
     <label>Mot de passe</label>
@@ -296,7 +295,7 @@
     </select>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showgestform=false">Annuler</button>
-      <button class="btn-save" (click)="savegestionnaire()">{{ editinggest ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="savegestionnaire()" [disabled]="!gestform.fullName">{{ editinggest ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
@@ -417,6 +416,32 @@
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showpermissionform=false">Annuler</button>
       <button class="btn-save" (click)="savepermission()">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showdetailsform" (click)="showdetailsform=false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>👁️ {{ detailsquest?.titre }}</h2>
+      <button class="btn-close" (click)="showdetailsform=false">✕</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <span class="badge badge-confirmed">✓ Publié</span>
+      <span style="margin-left:12px; color:#666">
+        Gestionnaire: {{ detailsquest?.gestionnaire?.fullName || 'Admin' }}
+      </span>
+    </div>
+    <div *ngIf="detailsquest?.description" style="margin-bottom:12px; color:#555">{{ detailsquest.description }}</div>
+    <div class="section-title">Questions</div>
+    <div *ngFor="let q of detailsquest?.questions; let i=index" class="selected-chip" style="margin-bottom:6px">
+      <span class="q-num">{{ i+1 }}</span>
+      <span class="q-type-badge">{{ q.type }}</span>
+      {{ q.titre }}
+    </div>
+    <div *ngIf="!detailsquest?.questions?.length" class="empty-drop">Aucune question</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showdetailsform=false">Fermer</button>
     </div>
   </div>
 </div>

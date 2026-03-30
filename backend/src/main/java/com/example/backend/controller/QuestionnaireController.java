@@ -57,7 +57,7 @@ public class QuestionnaireController {
             String description = (String) body.get("description");
             questionnaire.setTitre(titre);
             questionnaire.setDescription(description);
-            questionnaire.setStatut("BROUILLON");
+            questionnaire.setConfirmed(false);
 
             if (body.get("gestionnaire") != null) {
                 Object gestObj = body.get("gestionnaire");
@@ -149,15 +149,6 @@ public class QuestionnaireController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         questionnaireService.delete(id);
         return ResponseEntity.ok().build();
-    }
-
-    @PutMapping("/{id}/demander-publication")
-    public ResponseEntity<Questionnaire> demanderPublication(@PathVariable Long id) {
-        Questionnaire q = questionnaireService.demanderPublication(id);
-        if (q != null) {
-            return ResponseEntity.ok(q);
-        }
-        return ResponseEntity.notFound().build();
     }
 
     @PatchMapping("/{id}/confirm")

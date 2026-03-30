@@ -73,6 +73,9 @@ export class DashbordAdmin implements OnInit {
         description: ''
     };
 
+    showdetailsform = false;
+    detailsquest: any = null;
+
     showsendoffreform = false;
     sendoffreform: any = {
         offreId: null,
@@ -92,30 +95,29 @@ export class DashbordAdmin implements OnInit {
   }
 
   ngOnInit(): void {
-    this.api.getQuestionnaires().subscribe((data: any) => {
-      this.questionnaires = data;
-    }); 
-    this.api.getQuestions().subscribe((data: any) => {
-      this.questions = data;
+    forkJoin({
+      questionnaires: this.api.getQuestionnaires(),
+      questions: this.api.getQuestions(),
+      gestionnaire: this.api.getGestionnaires(),
+      roles: this.api.getroles(),
+      permissions: this.api.getpermissions(),
+      offres: this.api.getoffres(),
+      responses: this.api.getResponses()
+    }).subscribe({
+      next: (data: any) => {
+        this.questionnaires = data.questionnaires;
+        this.questions = data.questions;
+        this.gestionnaire = data.gestionnaire;
+        this.roles = data.roles;
+        this.permissions = data.permissions;
+        this.offres = data.offres;
+        this.responses = data.responses;
+        this.isLoading = false;
+      },
+      error: () => {
+        this.isLoading = false;
+      }
     });
-    this.api.getGestionnaires().subscribe((data: any) => {
-      this.gestionnaire = data;
-    });
-    this.api.getroles().subscribe((data: any) => {
-      this.roles = data;
-
-    
-    }); 
-    this.api.getpermissions().subscribe((data: any) => {
-      this.permissions = data;
-    });
-    this.api.getoffres().subscribe((data: any) => {
-      this.offres = data;
-    });
-  this.api.getResponses().subscribe((data: any) => {     
-     this.responses = data ;
-    });
-  
   } 
   openaddgestionnaire() {
     this.editinggest = null;
@@ -130,7 +132,7 @@ export class DashbordAdmin implements OnInit {
   openeditgestionnaire(gest: any) {
     this.editinggest = gest;
     this.gestform = {
-      name: gest.full_name,
+      fullName: gest.fullName,
       email: gest.email,
       password: '' ,
       role : gest.role
@@ -214,6 +216,11 @@ savegestionnaire() {
                 this.questionnaires = this.questionnaires.filter(q => q.id !== id);
             });
         }
+    }
+
+    opendetailsquestionnaire(quest: any) {
+        this.detailsquest = quest;
+        this.showdetailsform = true;
     }
 
     confirmquestionnaire(id: number) {
@@ -494,7 +501,7 @@ savegestionnaire() {
     get unconfirmedCount() {
         let count = 0;
         for (let i = 0; i < this.questionnaires.length; i++) {
-            if (this.questionnaires[i].statut === 'EN_ATTENTE') {
+            if (!this.questionnaires[i].confirmed) {
                 count++;
             }
         }

@@ -11,7 +11,7 @@ public class Gestionnaire {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "full_name")
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
     private String password;

@@ -10,6 +10,8 @@ public class Offre {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String title;
+
     private String description;
 
     public Long getId() {
@@ -18,6 +20,14 @@ public class Offre {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getDescription() {

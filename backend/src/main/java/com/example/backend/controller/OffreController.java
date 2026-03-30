@@ -10,7 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/offres")
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201"})
 public class OffreController {
 
     @Autowired
@@ -19,6 +19,29 @@ public class OffreController {
     @GetMapping
     public List<Offre> getAll() {
         return offreRepository.findAll();
+    }
+
+    @PostMapping
+    public ResponseEntity<Offre> create(@RequestBody Map<String, String> body) {
+        Offre o = new Offre();
+        o.setTitle(body.get("title"));
+        o.setDescription(body.get("description"));
+        return ResponseEntity.ok(offreRepository.save(o));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Offre> update(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return offreRepository.findById(id).map(o -> {
+            if (body.get("title") != null) o.setTitle(body.get("title"));
+            if (body.get("description") != null) o.setDescription(body.get("description"));
+            return ResponseEntity.ok(offreRepository.save(o));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        offreRepository.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/accepter")

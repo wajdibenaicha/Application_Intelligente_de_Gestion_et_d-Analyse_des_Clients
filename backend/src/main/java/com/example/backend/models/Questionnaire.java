@@ -15,7 +15,6 @@ public class Questionnaire {
 
     private String titre;
     private String description;
-    private String statut = "BROUILLON";
 
     @ManyToOne
     @JoinColumn(name = "gestionnaire_id")
@@ -51,14 +50,6 @@ public class Questionnaire {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getStatut() {
-        return statut;
-    }
-
-    public void setStatut(String statut) {
-        this.statut = statut;
     }
 
     public Gestionnaire getGestionnaire() {

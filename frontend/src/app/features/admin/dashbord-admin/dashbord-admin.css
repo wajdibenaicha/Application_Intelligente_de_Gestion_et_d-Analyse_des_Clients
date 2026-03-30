@@ -514,6 +514,10 @@
   background: #fdf0ef;
 }
 
+.btn-view {
+  background: #e8f0fe;
+}
+
 .btn-close {
   background: #f0faf4;
   border: none;
