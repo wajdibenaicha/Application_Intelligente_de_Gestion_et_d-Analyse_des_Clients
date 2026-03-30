@@ -1,7 +1,7 @@
 package com.example.backend.controller;
 
-import com.example.backend.Repository.ReponseRepository;
 import com.example.backend.models.Reponse;
+import com.example.backend.service.ReponseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -12,25 +12,25 @@ import java.util.List;
 public class ReponseController {
 
     @Autowired
-    private ReponseRepository reponseRepository;
+    private ReponseService reponseService;
 
     @GetMapping
     public List<Reponse> getAll() {
-        return reponseRepository.findAll();
+        return reponseService.getAllReponses();
     }
 
     @GetMapping("/questionnaire/{id}")
     public List<Reponse> getByQuestionnaire(@PathVariable Long id) {
-        return reponseRepository.findByQuestionnaireId(id);
+        return reponseService.getReponsesByQuestionnaire(id);
     }
 
     @PostMapping
     public Reponse create(@RequestBody Reponse reponse) {
-        return reponseRepository.save(reponse);
+        return reponseService.addReponse(reponse);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
-        reponseRepository.deleteById(id);
+        reponseService.deleteReponse(id);
     }
 }

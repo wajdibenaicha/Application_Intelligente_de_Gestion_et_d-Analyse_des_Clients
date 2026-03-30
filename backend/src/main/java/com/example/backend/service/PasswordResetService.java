@@ -43,7 +43,7 @@ public class PasswordResetService {
         message.setText(
                 "Bonjour " + name + ",\n\n" +
                         "Vous avez demandé une réinitialisation de votre mot de passe.\n\n" +
-                        "Veuillez contacter votre administrateur pour procéder à la réinitialisation.\n\n" +
+                        "Votre demande a etais envoyé a l'administrateur\n\n" +
                         "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\n" +
                         "Cordialement,\n" +
                         "L'équipe STAR Assurances");

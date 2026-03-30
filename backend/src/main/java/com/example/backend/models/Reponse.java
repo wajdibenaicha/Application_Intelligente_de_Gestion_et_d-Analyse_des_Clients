@@ -1,7 +1,6 @@
 package com.example.backend.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import jakarta.persistence.*;
 
 @Entity
@@ -12,17 +11,17 @@ public class Reponse {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "client_id")
     @JsonIgnoreProperties({ "reponses" })
     private Client client;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "question_id")
     @JsonIgnoreProperties({ "reponses" })
     private Question question;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "questionnaire_id")
     @JsonIgnoreProperties({ "questions", "gestionnaire" })
     private Questionnaire questionnaire;

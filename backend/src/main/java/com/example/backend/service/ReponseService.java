@@ -1,21 +1,23 @@
 package com.example.backend.service;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.example.backend.Repository.ReponseRepository;
 import com.example.backend.models.Reponse;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class ReponseService {
+
     @Autowired
     private ReponseRepository reponseRepository;
 
     public List<Reponse> getAllReponses() {
         return reponseRepository.findAll();
+    }
+
+    public List<Reponse> getReponsesByQuestionnaire(Long questionnaireId) {
+        return reponseRepository.findByQuestionnaireId(questionnaireId);
     }
 
     public Reponse getReponseById(Long id) {
