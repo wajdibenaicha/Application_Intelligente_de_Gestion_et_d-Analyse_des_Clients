@@ -30,11 +30,14 @@ selectedoffreid: number | null = null;
   showgestform = false;
   editinggest: any = null;
   gestform: any = {
-    full_name: '',
+    fullName: '',
     email: '',
-    password: '' , 
+    password: '' ,
     role: null
   };
+
+  showdetailsform = false;
+  detailsquest: any = null;
 
 
   showquestform = false;
@@ -52,13 +55,13 @@ selectedquestion: any[] = [];
   editingrole: any = null;
   roleform: any = {
     name: '',
-    permissions: null
+    permission: null
   };
 
   showpermissionform = false;
   editingpermission: any = null;
   permissionform: any = {
-    name: ''
+    description: ''
   };
 
   showoffreform = false;
@@ -118,22 +121,27 @@ selectedquestion: any[] = [];
   openaddgestionnaire() {
     this.editinggest = null;
     this.gestform = {
-      full_name: '',
+      fullName: '',
       email: '',
       password: '' ,
-      role: null 
+      role: null
     };
     this.showgestform = true;
   }
   openeditgestionnaire(gest: any) {
     this.editinggest = gest;
     this.gestform = {
-      name: gest.full_name,
+      fullName: gest.fullName,
       email: gest.email,
       password: '' ,
       role : gest.role
     };
     this.showgestform = true;
+  }
+
+  opendetailsquestionnaire(quest: any) {
+    this.detailsquest = quest;
+    this.showdetailsform = true;
   }
 savegestionnaire() {
       if (this.editinggest) {
@@ -349,7 +357,7 @@ savegestionnaire() {
       this.editingrole = null;
       this.roleform = {
         name: '',
-        permissions: []
+        permission: null
       };
       this.showroleform = true;
     }
@@ -358,23 +366,28 @@ savegestionnaire() {
       this.editingrole = role;
       this.roleform = {
         name: role.name,
-        permissions: role.permissions
+        permission: role.permission
       };
       this.showroleform = true;
     }
 
-    saverole() {      if (this.editingrole) {
-        this.api.updaterole(this.editingrole.id, this.roleform).subscribe((updated: any) => {
-          const index = this.roles.findIndex(r => r.id === this.editingrole.id);
-          if (index !== -1) {
-            this.roles[index] = updated;
-          }
-          this.showroleform = false;
+    saverole() {
+      if (this.editingrole) {
+        this.api.updaterole(this.editingrole.id, this.roleform).subscribe({
+          next: (updated: any) => {
+            const index = this.roles.findIndex(r => r.id === this.editingrole.id);
+            if (index !== -1) this.roles[index] = updated;
+            this.showroleform = false;
+          },
+          error: () => { this.showroleform = false; }
         });
       } else {
-        this.api.addrole(this.roleform).subscribe((newrole: any) => {
-          this.roles.push(newrole);
-          this.showroleform = false;
+        this.api.addrole(this.roleform).subscribe({
+          next: (newrole: any) => {
+            this.roles.push(newrole);
+            this.showroleform = false;
+          },
+          error: () => { this.showroleform = false; }
         });
       }
     }
@@ -391,17 +404,13 @@ savegestionnaire() {
 
     openaddpermission() {
       this.editingpermission = null;
-      this.permissionform = {
-        name: ''
-      };
+      this.permissionform = { description: '' };
       this.showpermissionform = true;
     }
 
     openeditpermission(permission: any) {
       this.editingpermission = permission;
-      this.permissionform = {
-        name: permission.name
-      };
+      this.permissionform = { description: permission.description };
       this.showpermissionform = true;
     }
 

@@ -1,7 +1,7 @@
 <div class="dashboard">
   <aside class="sidebar">
     <div class="logo-box">
-      <img src="assets/images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="logo-img" />
+      <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="logo-img" />
     </div>
     <nav>
       <a class="nav-item" [class.active]="activeTab==='gestionnaires'"  (click)="activeTab='gestionnaires'">👤 Gestionnaires</a>
@@ -67,7 +67,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let g of gestionnaire">
-            <td>{{ g.full_name }}</td>
+            <td>{{ g.fullName }}</td>
             <td>{{ g.email }}</td>
             <td><span class="role-chip">{{ g.role?.name || '—' }}</span></td>
             <td>
@@ -101,8 +101,8 @@
             <td>
               <button class="btn-edit"    *ngIf="!q.confirmed" (click)="oppeneditquestionnaire(q)">✏️</button>
               <button class="btn-confirm" *ngIf="!q.confirmed" (click)="confirmquestionnaire(q.id)">✅ Confirmer</button>
+              <button class="btn-edit"    *ngIf="q.confirmed"  (click)="opendetailsquestionnaire(q)">👁️ Voir</button>
               <button class="btn-delete"                       (click)="deletequestionnaire(q.id)">🗑️</button>
-              <span class="locked" *ngIf="q.confirmed">🔒</span>
             </td>
           </tr>
           <tr *ngIf="questionnaires.length===0">
@@ -173,7 +173,7 @@
           <tr *ngFor="let r of roles">
             <td>{{ r.id }}</td>
             <td>{{ r.name }}</td>
-            <td>{{ r.permission?.description || r.permissions?.description || '—' }}</td>
+            <td>{{ r.permission?.description || '—' }}</td>
             <td>
               <button class="btn-edit"   (click)="openeditrole(r)">✏️ Modifier</button>
               <button class="btn-delete" (click)="deleterole(r.id)">🗑️ Supprimer</button>
@@ -196,7 +196,7 @@
         <tbody>
           <tr *ngFor="let p of permissions">
             <td>{{ p.id }}</td>
-            <td>{{ p.name }}</td>
+            <td>{{ p.description }}</td>
             <td>
               <button class="btn-edit"   (click)="openeditpermission(p)">✏️ Modifier</button>
               <button class="btn-delete" (click)="deletepermission(p.id)">🗑️ Supprimer</button>
@@ -221,7 +221,7 @@
       <h2>{{ editinggest ? '✏️ Modifier Gestionnaire' : '👤 Ajouter Gestionnaire' }}</h2>
     </div>
     <label>Nom Complet</label>
-    <input [(ngModel)]="gestform.full_name" placeholder="Nom complet" />
+    <input [(ngModel)]="gestform.fullName" placeholder="Nom complet" />
     <label>Email</label>
     <input [(ngModel)]="gestform.email" placeholder="Email" type="email" />
     <label>Mot de passe</label>
@@ -341,9 +341,9 @@
     <label>Nom du rôle</label>
     <input [(ngModel)]="roleform.name" placeholder="Nom du rôle" />
     <label>Permission associée</label>
-    <select [(ngModel)]="roleform.permissions">
+    <select [(ngModel)]="roleform.permission">
       <option [ngValue]="null">— Aucune permission —</option>
-      <option *ngFor="let p of permissions" [ngValue]="p">{{ p.name }}</option>
+      <option *ngFor="let p of permissions" [ngValue]="p">{{ p.description }}</option>
     </select>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showroleform=false">Annuler</button>
@@ -361,10 +361,34 @@
       <h2>{{ editingpermission ? '✏️ Modifier Permission' : '🛡️ Ajouter Permission' }}</h2>
     </div>
     <label>Nom de la permission</label>
-    <input [(ngModel)]="permissionform.name" placeholder="Nom de la permission" />
+    <input [(ngModel)]="permissionform.description" placeholder="Nom de la permission" />
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showpermissionform=false">Annuler</button>
       <button class="btn-save"   (click)="savepermission()">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL DETAILS QUESTIONNAIRE CONFIRME
+════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showdetailsform" (click)="showdetailsform=false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>👁️ {{ detailsquest?.titre }}</h2>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="badge confirmed">✓ Confirmé</span>
+    </div>
+    <div class="section-title">Questions</div>
+    <div *ngFor="let q of detailsquest?.questions; let i=index" class="selected-chip" style="margin-bottom:6px">
+      <span class="q-num">{{ i+1 }}</span>
+      <span class="q-type-badge">{{ q.type }}</span>
+      {{ q.titre }}
+    </div>
+    <div *ngIf="!detailsquest?.questions?.length" class="empty">Aucune question</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showdetailsform=false">Fermer</button>
     </div>
   </div>
 </div>
