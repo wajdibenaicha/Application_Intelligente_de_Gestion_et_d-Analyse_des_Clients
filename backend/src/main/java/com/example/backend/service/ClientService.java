@@ -2,15 +2,20 @@ package com.example.backend.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-
+ 
 import com.example.backend.Repository.ClientRepository;
 import com.example.backend.models.Client;
+ 
+
 
 @Service
 
 public class ClientService {
     @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
     private ClientRepository clientRepository;
     public List<Client> getAllClients() {
         return clientRepository.findAll();
@@ -21,7 +26,10 @@ public class ClientService {
         return clientRepository.findById(id).orElse(null);
       }
      public Client addClient(Client client){
-        return clientRepository.save(client);
+       Client saved = clientRepository.save(client);
+        messagingTemplate.convertAndSend("/topic/clients", getAllClients());
+        messagingTemplate.convertAndSend("/topic/notifications", "Nouveau client ajouté");
+        return saved;
      } 
      public Client updateClient(Long id , Client client){
         Client exist = getClientById(id);

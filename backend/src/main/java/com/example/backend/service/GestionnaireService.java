@@ -3,6 +3,7 @@ package com.example.backend.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.example.backend.Repository.GestionnaireRepository;
@@ -10,6 +11,8 @@ import com.example.backend.models.Gestionnaire;
 
 @Service
 public class GestionnaireService {
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
     private GestionnaireRepository gestionnaireRepository;
@@ -31,7 +34,9 @@ public class GestionnaireService {
     }
 
     public Gestionnaire addGestionnaire(Gestionnaire gestionnaire) {
-        return gestionnaireRepository.save(gestionnaire);
+         Gestionnaire saved= gestionnaireRepository.save(gestionnaire);
+        messagingTemplate.convertAndSend("/topic/gestionnaires", getAllGestionnaires());
+        return saved;
     }
 
     public Gestionnaire updateGestionnaire(Long id, Gestionnaire gestionnaire) {
@@ -40,6 +45,8 @@ public class GestionnaireService {
             if (gestionnaire.getEmail() != null) existing.setEmail(gestionnaire.getEmail());
             if (gestionnaire.getPassword() != null && !gestionnaire.getPassword().isEmpty()) existing.setPassword(gestionnaire.getPassword());
             if (gestionnaire.getRole() != null) existing.setRole(gestionnaire.getRole());
+            if (gestionnaire.getFullName() != null) existing.setFullName(gestionnaire.getFullName());
+             messagingTemplate.convertAndSend("/topic/gestionnaires", getAllGestionnaires());
             return gestionnaireRepository.save(existing);
         }
         return null;
@@ -49,6 +56,7 @@ public class GestionnaireService {
         Gestionnaire existing = getGestionnaireById(id);
         if (existing != null) {
             gestionnaireRepository.delete(existing);
+            messagingTemplate.convertAndSend("/topic/gestionnaires", getAllGestionnaires());
             return existing;
         }
         return null;

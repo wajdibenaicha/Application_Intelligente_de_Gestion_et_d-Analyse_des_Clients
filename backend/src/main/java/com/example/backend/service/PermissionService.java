@@ -1,14 +1,20 @@
 package com.example.backend.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
 import com.example.backend.Repository.PermissionRepository;
 import com.example.backend.models.Permission;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import java.util.List;
 
 
 @Service
 public class PermissionService {
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+    
     @Autowired
     private PermissionRepository permissionRepository;
 
@@ -21,14 +27,18 @@ public class PermissionService {
     }
 
     public Permission addPermission(Permission permission) {
-        return permissionRepository.save(permission);
+        Permission saved = permissionRepository.save(permission);
+        messagingTemplate.convertAndSend("/topic/permissions", getAllPermissions());
+        return saved;
     }
 
     public Permission updatePermission(Long id, Permission permission) {
         Permission existing = getPermissionById(id);
         if (existing != null) {
             permission.setId(id);
-            return permissionRepository.save(permission);
+            Permission updated = permissionRepository.save(permission);
+            messagingTemplate.convertAndSend("/topic/permissions", getAllPermissions());
+            return updated;
         }
         return null;
     }
@@ -37,6 +47,7 @@ public class PermissionService {
         Permission existing = getPermissionById(id);
         if (existing != null) {
             permissionRepository.delete(existing);
+            messagingTemplate.convertAndSend("/topic/permissions", getAllPermissions());
             return existing;
         }
         return null;

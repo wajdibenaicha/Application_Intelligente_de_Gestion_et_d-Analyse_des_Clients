@@ -1,13 +1,18 @@
 package com.example.backend.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
 import com.example.backend.Repository.ReponseRepository;
 import com.example.backend.models.Reponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import java.util.List;
 
 @Service
 public class ReponseService {
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
     private ReponseRepository reponseRepository;
@@ -25,14 +30,18 @@ public class ReponseService {
     }
 
     public Reponse addReponse(Reponse reponse) {
-        return reponseRepository.save(reponse);
+        Reponse saved = reponseRepository.save(reponse);
+        messagingTemplate.convertAndSend("/topic/reponses", getAllReponses());
+        return saved;
     }
 
     public Reponse updateReponse(Long id, Reponse reponse) {
         Reponse existing = getReponseById(id);
         if (existing != null) {
             reponse.setId(id);
-            return reponseRepository.save(reponse);
+            Reponse updated = reponseRepository.save(reponse);
+            messagingTemplate.convertAndSend("/topic/reponses", getAllReponses());
+            return updated;
         }
         return null;
     }
@@ -41,6 +50,7 @@ public class ReponseService {
         Reponse existing = getReponseById(id);
         if (existing != null) {
             reponseRepository.delete(existing);
+            messagingTemplate.convertAndSend("/topic/reponses", getAllReponses());
             return existing;
         }
         return null;

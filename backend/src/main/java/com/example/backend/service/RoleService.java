@@ -1,14 +1,20 @@
 package com.example.backend.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
 import com.example.backend.Repository.RoleRepository;
 import com.example.backend.models.Role;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import java.util.List;
 
 
 @Service
 public class RoleService {
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+    
     @Autowired
     private RoleRepository roleRepository;
 
@@ -21,14 +27,18 @@ public class RoleService {
     }
 
     public Role addRole(Role role) {
-        return roleRepository.save(role);
+        Role saved = roleRepository.save(role);
+        messagingTemplate.convertAndSend("/topic/roles", getAllRoles());
+        return saved;
     }
 
     public Role updateRole(Long id, Role role) {
         Role existing = getRoleById(id);
         if (existing != null) {
             role.setId(id);
-            return roleRepository.save(role);
+            Role updated = roleRepository.save(role);
+            messagingTemplate.convertAndSend("/topic/roles", getAllRoles());
+            return updated;
         }
         return null;
     }
@@ -37,6 +47,7 @@ public class RoleService {
         Role existing = getRoleById(id);
         if (existing != null) {
             roleRepository.delete(existing);
+            messagingTemplate.convertAndSend("/topic/roles", getAllRoles());
             return existing;
         }
         return null;

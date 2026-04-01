@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.example.backend.Repository.QuestionnaireRepository;
@@ -11,7 +12,9 @@ import com.example.backend.models.Questionnaire;
 
 @Service
 public class QuestionnaireService {
-
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+    
     @Autowired
     private QuestionnaireRepository questionnaireRepository;
 
@@ -24,7 +27,9 @@ public class QuestionnaireService {
     }
 
     public Questionnaire save(Questionnaire q) {
-        return questionnaireRepository.save(q);
+        Questionnaire saved = questionnaireRepository.save(q);
+        messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
+        return saved;
     }
 
     public Optional<Questionnaire> findById(Long id) {
@@ -48,7 +53,9 @@ public class QuestionnaireService {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
             q.setConfirmed(true);
-            return questionnaireRepository.save(q);
+            Questionnaire updated = questionnaireRepository.save(q);
+            messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
+            return updated;
         }
         return null;
     }
@@ -57,7 +64,9 @@ public class QuestionnaireService {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
             q.setConfirmed(false);
-            return questionnaireRepository.save(q);
+            Questionnaire updated = questionnaireRepository.save(q);
+            messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
+            return updated;
         }
         return null;
     }
