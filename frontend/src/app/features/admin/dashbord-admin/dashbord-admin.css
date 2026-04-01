@@ -245,26 +245,9 @@
   font-weight: 500;
 }
 
-.notif-btn {
-  position: relative;
-  font-size: 20px;
-  cursor: pointer;
-}
 
-.notif-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #e74c3c;
-  color: white;
-  font-size: 10px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+
+
 
 .content-section {
   flex: 1;

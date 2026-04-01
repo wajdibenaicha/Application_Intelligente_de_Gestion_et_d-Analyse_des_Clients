@@ -11,7 +11,7 @@ public class Gestionnaire {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "full_name", nullable = false)
+    @Column(name = "full_name")
     private String fullName;
 
     private String password;
@@ -22,7 +22,8 @@ public class Gestionnaire {
     @JsonIgnoreProperties({ "gestionnaires" })
     private Role role;
 
-    public Gestionnaire() {}
+    public Gestionnaire() {
+    }
 
     public Long getId() {
         return id;
