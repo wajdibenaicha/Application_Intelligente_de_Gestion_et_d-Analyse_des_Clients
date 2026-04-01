@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { Api } from '../../../services/api';
+import { WebSocketService } from '../../../services/websocket.service';  
 
 @Component({
   selector: 'app-dashbord-admin',
@@ -14,6 +15,7 @@ import { Api } from '../../../services/api';
 })
 export class DashbordAdmin implements OnInit {
     activeTab = 'gestionnaires';
+       
 
     sidebarCollapsed = false;
     today: Date = new Date();
@@ -39,6 +41,7 @@ export class DashbordAdmin implements OnInit {
     password: '' , 
     role: null
   };
+
 
 
     showquestform = false;
@@ -83,8 +86,7 @@ export class DashbordAdmin implements OnInit {
     };
 
 
-
-  constructor(private api: Api, private router: Router) {}
+    constructor(private api: Api, private router: Router, private wsService: WebSocketService) {} 
 
   toggleSidebar() {
     this.sidebarCollapsed = !this.sidebarCollapsed;
@@ -118,6 +120,21 @@ export class DashbordAdmin implements OnInit {
         this.isLoading = false;
       }
     });
+    this.wsService.gestionnaires$.subscribe(data => {
+  this.gestionnaire = data;
+});
+this.wsService.questionnaires$.subscribe(data => {
+  this.questionnaires = data;
+});
+this.wsService.question$.subscribe(data => {
+  this.questions = data;
+}); 
+this.wsService.role$.subscribe(data => {  this.roles = data;
+});
+this.wsService.permission$.subscribe(data => {  this.permissions = data;
+});
+this.wsService.offre$.subscribe(data => {  this.offres = data;
+});
   } 
   openaddgestionnaire() {
     this.editinggest = null;

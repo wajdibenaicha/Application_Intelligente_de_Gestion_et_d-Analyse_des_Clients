@@ -46,13 +46,21 @@ public class QuestionnaireService {
             q.getQuestions().clear();
             questionnaireRepository.save(q);
             questionnaireRepository.deleteById(id);
+            messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
         }
     }
 
     public Questionnaire confirmQuestionnaire(Long id) {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
-            q.setConfirmed(true);
+            // Gestionnaire sends for review → EN_ATTENTE; Admin approves → PUBLIE
+            if ("EN_ATTENTE".equals(q.getStatut())) {
+                q.setStatut("PUBLIE");
+                q.setConfirmed(true);
+            } else {
+                q.setStatut("EN_ATTENTE");
+                q.setConfirmed(false);
+            }
             Questionnaire updated = questionnaireRepository.save(q);
             messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
             return updated;
@@ -63,6 +71,7 @@ public class QuestionnaireService {
     public Questionnaire rejeterQuestionnaire(Long id) {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
+            q.setStatut("REJETE");
             q.setConfirmed(false);
             Questionnaire updated = questionnaireRepository.save(q);
             messagingTemplate.convertAndSend("/topic/questionnaires", getAll());

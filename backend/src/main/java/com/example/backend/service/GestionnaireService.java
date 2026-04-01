@@ -46,8 +46,9 @@ public class GestionnaireService {
             if (gestionnaire.getPassword() != null && !gestionnaire.getPassword().isEmpty()) existing.setPassword(gestionnaire.getPassword());
             if (gestionnaire.getRole() != null) existing.setRole(gestionnaire.getRole());
             if (gestionnaire.getFullName() != null) existing.setFullName(gestionnaire.getFullName());
-             messagingTemplate.convertAndSend("/topic/gestionnaires", getAllGestionnaires());
-            return gestionnaireRepository.save(existing);
+             Gestionnaire updated = gestionnaireRepository.save(existing);
+            messagingTemplate.convertAndSend("/topic/gestionnaires", getAllGestionnaires());
+            return updated;
         }
         return null;
     }

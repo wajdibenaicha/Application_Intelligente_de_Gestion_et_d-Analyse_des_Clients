@@ -28,6 +28,9 @@ public class Questionnaire {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean confirmed = false;
 
+    @Column(columnDefinition = "VARCHAR(50) DEFAULT 'BROUILLON'")
+    private String statut = "BROUILLON";
+
     public Long getId() {
         return id;
     }
@@ -74,5 +77,13 @@ public class Questionnaire {
 
     public void setConfirmed(Boolean confirmed) {
         this.confirmed = confirmed;
+    }
+
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
     }
 }

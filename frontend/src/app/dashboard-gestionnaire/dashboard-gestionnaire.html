@@ -146,162 +146,79 @@
           </table>
         </div>
       </div>
+      <div class="modal-overlay" *ngIf="showquestform" (click)="showquestform=false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingquest ? '✏️ Modifier Questionnaire' : '📋 Nouveau Questionnaire' }}</h2>
+      <button class="btn-close" (click)="showquestform=false">✕</button>
+    </div>
+    <label>Titre</label>
+    <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
+    <label>Description</label>
+    <input [(ngModel)]="questform.description" placeholder="Description" />
 
-
-      <div class="form-card" *ngIf="showCreateForm">
-        <div class="form-card-header">
-          <h3>Nouveau questionnaire</h3>
-          <button class="btn-close" (click)="cancelForm()">✕</button>
-        </div>
-
-        <div class="form-group">
-          <label>Titre *</label>
-          <input type="text" [(ngModel)]="newQuestionnaire.titre" placeholder="Ex: Questionnaire Assurance Auto">
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea [(ngModel)]="newQuestionnaire.description" placeholder="Description du questionnaire..." rows="2"></textarea>
-        </div>
-
-        <div class="questions-section">
-          <div class="questions-header">
-            <h4>Questions ({{ newQuestionnaire.questions.length }})</h4>
-            <button class="btn-secondary" (click)="addNewQuestion()">➕ Ajouter une question</button>
+    <div class="questions-section">
+      <div class="questions-pool">
+        <div class="section-title">📚 Questions existantes</div>
+        <div class="search-hint">Cliquez pour ajouter / retirer</div>
+        <div class="questions-list">
+          <div *ngFor="let q of questions"
+               class="q-chip"
+               [class.selected]="isselectedquestion(q.id)"
+               (click)="changequestion(q.id)">
+            <span class="q-type-badge">{{ q.type }}</span>
+            {{ q.titre || q.title }}
+            <span class="q-check" *ngIf="isselectedquestion(q.id)">✓</span>
           </div>
-
-          <div *ngIf="newQuestionnaire.questions.length === 0" class="empty-row">
-            Aucune question — cliquez sur "Ajouter une question"
-          </div>
-
-          <div class="question-item" *ngFor="let q of newQuestionnaire.questions; let i = index">
-            <div class="question-number">{{ i + 1 }}</div>
-            <div class="question-fields">
-              <div class="question-row">
-                <input type="text" [(ngModel)]="q.titre" placeholder="Texte de la question" class="q-input-titre">
-                <select [(ngModel)]="q.type" class="q-select-type">
-                  <option value="input">Texte libre</option>
-                  <option value="radio">Choix unique</option>
-                  <option value="checkbox">Cases à cocher</option>
-                  <option value="select">Liste déroulante</option>
-                </select>
-              </div>
-              <div class="question-options-row" *ngIf="questionNeedsOptions(q.type)">
-                <input type="text" [(ngModel)]="q.options" placeholder="Options séparées par virgule : Oui,Non,Peut-être" class="q-input-options">
-              </div>
-            </div>
-            <button class="btn-icon btn-delete" (click)="removeQuestion(i)" title="Supprimer">🗑</button>
-          </div>
+          <div *ngIf="questions.length===0" class="empty-pool">Aucune question disponible</div>
         </div>
-
-        <div class="form-actions">
-          <button class="btn-outline" (click)="cancelForm()">Annuler</button>
-          <button class="btn-primary" (click)="saveQuestionnaire()" [disabled]="isLoading">
-            <span *ngIf="!isLoading">Enregistrer</span>
-            <span *ngIf="isLoading">Enregistrement...</span>
-          </button>
+        <button class="btn-new-q" (click)="showaddquestion=!showaddquestion">+ Créer nouvelle question</button>
+        <div *ngIf="showaddquestion" class="new-q-form">
+          <input [(ngModel)]="newquest.titre" placeholder="Titre de la question" />
+          <select [(ngModel)]="newquest.type">
+            <option value="text">Texte libre</option>
+            <option value="radio">Choix unique</option>
+            <option value="checkbox">Choix multiple</option>
+            <option value="select">Liste déroulante</option>
+          </select>
+          <input *ngIf="newquest.type!=='text'" [(ngModel)]="newquest.options" placeholder="Options séparées par virgule" />
+          <button class="btn-save-q" (click)="createaddquestion()">✓ Ajouter</button>
         </div>
       </div>
-
-
-      <div class="form-card" *ngIf="showEditForm">
-        <div class="form-card-header">
-          <h3>Modifier : {{ editingQuestionnaire?.titre }}</h3>
-          <button class="btn-close" (click)="cancelForm()">✕</button>
-        </div>
-
-        <div class="form-group">
-          <label>Titre *</label>
-          <input type="text" [(ngModel)]="editingQuestionnaire.titre">
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea [(ngModel)]="editingQuestionnaire.description" rows="2"></textarea>
-        </div>
-
-        <div class="questions-section">
-          <div class="questions-header">
-            <h4>Questions ({{ editingQuestionnaire.questions.length }})</h4>
-            <button class="btn-secondary" (click)="addQuestionToEdit()">➕ Ajouter une question</button>
+      <div class="questions-selected">
+        <div class="section-title">📋 Questions sélectionnées</div>
+        <div class="search-hint">Glissez pour réorganiser</div>
+        <div class="drop-zone">
+          <div *ngFor="let q of selectedquestion; let i=index"
+               class="selected-chip"
+               draggable="true"
+               [class.drag-over]="dragoverIndex===i"
+               (dragstart)="dragStart(i,$event)"
+               (dragover)="dragover(i,$event)"
+               (drop)="drop(i,$event)">
+            <span class="drag-handle">⠿</span>
+            <span class="q-num">{{ i+1 }}</span>
+            <span class="q-type-badge">{{ q.type }}</span>
+            {{ q.titre || q.title }}
+            <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
           </div>
-
-          <div *ngIf="editingQuestionnaire.questions.length === 0" class="empty-row">
-            Aucune question
-          </div>
-
-          <div class="question-item" *ngFor="let q of editingQuestionnaire.questions; let i = index">
-            <div class="question-number">{{ i + 1 }}</div>
-            <div class="question-fields">
-              <div class="question-row">
-                <input type="text" [(ngModel)]="q.titre" placeholder="Texte de la question" class="q-input-titre">
-                <select [(ngModel)]="q.type" class="q-select-type">
-                  <option value="input">Texte libre</option>
-                  <option value="radio">Choix unique</option>
-                  <option value="checkbox">Cases à cocher</option>
-                  <option value="select">Liste déroulante</option>
-                </select>
-              </div>
-              <div class="question-options-row" *ngIf="questionNeedsOptions(q.type)">
-                <input type="text" [(ngModel)]="q.options" placeholder="Options séparées par virgule : Oui,Non,Peut-être" class="q-input-options">
-              </div>
-            </div>
-            <button class="btn-icon btn-delete" (click)="removeQuestionEdit(i)" title="Supprimer">🗑</button>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button class="btn-outline" (click)="cancelForm()">Annuler</button>
-          <button class="btn-primary" (click)="updateQuestionnaire()" [disabled]="isLoading">
-            <span *ngIf="!isLoading">Sauvegarder</span>
-            <span *ngIf="isLoading">Mise à jour...</span>
-          </button>
+          <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
         </div>
       </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showquestform=false">Annuler</button>
+      <button class="btn-save" (click)="savequestionnaire()">{{ editingquest ? 'Modifier' : 'Créer' }}</button>
+    </div>
+  </div>
+</div>
+
+      
 
 
-      <div class="form-card" *ngIf="showQuestionsView">
-        <div class="form-card-header">
-          <div class="view-header-info">
-            <h3>{{ selectedQuestionnaire?.titre }}</h3>
-            <span class="badge" [ngClass]="getBadgeClass(selectedQuestionnaire?.statut)">
-              {{ getStatutLabel(selectedQuestionnaire?.statut) }}
-            </span>
-          </div>
-          <button class="btn-close" (click)="showQuestionsView = false">✕</button>
-        </div>
 
-        <div *ngIf="!selectedQuestionnaire?.questions?.length" class="empty-row">
-          Aucune question dans ce questionnaire
-        </div>
 
-        <div class="question-view-item" *ngFor="let q of selectedQuestionnaire?.questions; let i = index">
-          <span class="q-num">{{ i + 1 }}</span>
-          <div class="q-content">
-            <p class="q-text">{{ q.titre }}</p>
-            <div class="q-meta">
-              <span class="q-type-badge">{{ q.type }}</span>
-              <span class="q-options-preview" *ngIf="q.options && q.options !== ''">
-                Options : {{ q.options }}
-              </span>
-            </div>
-          </div>
-          <button
-            class="btn-icon btn-delete"
-            (click)="deleteQuestion(q.id, selectedQuestionnaire)"
-            *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'"
-            title="Supprimer cette question">
-            🗑
-          </button>
-        </div>
-
-        <div class="form-actions" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'">
-          <button class="btn-outline" (click)="editQuestionnaire(selectedQuestionnaire); showQuestionsView = false">
-            ✏️ Modifier
-          </button>
-          <button class="btn-primary" (click)="demanderPublication(selectedQuestionnaire); showQuestionsView = false">
-            📤 Envoyer à l'administrateur
-          </button>
-        </div>
-      </div>
 
     </section>
 
@@ -405,6 +322,59 @@
     </section>
 
   </main>
+</div>
+
+<div class="modal-overlay" *ngIf="showQuestionsView" (click)="showQuestionsView = false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>👁️ {{ selectedQuestionnaire?.titre }}</h2>
+      <button class="btn-close" (click)="showQuestionsView = false">✕</button>
+    </div>
+
+    <div style="padding: 0 24px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span class="badge" [ngClass]="getBadgeClass(selectedQuestionnaire?.statut)">
+        {{ getStatutLabel(selectedQuestionnaire?.statut) }}
+      </span>
+      <span *ngIf="selectedQuestionnaire?.description" style="color:#666; font-size:13px;">
+        {{ selectedQuestionnaire?.description }}
+      </span>
+    </div>
+
+    <div style="padding: 0 24px 8px;">
+      <div class="section-title">Questions</div>
+    </div>
+
+    <div style="padding: 0 24px; display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto;">
+      <div *ngFor="let q of selectedQuestionnaire?.questions; let i = index"
+           class="selected-chip"
+           style="justify-content: flex-start;">
+        <span class="q-num">{{ i + 1 }}</span>
+        <span class="q-type-badge">{{ q.type }}</span>
+        <span style="flex:1;">{{ q.titre }}</span>
+        <span *ngIf="q.options && q.options !== ''" style="font-size:11px; color:#7f8c8d; font-style:italic;">
+          {{ q.options }}
+        </span>
+        <button
+          class="btn-icon btn-delete"
+          *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'"
+          (click)="deleteQuestion(q.id, selectedQuestionnaire)"
+          title="Supprimer">🗑</button>
+      </div>
+      <div *ngIf="!selectedQuestionnaire?.questions?.length" class="empty-drop">Aucune question</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showQuestionsView = false">Fermer</button>
+      <button class="btn-outline" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'"
+        (click)="editQuestionnaire(selectedQuestionnaire); showQuestionsView = false">
+        ✏️ Modifier
+      </button>
+      <button class="btn-save" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'"
+        (click)="demanderPublication(selectedQuestionnaire); showQuestionsView = false">
+        📤 Envoyer à l'administrateur
+      </button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" [class.show]="showToast" [class.toast-error]="toastType === 'error'">

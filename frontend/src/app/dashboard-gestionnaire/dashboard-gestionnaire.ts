@@ -3,6 +3,8 @@ import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { WebSocketService } from '../services/websocket.service';  
+
 
 @Component({
   selector: 'app-dashboard-gestionnaire',
@@ -44,12 +46,25 @@ export class DashboardGestionnaire implements OnInit {
   publishedCount = 0;
   totalReponses = 0;
 
+  // Admin-style questionnaire form
+  showquestform = false;
+  editingquest: any = null;
+  questform: any = { titre: '', description: '', questions: [] };
+  questions: any[] = [];
+  showaddquestion = false;
+  newquest: any = { titre: '', type: 'text', options: '' };
+  selectedquestion: any[] = [];
+  dragoverIndex = -1;
+
   constructor(
     private http: HttpClient,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef ,
+    private wsService: WebSocketService
   ) {}
+      
+  
 
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -65,6 +80,17 @@ export class DashboardGestionnaire implements OnInit {
     this.gestionnaire = JSON.parse(user);
     this.loadQuestionnaires();
     this.loadOffresIA();
+    this.http.get<any[]>(this.apiUrl + '/questions').subscribe({
+      next: (data) => { this.questions = data; },
+      error: () => {}
+    });
+
+    this.wsService.questionnaires$.subscribe(data => {
+  this.questionnaires = data;
+});
+
+
+  
   }
 
   setSection(section: string) {
@@ -114,6 +140,9 @@ export class DashboardGestionnaire implements OnInit {
     if (!q.statut) {
       q.statut = q.confirmed === true ? 'PUBLIE' : 'BROUILLON';
     }
+    if (q.statut === null || q.statut === undefined || q.statut === '') {
+      q.statut = 'BROUILLON';
+    }
     return q;
   }
 
@@ -141,8 +170,11 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   openCreateQuestionnaire() {
-    this.newQuestionnaire = { titre: '', description: '', questions: [] };
-    this.showCreateForm = true;
+    this.editingquest = null;
+    this.selectedquestion = [];
+    this.questform = { titre: '', description: '', questions: [] };
+    this.showquestform = true;
+    this.showCreateForm = false;
     this.showEditForm = false;
     this.showQuestionsView = false;
     this.activeSection = 'questionnaires';
@@ -208,23 +240,16 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   editQuestionnaire(q: any) {
-    const questions = (q.questions || []).map((item: any) => ({
-      id: item.id,
-      titre: item.titre,
-      type: item.type,
-      options: item.options ? item.options : ''
-    }));
-
-    this.editingQuestionnaire = {
-      id: q.id,
+    this.editingquest = q;
+    this.questform = {
       titre: q.titre,
       description: q.description,
-      statut: q.statut,
-      questions: questions
+      questions: q.questions ? q.questions.map((item: any) => item.id) : []
     };
-
-    this.showEditForm = true;
+    this.selectedquestion = q.questions ? [...q.questions] : [];
+    this.showquestform = true;
     this.showCreateForm = false;
+    this.showEditForm = false;
     this.showQuestionsView = false;
   }
 
@@ -486,6 +511,117 @@ export class DashboardGestionnaire implements OnInit {
         this.showToastMessage('Erreur lors de la soumission', 'error');
       }
     });
+  }
+
+  isselectedquestion(id: number): boolean {
+    for (let i = 0; i < this.questform.questions.length; i++) {
+      if (this.questform.questions[i] === id) return true;
+    }
+    return false;
+  }
+
+  changequestion(id: number) {
+    let found = false;
+    for (let i = 0; i < this.questform.questions.length; i++) {
+      if (this.questform.questions[i] === id) { found = true; break; }
+    }
+    if (found) {
+      const newIds = [];
+      for (let i = 0; i < this.questform.questions.length; i++) {
+        if (this.questform.questions[i] !== id) newIds.push(this.questform.questions[i]);
+      }
+      this.questform.questions = newIds;
+      const newSelected = [];
+      for (let i = 0; i < this.selectedquestion.length; i++) {
+        if (this.selectedquestion[i].id !== id) newSelected.push(this.selectedquestion[i]);
+      }
+      this.selectedquestion = newSelected;
+    } else {
+      this.questform.questions.push(id);
+      for (let i = 0; i < this.questions.length; i++) {
+        if (this.questions[i].id === id) { this.selectedquestion.push(this.questions[i]); break; }
+      }
+    }
+  }
+
+  removeselectedquestion(id: number) {
+    const newIds = [];
+    for (let i = 0; i < this.questform.questions.length; i++) {
+      if (this.questform.questions[i] !== id) newIds.push(this.questform.questions[i]);
+    }
+    this.questform.questions = newIds;
+    const newSelected = [];
+    for (let i = 0; i < this.selectedquestion.length; i++) {
+      if (this.selectedquestion[i].id !== id) newSelected.push(this.selectedquestion[i]);
+    }
+    this.selectedquestion = newSelected;
+  }
+
+  createaddquestion() {
+    if (!this.newquest.titre) return;
+    this.http.post<any>(this.apiUrl + '/questions', this.newquest).subscribe((c: any) => {
+      this.selectedquestion.push(c);
+      this.questions.push(c);
+      this.questform.questions.push(c.id);
+      this.newquest = { titre: '', type: 'text', options: '' };
+      this.showaddquestion = false;
+    });
+  }
+
+  dragStart(i: number, e: DragEvent) {
+    e.dataTransfer?.setData('text/plain', i.toString());
+  }
+
+  dragover(i: number, e: DragEvent) {
+    e.preventDefault();
+    this.dragoverIndex = i;
+  }
+
+  drop(toindex: number, e: DragEvent) {
+    e.preventDefault();
+    const from = parseInt(e.dataTransfer?.getData('text/plain') || '0');
+    const item = this.selectedquestion.splice(from, 1)[0];
+    this.selectedquestion.splice(toindex, 0, item);
+    this.dragoverIndex = -1;
+    const newIds = [];
+    for (let i = 0; i < this.selectedquestion.length; i++) {
+      newIds.push(this.selectedquestion[i].id);
+    }
+    this.questform.questions = newIds;
+  }
+
+  savequestionnaire() {
+    this.questform.questions = this.selectedquestion;
+    if (this.editingquest) {
+      const payload = {
+        titre: this.questform.titre,
+        description: this.questform.description,
+        questions: this.selectedquestion
+      };
+      this.http.put<any>(this.apiUrl + '/questionnaires/' + this.editingquest.id, payload).subscribe({
+        next: () => {
+          this.showquestform = false;
+          this.loadQuestionnaires();
+          this.showToastMessage('Questionnaire mis à jour');
+        },
+        error: () => { this.showToastMessage('Erreur lors de la mise à jour', 'error'); }
+      });
+    } else {
+      const payload = {
+        titre: this.questform.titre,
+        description: this.questform.description,
+        gestionnaire: { id: this.gestionnaire.id },
+        questions: this.selectedquestion
+      };
+      this.http.post<any>(this.apiUrl + '/questionnaires', payload).subscribe({
+        next: () => {
+          this.showquestform = false;
+          this.loadQuestionnaires();
+          this.showToastMessage('Questionnaire créé avec succès');
+        },
+        error: () => { this.showToastMessage('Erreur lors de la création', 'error'); }
+      });
+    }
   }
 
   showToastMessage(message: string, type = 'success') {
