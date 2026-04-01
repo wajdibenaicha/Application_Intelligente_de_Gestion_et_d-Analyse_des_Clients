@@ -200,7 +200,7 @@
         <div class="form-actions">
           <button class="btn-outline" (click)="cancelForm()">Annuler</button>
           <button class="btn-primary" (click)="saveQuestionnaire()" [disabled]="isLoading">
-            <span *ngIf="!isLoading">💾 Enregistrer</span>
+            <span *ngIf="!isLoading">Enregistrer</span>
             <span *ngIf="isLoading">Enregistrement...</span>
           </button>
         </div>
@@ -255,7 +255,7 @@
         <div class="form-actions">
           <button class="btn-outline" (click)="cancelForm()">Annuler</button>
           <button class="btn-primary" (click)="updateQuestionnaire()" [disabled]="isLoading">
-            <span *ngIf="!isLoading">💾 Sauvegarder</span>
+            <span *ngIf="!isLoading">Sauvegarder</span>
             <span *ngIf="isLoading">Mise à jour...</span>
           </button>
         </div>
@@ -319,7 +319,7 @@
           <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
         </select>
         <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">
-          📥 Exporter CSV
+          Exporter CSV
         </button>
       </div>
 
