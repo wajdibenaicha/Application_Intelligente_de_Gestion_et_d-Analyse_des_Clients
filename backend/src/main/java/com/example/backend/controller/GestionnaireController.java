@@ -20,7 +20,7 @@ import com.example.backend.service.GestionnaireService;
 
 @RestController
 @RequestMapping("/api/gestionnaires")
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201"})
+@CrossOrigin(origins = "http://localhost:4200")
 public class GestionnaireController {
 
     @Autowired

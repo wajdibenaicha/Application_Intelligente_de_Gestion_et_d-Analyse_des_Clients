@@ -48,10 +48,6 @@
       <h2 class="section-title">{{ getSectionTitle() }}</h2>
       <div class="topbar-right">
         <span class="date-badge">{{ today | date:'dd MMM yyyy' }}</span>
-        <div class="notif-btn">
-          🔔
-          <span class="notif-badge" *ngIf="pendingCount > 0">{{ pendingCount }}</span>
-        </div>
       </div>
     </header>
 

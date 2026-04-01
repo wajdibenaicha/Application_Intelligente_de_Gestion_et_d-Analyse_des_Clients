@@ -98,9 +98,7 @@ export class DashboardGestionnaire implements OnInit {
     let initials = '';
 
     for (let i = 0; i < parts.length; i++) {
-      if (parts[i].length > 0) {
-        initials += parts[i][0].toUpperCase();
-      }
+      if (parts[i].length > 0) initials += parts[i][0].toUpperCase();
       if (initials.length === 2) break;
     }
 
@@ -108,23 +106,28 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   logout() {
-    if (isPlatformBrowser(this.platformId)) {
-      sessionStorage.clear();
-    }
+    if (isPlatformBrowser(this.platformId)) sessionStorage.clear();
     this.router.navigate(['/login']);
+  }
+
+  private mapStatut(q: any): any {
+    if (!q.statut) {
+      q.statut = q.confirmed === true ? 'PUBLIE' : 'BROUILLON';
+    }
+    return q;
   }
 
   loadQuestionnaires() {
     this.http.get<any[]>(this.apiUrl + '/questionnaires/gestionnaire/' + this.gestionnaire.id).subscribe({
       next: (data) => {
-        this.questionnaires = data;
-        this.totalQuestionnaires = data.length;
+        this.questionnaires = data.map(q => this.mapStatut(q));
+        this.totalQuestionnaires = this.questionnaires.length;
 
         let enAttente = 0;
         let publie = 0;
-        for (let i = 0; i < data.length; i++) {
-          if (data[i].statut === 'EN_ATTENTE') enAttente++;
-          if (data[i].statut === 'PUBLIE') publie++;
+        for (let i = 0; i < this.questionnaires.length; i++) {
+          if (this.questionnaires[i].statut === 'EN_ATTENTE') enAttente++;
+          if (this.questionnaires[i].statut === 'PUBLIE') publie++;
         }
 
         this.pendingCount = enAttente;
@@ -146,8 +149,7 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   addNewQuestion() {
-    const question = { titre: '', type: 'input', options: '' };
-    this.newQuestionnaire.questions.push(question);
+    this.newQuestionnaire.questions.push({ titre: '', type: 'input', options: '' });
   }
 
   removeQuestion(index: number) {
@@ -155,10 +157,7 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   questionNeedsOptions(type: string) {
-    if (type === 'radio') return true;
-    if (type === 'checkbox') return true;
-    if (type === 'select') return true;
-    return false;
+    return type === 'radio' || type === 'checkbox' || type === 'select';
   }
 
   saveQuestionnaire() {
@@ -173,8 +172,7 @@ export class DashboardGestionnaire implements OnInit {
     }
 
     for (let i = 0; i < this.newQuestionnaire.questions.length; i++) {
-      const q = this.newQuestionnaire.questions[i];
-      if (!q.titre || q.titre.trim() === '') {
+      if (!this.newQuestionnaire.questions[i].titre || this.newQuestionnaire.questions[i].titre.trim() === '') {
         this.showToastMessage('La question ' + (i + 1) + ' n\'a pas de titre', 'error');
         return;
       }
@@ -182,15 +180,11 @@ export class DashboardGestionnaire implements OnInit {
 
     this.isLoading = true;
 
-    const questions = [];
-    for (let i = 0; i < this.newQuestionnaire.questions.length; i++) {
-      const q = this.newQuestionnaire.questions[i];
-      questions.push({
-        titre: q.titre,
-        type: q.type,
-        options: q.options ? q.options : ''
-      });
-    }
+    const questions = this.newQuestionnaire.questions.map((q: any) => ({
+      titre: q.titre,
+      type: q.type,
+      options: q.options ? q.options : ''
+    }));
 
     const payload = {
       titre: this.newQuestionnaire.titre,
@@ -204,7 +198,7 @@ export class DashboardGestionnaire implements OnInit {
         this.isLoading = false;
         this.showCreateForm = false;
         this.loadQuestionnaires();
-        this.showToastMessage('Questionnaire créé et sauvegardé');
+        this.showToastMessage('Questionnaire créé avec succès');
       },
       error: () => {
         this.isLoading = false;
@@ -214,17 +208,12 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   editQuestionnaire(q: any) {
-    const questions = [];
-    if (q.questions) {
-      for (let i = 0; i < q.questions.length; i++) {
-        questions.push({
-          id: q.questions[i].id,
-          titre: q.questions[i].titre,
-          type: q.questions[i].type,
-          options: q.questions[i].options ? q.questions[i].options : ''
-        });
-      }
-    }
+    const questions = (q.questions || []).map((item: any) => ({
+      id: item.id,
+      titre: item.titre,
+      type: item.type,
+      options: item.options ? item.options : ''
+    }));
 
     this.editingQuestionnaire = {
       id: q.id,
@@ -240,8 +229,7 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   addQuestionToEdit() {
-    const question = { titre: '', type: 'input', options: '' };
-    this.editingQuestionnaire.questions.push(question);
+    this.editingQuestionnaire.questions.push({ titre: '', type: 'input', options: '' });
   }
 
   removeQuestionEdit(index: number) {
@@ -260,8 +248,7 @@ export class DashboardGestionnaire implements OnInit {
     }
 
     for (let i = 0; i < this.editingQuestionnaire.questions.length; i++) {
-      const q = this.editingQuestionnaire.questions[i];
-      if (!q.titre || q.titre.trim() === '') {
+      if (!this.editingQuestionnaire.questions[i].titre || this.editingQuestionnaire.questions[i].titre.trim() === '') {
         this.showToastMessage('La question ' + (i + 1) + ' n\'a pas de titre', 'error');
         return;
       }
@@ -269,19 +256,15 @@ export class DashboardGestionnaire implements OnInit {
 
     this.isLoading = true;
 
-    const questions = [];
-    for (let i = 0; i < this.editingQuestionnaire.questions.length; i++) {
-      const q = this.editingQuestionnaire.questions[i];
+    const questions = this.editingQuestionnaire.questions.map((q: any) => {
       const obj: any = {
         titre: q.titre,
         type: q.type,
         options: q.options ? q.options : ''
       };
-      if (q.id) {
-        obj.id = q.id;
-      }
-      questions.push(obj);
-    }
+      if (q.id) obj.id = q.id;
+      return obj;
+    });
 
     const payload = {
       titre: this.editingQuestionnaire.titre,
@@ -304,8 +287,7 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   deleteQuestionnaire(id: number) {
-    const confirmation = confirm('Supprimer ce questionnaire ?');
-    if (!confirmation) return;
+    if (!confirm('Supprimer ce questionnaire ?')) return;
 
     this.http.delete(this.apiUrl + '/questionnaires/' + id).subscribe({
       next: () => {
@@ -319,11 +301,17 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   demanderPublication(q: any) {
-    const confirmation = confirm('Envoyer "' + q.titre + '" à l\'administrateur pour publication ?');
-    if (!confirmation) return;
+    if (!confirm('Envoyer "' + q.titre + '" à l\'administrateur pour publication ?')) return;
 
-    this.http.put(this.apiUrl + '/questionnaires/' + q.id + '/demander-publication', {}).subscribe({
-      next: () => {
+    this.http.patch<any>(this.apiUrl + '/questionnaires/' + q.id + '/confirm', {}).subscribe({
+      next: (updated) => {
+        const idx = this.questionnaires.findIndex((item: any) => item.id === q.id);
+        if (idx !== -1) {
+          this.questionnaires[idx] = this.mapStatut(updated);
+        }
+        if (this.selectedQuestionnaire && this.selectedQuestionnaire.id === q.id) {
+          this.selectedQuestionnaire = this.questionnaires[idx];
+        }
         this.loadQuestionnaires();
         this.showToastMessage('Questionnaire envoyé à l\'administrateur');
       },
@@ -341,30 +329,17 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   deleteQuestion(questionId: number, questionnaire: any) {
-    const confirmation = confirm('Supprimer cette question ?');
-    if (!confirmation) return;
+    if (!confirm('Supprimer cette question ?')) return;
 
     this.http.delete(this.apiUrl + '/questions/' + questionId).subscribe({
       next: () => {
-        const newList = [];
-        for (let i = 0; i < questionnaire.questions.length; i++) {
-          if (questionnaire.questions[i].id !== questionId) {
-            newList.push(questionnaire.questions[i]);
-          }
-        }
-        questionnaire.questions = newList;
-
+        questionnaire.questions = questionnaire.questions.filter((q: any) => q.id !== questionId);
         this.selectedQuestionnaire = { ...questionnaire };
 
-        const newQuestionnaires = [];
-        for (let i = 0; i < this.questionnaires.length; i++) {
-          if (this.questionnaires[i].id === questionnaire.id) {
-            newQuestionnaires.push({ ...questionnaire });
-          } else {
-            newQuestionnaires.push(this.questionnaires[i]);
-          }
-        }
-        this.questionnaires = newQuestionnaires;
+        this.questionnaires = this.questionnaires.map((item: any) =>
+          item.id === questionnaire.id ? { ...questionnaire } : item
+        );
+
         this.cdr.detectChanges();
         this.showToastMessage('Question supprimée');
       },
@@ -423,36 +398,30 @@ export class DashboardGestionnaire implements OnInit {
     let nomFichier = 'questionnaire';
     for (let i = 0; i < this.questionnaires.length; i++) {
       if (this.questionnaires[i].id == this.selectedQuestionnaireId) {
-        nomFichier = this.questionnaires[i].titre;
+        nomFichier = this.questionnaires[i].titre.replace(/ /g, '_');
         break;
       }
     }
 
-    nomFichier = nomFichier.replace(/ /g, '_');
-
     const date = new Date();
-    const jour = date.getDate() < 10 ? '0' + date.getDate() : '' + date.getDate();
-    const mois = (date.getMonth() + 1) < 10 ? '0' + (date.getMonth() + 1) : '' + (date.getMonth() + 1);
+    const jour = String(date.getDate()).padStart(2, '0');
+    const mois = String(date.getMonth() + 1).padStart(2, '0');
     const annee = date.getFullYear();
 
     let lignes = 'Email client;Téléphone;Question;Type de question;Réponse\r\n';
 
     for (let i = 0; i < this.reponses.length; i++) {
       const r = this.reponses[i];
-
-      const email = r.client && r.client.mail ? r.client.mail : '';
-      const tel = r.client && r.client.tel ? r.client.tel : '';
-      const question = r.question && r.question.titre ? r.question.titre : '';
-      const type = r.question && r.question.type ? r.question.type : '';
-      const reponse = r.reponse ? r.reponse : '';
-
+      const email    = r.client?.mail    || '';
+      const tel      = r.client?.tel     || '';
+      const question = r.question?.titre || '';
+      const type     = r.question?.type  || '';
+      const reponse  = r.reponse         || '';
       lignes += '"' + email + '";"' + tel + '";"' + question + '";"' + type + '";"' + reponse + '"\r\n';
     }
 
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + lignes], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + lignes], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-
     const lien = document.createElement('a');
     lien.href = url;
     lien.download = 'reponses_' + nomFichier + '_' + jour + '-' + mois + '-' + annee + '.csv';
@@ -467,14 +436,11 @@ export class DashboardGestionnaire implements OnInit {
   loadOffresIA() {
     this.http.get<any[]>(this.apiUrl + '/offres').subscribe({
       next: (data) => {
-        const liste = [];
-        for (let i = 0; i < data.length; i++) {
-          const offre = data[i];
-          offre.showManualForm = false;
-          if (!offre.offreManuelle) offre.offreManuelle = '';
-          liste.push(offre);
-        }
-        this.offresIA = liste;
+        this.offresIA = data.map(offre => ({
+          ...offre,
+          showManualForm: false,
+          offreManuelle: offre.offreManuelle || ''
+        }));
         this.cdr.detectChanges();
       },
       error: () => {}
@@ -511,9 +477,7 @@ export class DashboardGestionnaire implements OnInit {
       return;
     }
 
-    const body = { offreManuelle: offre.offreManuelle };
-
-    this.http.put(this.apiUrl + '/offres/' + offre.id + '/manuelle', body).subscribe({
+    this.http.put(this.apiUrl + '/offres/' + offre.id + '/manuelle', { offreManuelle: offre.offreManuelle }).subscribe({
       next: () => {
         offre.showManualForm = false;
         this.showToastMessage('Offre personnalisée soumise');

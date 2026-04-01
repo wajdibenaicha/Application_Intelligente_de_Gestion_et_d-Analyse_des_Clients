@@ -37,10 +37,8 @@ public class GestionnaireService {
     public Gestionnaire updateGestionnaire(Long id, Gestionnaire gestionnaire) {
         Gestionnaire existing = getGestionnaireById(id);
         if (existing != null) {
-            if (gestionnaire.getEmail() != null) existing.setEmail(gestionnaire.getEmail());
-            if (gestionnaire.getPassword() != null && !gestionnaire.getPassword().isEmpty()) existing.setPassword(gestionnaire.getPassword());
-            if (gestionnaire.getRole() != null) existing.setRole(gestionnaire.getRole());
-            return gestionnaireRepository.save(existing);
+            gestionnaire.setId(id);
+            return gestionnaireRepository.save(gestionnaire);
         }
         return null;
     }
