@@ -78,19 +78,17 @@ export class DashboardGestionnaire implements OnInit {
     }
 
     this.gestionnaire = JSON.parse(user);
+
+    this.wsService.connect();
+    this.wsService.questionnaires$.subscribe(data => { this.questionnaires = data; });
+    this.wsService.question$.subscribe(data => { this.questions = data; });
+
     this.loadQuestionnaires();
     this.loadOffresIA();
     this.http.get<any[]>(this.apiUrl + '/questions').subscribe({
       next: (data) => { this.questions = data; },
       error: () => {}
     });
-
-    this.wsService.questionnaires$.subscribe(data => {
-  this.questionnaires = data;
-  this.wsService.question$.subscribe(questions => {
-    this.questions = questions;
-  });
-});
 
 
   

@@ -51,6 +51,11 @@ public class GestionnaireController {
 
     @PostMapping
     public ResponseEntity<Gestionnaire> addGestionnaire(@RequestBody Gestionnaire gestionnaire) {
+        if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank()
+                || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()
+                || gestionnaire.getPassword() == null || gestionnaire.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
         Gestionnaire savedGestionnaire = gestionnaireService.addGestionnaire(gestionnaire);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedGestionnaire);
     }
@@ -58,6 +63,10 @@ public class GestionnaireController {
     @PutMapping("/{id}")
     public ResponseEntity<Gestionnaire> updateGestionnaire(@PathVariable Long id,
             @RequestBody Gestionnaire gestionnaire) {
+        if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank()
+                || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
         Gestionnaire updatedGestionnaire = gestionnaireService.updateGestionnaire(id, gestionnaire);
         if (updatedGestionnaire != null) {
             return ResponseEntity.ok(updatedGestionnaire);

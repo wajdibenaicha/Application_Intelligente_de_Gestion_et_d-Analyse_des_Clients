@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Subject } from 'rxjs';
@@ -15,43 +15,36 @@ export class WebSocketService {
   permission$ = new Subject<any[]>();
   offre$ = new Subject<any[]>();
 
+  constructor(private ngZone: NgZone) {}
+
   connect() {
+    if (this.stompClient?.active) return;
+
     this.stompClient = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
+      reconnectDelay: 5000,
       onConnect: () => {
-        console.log('WebSocket connected!');
-
         this.stompClient.subscribe('/topic/notifications', (message) => {
-          this.notifications$.next(message.body);
+          this.ngZone.run(() => this.notifications$.next(message.body));
         });
-
         this.stompClient.subscribe('/topic/questionnaires', (message) => {
-          this.questionnaires$.next(JSON.parse(message.body));
+          this.ngZone.run(() => this.questionnaires$.next(JSON.parse(message.body)));
         });
-
         this.stompClient.subscribe('/topic/questions', (message) => {
-          this.question$.next(JSON.parse(message.body));
+          this.ngZone.run(() => this.question$.next(JSON.parse(message.body)));
         });
-
         this.stompClient.subscribe('/topic/roles', (message) => {
-          this.role$.next(JSON.parse(message.body));
+          this.ngZone.run(() => this.role$.next(JSON.parse(message.body)));
         });
-
         this.stompClient.subscribe('/topic/permissions', (message) => {
-          this.permission$.next(JSON.parse(message.body));
+          this.ngZone.run(() => this.permission$.next(JSON.parse(message.body)));
         });
-
         this.stompClient.subscribe('/topic/offres', (message) => {
-          this.offre$.next(JSON.parse(message.body));
+          this.ngZone.run(() => this.offre$.next(JSON.parse(message.body)));
         });
-        
-
         this.stompClient.subscribe('/topic/gestionnaires', (message) => {
-          this.gestionnaires$.next(JSON.parse(message.body));
+          this.ngZone.run(() => this.gestionnaires$.next(JSON.parse(message.body)));
         });
-      },
-      onDisconnect: () => {
-        console.log('WebSocket disconnected');
       }
     });
 

@@ -280,9 +280,10 @@
     <label>Nom Complet <span style="color:red">*</span></label>
     <input [(ngModel)]="gestform.fullName" placeholder="Nom complet" [readonly]="!!editinggest" [style.background]="editinggest ? '#f0f0f0' : ''" required #nomField="ngModel" />
     <span style="color:red; font-size:12px" *ngIf="nomField.invalid && nomField.touched">Le nom est obligatoire</span>
-    <label>Email</label>
-    <input [(ngModel)]="gestform.email" placeholder="Email" type="email" />
-    <label>Mot de passe</label>
+    <label>Email <span style="color:red">*</span></label>
+    <input [(ngModel)]="gestform.email" placeholder="Email" type="email" required #emailField="ngModel" />
+    <span style="color:red; font-size:12px" *ngIf="emailField.invalid && emailField.touched">L'email est obligatoire</span>
+    <label>Mot de passe <span *ngIf="!editinggest" style="color:red">*</span></label>
     <input [(ngModel)]="gestform.password" placeholder="Mot de passe" type="password" />
     <label>Rôle</label>
     <select [(ngModel)]="gestform.role">
@@ -291,7 +292,10 @@
     </select>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showgestform=false">Annuler</button>
-      <button class="btn-save" (click)="savegestionnaire()" [disabled]="!gestform.fullName">{{ editinggest ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="savegestionnaire()"
+        [disabled]="!gestform.fullName || !gestform.email || (!editinggest && !gestform.password)">
+        {{ editinggest ? 'Modifier' : 'Ajouter' }}
+      </button>
     </div>
   </div>
 </div>

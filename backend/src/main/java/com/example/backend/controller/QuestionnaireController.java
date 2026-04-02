@@ -77,7 +77,13 @@ public class QuestionnaireController {
                 for (Object item : rawList) {
                     if (item instanceof Map) {
                         Map<?, ?> qData = (Map<?, ?>) item;
-                        Question q = new Question();
+                        Question q;
+                        if (qData.get("id") != null) {
+                            Long qId = Long.valueOf(qData.get("id").toString());
+                            q = questionRepository.findById(qId).orElse(new Question());
+                        } else {
+                            q = new Question();
+                        }
                         q.setTitre(qData.get("titre") != null ? qData.get("titre").toString() : "");
                         q.setType(qData.get("type") != null ? qData.get("type").toString() : "input");
                         q.setOptions(qData.get("options") != null ? qData.get("options").toString() : "");
