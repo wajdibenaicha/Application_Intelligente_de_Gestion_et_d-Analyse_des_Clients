@@ -3,7 +3,7 @@ package com.example.backend.models;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "question")
+@Table(name = "question" , uniqueConstraints = @UniqueConstraint(columnNames = {"titre", "type"}))
 public class Question {
 
     @Id

@@ -36,9 +36,9 @@ export class DashbordAdmin implements OnInit {
     showgestform = false;
   editinggest: any = null;
   gestform: any = {
-    full_name: '',
+    fullName: '',
     email: '',
-    password: '' , 
+    password: '',
     role: null
   };
 
@@ -60,13 +60,13 @@ export class DashbordAdmin implements OnInit {
   editingrole: any = null;
   roleform: any = {
     name: '',
-    permissions: null
+    permission: null
   };
 
   showpermissionform = false;
   editingpermission: any = null;
   permissionform: any = {
-    name: ''
+    description: ''
   };
 
     showoffreform = false;
@@ -139,10 +139,10 @@ this.wsService.offre$.subscribe(data => {  this.offres = data;
   openaddgestionnaire() {
     this.editinggest = null;
     this.gestform = {
-      full_name: '',
+      fullName: '',
       email: '',
-      password: '' ,
-      role: null 
+      password: '',
+      role: null
     };
     this.showgestform = true;
   }
@@ -436,7 +436,7 @@ savegestionnaire() {
       this.editingrole = null;
       this.roleform = {
         name: '',
-        permissions: []
+        permission: null
       };
       this.showroleform = true;
     }
@@ -445,7 +445,7 @@ savegestionnaire() {
       this.editingrole = role;
       this.roleform = {
         name: role.name,
-        permissions: role.permissions
+        permission: role.permission
       };
       this.showroleform = true;
     }
@@ -477,7 +477,7 @@ savegestionnaire() {
     openaddpermission() {
       this.editingpermission = null;
       this.permissionform = {
-        name: ''
+        description: ''
       };
       this.showpermissionform = true;
     }
@@ -485,7 +485,7 @@ savegestionnaire() {
     openeditpermission(permission: any) {
       this.editingpermission = permission;
       this.permissionform = {
-        name: permission.name
+        description: permission.description
       };
       this.showpermissionform = true;
     }

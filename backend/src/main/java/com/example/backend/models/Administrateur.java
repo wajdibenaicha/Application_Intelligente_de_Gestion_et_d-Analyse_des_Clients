@@ -17,7 +17,7 @@ public class Administrateur {
     @Column(name = "full_name")
     private String fullName;
     private String password;
-    @Column(name = "email")
+    @Column(name = "email" , unique = true)
     private String email;
 
     public Administrateur() {

@@ -87,6 +87,9 @@ export class DashboardGestionnaire implements OnInit {
 
     this.wsService.questionnaires$.subscribe(data => {
   this.questionnaires = data;
+  this.wsService.question$.subscribe(questions => {
+    this.questions = questions;
+  });
 });
 
 
@@ -473,27 +476,13 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   accepterOffre(offre: any) {
-    this.http.put(this.apiUrl + '/offres/' + offre.id + '/accepter', {}).subscribe({
-      next: () => {
-        offre.statut = 'ACCEPTE';
-        this.showToastMessage('Offre acceptée');
-      },
-      error: () => {
-        this.showToastMessage('Erreur', 'error');
-      }
-    });
+    offre.statut = 'ACCEPTE';
+    this.showToastMessage('Offre acceptée');
   }
 
   rejeterOffre(offre: any) {
-    this.http.put(this.apiUrl + '/offres/' + offre.id + '/rejeter', {}).subscribe({
-      next: () => {
-        offre.statut = 'REJETE';
-        offre.showManualForm = true;
-      },
-      error: () => {
-        this.showToastMessage('Erreur', 'error');
-      }
-    });
+    offre.statut = 'REJETE';
+    offre.showManualForm = true;
   }
 
   soumettreOffreManuelle(offre: any) {
@@ -501,16 +490,8 @@ export class DashboardGestionnaire implements OnInit {
       this.showToastMessage('Veuillez saisir votre offre', 'error');
       return;
     }
-
-    this.http.put(this.apiUrl + '/offres/' + offre.id + '/manuelle', { offreManuelle: offre.offreManuelle }).subscribe({
-      next: () => {
-        offre.showManualForm = false;
-        this.showToastMessage('Offre personnalisée soumise');
-      },
-      error: () => {
-        this.showToastMessage('Erreur lors de la soumission', 'error');
-      }
-    });
+    offre.showManualForm = false;
+    this.showToastMessage('Offre personnalisée soumise');
   }
 
   isselectedquestion(id: number): boolean {

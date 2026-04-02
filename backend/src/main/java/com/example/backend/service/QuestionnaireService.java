@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -27,7 +28,24 @@ public class QuestionnaireService {
     }
 
     public Questionnaire save(Questionnaire q) {
+        List<Long> newQuestionIds = q.getQuestions().stream().map(question -> question.getId()).sorted().toList();
+        for (Questionnaire existing : questionnaireRepository.findAll()) {
+        if (existing.getId() != null && existing.getId().equals(q.getId())) {
+            continue;
+        }
+         List<Long> existingIds = existing.getQuestions()
+            .stream()
+            .map(question -> question.getId())
+            .sorted()
+            .toList();
+
+        if (existingIds.equals(newQuestionIds)) {
+            throw new RuntimeException("Un questionnaire avec les mêmes questions existe déjà");
+        }
+    }
+
         Questionnaire saved = questionnaireRepository.save(q);
+
         messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
         return saved;
     }
@@ -53,7 +71,6 @@ public class QuestionnaireService {
     public Questionnaire confirmQuestionnaire(Long id) {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
-            // Gestionnaire sends for review → EN_ATTENTE; Admin approves → PUBLIE
             if ("EN_ATTENTE".equals(q.getStatut())) {
                 q.setStatut("PUBLIE");
                 q.setConfirmed(true);

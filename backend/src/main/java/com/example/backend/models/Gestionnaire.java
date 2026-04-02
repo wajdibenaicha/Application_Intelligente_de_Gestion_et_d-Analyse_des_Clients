@@ -13,9 +13,10 @@ public class Gestionnaire {
 
     @Column(name = "full_name")
     private String fullName;
-
-    private String password;
+    @Column(name = "email" , unique = true)
     private String email;
+    @Column(name = "password")
+    private String password;
 
     @ManyToOne
     @JoinColumn(name = "id_role")
