@@ -1,21 +1,10 @@
-
 package com.example.backend.controller;
 
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import com.example.backend.models.Administrateur;
 import com.example.backend.service.AdministrateurService;
 
@@ -43,8 +32,8 @@ public class AdministrateurController {
 
     @PostMapping
     public ResponseEntity<Administrateur> addAdministrateur(@RequestBody Administrateur administrateur) {
-        Administrateur savedAdministrateur = administrateurService.addAdministrateur(administrateur);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedAdministrateur);
+        Administrateur saved = administrateurService.addAdministrateur(administrateur);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PostMapping("/login")
@@ -60,19 +49,19 @@ public class AdministrateurController {
     @PutMapping("/{id}")
     public ResponseEntity<Administrateur> updateAdministrateur(@PathVariable Long id,
             @RequestBody Administrateur administrateur) {
-        Administrateur updatedAdministrateur = administrateurService.updateAdministrateur(id, administrateur);
-        if (updatedAdministrateur != null) {
-            return ResponseEntity.ok(updatedAdministrateur);
+        Administrateur updated = administrateurService.updateAdministrateur(id, administrateur);
+        if (updated != null) {
+            return ResponseEntity.ok(updated);
         }
         return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Administrateur> deleteAdministrateur(@PathVariable Long id) {
-        Administrateur existingAdministrateur = administrateurService.getAdministrateurById(id);
-        if (existingAdministrateur != null) {
+        Administrateur existing = administrateurService.getAdministrateurById(id);
+        if (existing != null) {
             administrateurService.deleteAdministrateur(id);
-            return ResponseEntity.ok(existingAdministrateur);
+            return ResponseEntity.ok(existing);
         }
         return ResponseEntity.notFound().build();
     }

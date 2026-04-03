@@ -1,10 +1,9 @@
 package com.example.backend.service;
 
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import com.example.backend.Repository.AdministrateurRepository;
 import com.example.backend.models.Administrateur;
 
@@ -13,6 +12,9 @@ public class AdministrateurService {
 
     @Autowired
     private AdministrateurRepository administrateurRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public List<Administrateur> getAllAdministrateurs() {
         return administrateurRepository.findAll();
@@ -23,6 +25,7 @@ public class AdministrateurService {
     }
 
     public Administrateur addAdministrateur(Administrateur administrateur) {
+        administrateur.setPassword(passwordEncoder.encode(administrateur.getPassword()));
         return administrateurRepository.save(administrateur);
     }
 
@@ -30,10 +33,14 @@ public class AdministrateurService {
         Administrateur exAd = getAdministrateurById(id);
         if (exAd != null) {
             administrateur.setId(id);
+            if (administrateur.getPassword() != null && !administrateur.getPassword().isEmpty()) {
+                administrateur.setPassword(passwordEncoder.encode(administrateur.getPassword()));
+            } else {
+                administrateur.setPassword(exAd.getPassword());
+            }
             return administrateurRepository.save(administrateur);
-        } else {
-            return null;
         }
+        return null;
     }
 
     public Administrateur deleteAdministrateur(Long id) {
@@ -41,12 +48,15 @@ public class AdministrateurService {
         if (exAd != null) {
             administrateurRepository.deleteById(id);
             return exAd;
-        } else {
-            return null;
         }
+        return null;
     }
 
     public Administrateur login(String fullName, String password) {
-        return administrateurRepository.findByFullNameAndPassword(fullName, password);
+        Administrateur admin = administrateurRepository.findByFullName(fullName);
+        if (admin != null && passwordEncoder.matches(password, admin.getPassword())) {
+            return admin;
+        }
+        return null;
     }
 }

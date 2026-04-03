@@ -1,20 +1,10 @@
 package com.example.backend.controller;
 
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import com.example.backend.models.Gestionnaire;
 import com.example.backend.service.GestionnaireService;
 
@@ -56,8 +46,8 @@ public class GestionnaireController {
                 || gestionnaire.getPassword() == null || gestionnaire.getPassword().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        Gestionnaire savedGestionnaire = gestionnaireService.addGestionnaire(gestionnaire);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedGestionnaire);
+        Gestionnaire saved = gestionnaireService.addGestionnaire(gestionnaire);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
@@ -67,18 +57,18 @@ public class GestionnaireController {
                 || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        Gestionnaire updatedGestionnaire = gestionnaireService.updateGestionnaire(id, gestionnaire);
-        if (updatedGestionnaire != null) {
-            return ResponseEntity.ok(updatedGestionnaire);
+        Gestionnaire updated = gestionnaireService.updateGestionnaire(id, gestionnaire);
+        if (updated != null) {
+            return ResponseEntity.ok(updated);
         }
         return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Gestionnaire> deleteGestionnaire(@PathVariable Long id) {
-        Gestionnaire deletedGestionnaire = gestionnaireService.deleteGestionnaire(id);
-        if (deletedGestionnaire != null) {
-            return ResponseEntity.ok(deletedGestionnaire);
+        Gestionnaire deleted = gestionnaireService.deleteGestionnaire(id);
+        if (deleted != null) {
+            return ResponseEntity.ok(deleted);
         }
         return ResponseEntity.notFound().build();
     }
