@@ -32,13 +32,19 @@ public class PermissionController {
     }
 
     @PostMapping
-    public ResponseEntity<Permission> addPermission(@RequestBody Permission permission) {
+    public ResponseEntity<?> addPermission(@RequestBody Permission permission) {
+        if (permission.getDescription() == null || permission.getDescription().isBlank()) {
+            return ResponseEntity.badRequest().body("Le nom de la permission est obligatoire.");
+        }
         Permission savedPermission = permissionService.addPermission(permission);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedPermission);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Permission> updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
+    public ResponseEntity<?> updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
+        if (permission.getDescription() == null || permission.getDescription().isBlank()) {
+            return ResponseEntity.badRequest().body("Le nom de la permission est obligatoire.");
+        }
         Permission updatedPermission = permissionService.updatePermission(id, permission);
         if (updatedPermission != null) {
             return ResponseEntity.ok(updatedPermission);

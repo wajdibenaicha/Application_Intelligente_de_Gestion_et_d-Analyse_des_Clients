@@ -34,11 +34,19 @@ public class OffreController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Offre> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        String title = body.get("title") != null ? body.get("title").toString().trim() : null;
+        String description = body.get("description") != null ? body.get("description").toString().trim() : null;
+        if (title == null || title.isBlank()) {
+            return ResponseEntity.badRequest().body("Le titre est obligatoire.");
+        }
+        if (description == null || description.isBlank()) {
+            return ResponseEntity.badRequest().body("La description est obligatoire.");
+        }
         Offre existing = offreService.getOffreById(id);
         if (existing == null) return ResponseEntity.notFound().build();
-        if (body.get("title") != null) existing.setTitle(body.get("title").toString());
-        if (body.get("description") != null) existing.setDescription(body.get("description").toString());
+        existing.setTitle(title);
+        existing.setDescription(description);
         return ResponseEntity.ok(offreService.updateOffre(id, existing));
     }
 

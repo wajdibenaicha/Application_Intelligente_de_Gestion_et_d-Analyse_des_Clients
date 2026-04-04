@@ -32,13 +32,25 @@ public class RoleController {
     }
 
     @PostMapping
-    public ResponseEntity<Role> addRole(@RequestBody Role role) {
+    public ResponseEntity<?> addRole(@RequestBody Role role) {
+        if (role.getName() == null || role.getName().isBlank()) {
+            return ResponseEntity.badRequest().body("Le nom du rôle est obligatoire.");
+        }
+        if (role.getPermission() == null) {
+            return ResponseEntity.badRequest().body("La permission est obligatoire.");
+        }
         Role savedRole = roleService.addRole(role);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedRole);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Role> updateRole(@PathVariable Long id, @RequestBody Role role) {
+    public ResponseEntity<?> updateRole(@PathVariable Long id, @RequestBody Role role) {
+        if (role.getName() == null || role.getName().isBlank()) {
+            return ResponseEntity.badRequest().body("Le nom du rôle est obligatoire.");
+        }
+        if (role.getPermission() == null) {
+            return ResponseEntity.badRequest().body("La permission est obligatoire.");
+        }
         Role updatedRole = roleService.updateRole(id, role);
         if (updatedRole != null) {
             return ResponseEntity.ok(updatedRole);

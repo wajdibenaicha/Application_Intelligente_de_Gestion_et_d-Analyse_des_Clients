@@ -312,6 +312,7 @@ export class DashbordAdmin implements OnInit {
 
     createaddquestion() {
         if (!this.newquest.titre) return;
+        if (this.newquest.type !== 'text' && (!this.newquest.options || this.newquest.options.trim() === '')) return;
         this.api.addQuestion(this.newquest).subscribe((c: any) => {
             this.selectedquestion.push(c);
             this.questions.push(c);

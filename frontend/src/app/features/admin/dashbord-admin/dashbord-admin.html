@@ -293,7 +293,7 @@
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showgestform=false">Annuler</button>
       <button class="btn-save" (click)="savegestionnaire()"
-        [disabled]="!gestform.fullName || !gestform.email || (!editinggest && !gestform.password)">
+        [disabled]="!gestform.fullName || !gestform.email || (!editinggest && !gestform.password) || !gestform.role">
         {{ editinggest ? 'Modifier' : 'Ajouter' }}
       </button>
     </div>
@@ -336,7 +336,8 @@
             <option value="select">Liste déroulante</option>
           </select>
           <input *ngIf="newquest.type!=='text'" [(ngModel)]="newquest.options" placeholder="Options séparées par virgule" />
-          <button class="btn-save-q" (click)="createaddquestion()">✓ Ajouter</button>
+          <button class="btn-save-q" (click)="createaddquestion()"
+            [disabled]="!newquest.titre || (newquest.type !== 'text' && !newquest.options)">✓ Ajouter</button>
         </div>
       </div>
       <div class="questions-selected">
@@ -363,7 +364,10 @@
 
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showquestform=false">Annuler</button>
-      <button class="btn-save" (click)="savequestionnaire()">{{ editingquest ? 'Modifier' : 'Créer' }}</button>
+      <button class="btn-save" (click)="savequestionnaire()"
+        [disabled]="!questform.titre || !questform.description || selectedquestion.length === 0">
+        {{ editingquest ? 'Modifier' : 'Créer' }}
+      </button>
     </div>
   </div>
 </div>
@@ -380,7 +384,8 @@
     <textarea [(ngModel)]="offreform.description" placeholder="Description de l'offre..." rows="4"></textarea>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showoffreform=false">Annuler</button>
-      <button class="btn-save" (click)="saveoffre()">{{ editingoffre ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="saveoffre()"
+        [disabled]="!offreform.title || !offreform.description">{{ editingoffre ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
@@ -400,7 +405,8 @@
     </select>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showroleform=false">Annuler</button>
-      <button class="btn-save" (click)="saverole()">{{ editingrole ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="saverole()"
+        [disabled]="!roleform.name || !roleform.permission">{{ editingrole ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
@@ -415,7 +421,8 @@
     <input [(ngModel)]="permissionform.description" placeholder="Nom de la permission" />
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showpermissionform=false">Annuler</button>
-      <button class="btn-save" (click)="savepermission()">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="savepermission()"
+        [disabled]="!permissionform.description">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
