@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/permissions")
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201"})
+@CrossOrigin(origins = { "http://localhost:4200", "http://localhost:4201" })
 public class PermissionController {
 
     @Autowired
@@ -32,19 +32,13 @@ public class PermissionController {
     }
 
     @PostMapping
-    public ResponseEntity<?> addPermission(@RequestBody Permission permission) {
-        if (permission.getDescription() == null || permission.getDescription().isBlank()) {
-            return ResponseEntity.badRequest().body("Le nom de la permission est obligatoire.");
-        }
+    public ResponseEntity<Permission> addPermission(@RequestBody Permission permission) {
         Permission savedPermission = permissionService.addPermission(permission);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedPermission);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
-        if (permission.getDescription() == null || permission.getDescription().isBlank()) {
-            return ResponseEntity.badRequest().body("Le nom de la permission est obligatoire.");
-        }
+    public ResponseEntity<Permission> updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
         Permission updatedPermission = permissionService.updatePermission(id, permission);
         if (updatedPermission != null) {
             return ResponseEntity.ok(updatedPermission);

@@ -27,15 +27,8 @@ public class QuestionController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Question question) {
-        if (question.getTitre() == null || question.getTitre().isBlank()) {
-            return ResponseEntity.badRequest().body("Le titre est obligatoire.");
-        }
-        if (question.getType() != null && !question.getType().equals("text")
-                && (question.getOptions() == null || question.getOptions().isBlank())) {
-            return ResponseEntity.badRequest().body("Les options sont obligatoires pour ce type de question.");
-        }
-        return ResponseEntity.ok(questionRepository.save(question));
+    public Question create(@RequestBody Question question) {
+        return questionRepository.save(question);
     }
 
     @PutMapping("/{id}")

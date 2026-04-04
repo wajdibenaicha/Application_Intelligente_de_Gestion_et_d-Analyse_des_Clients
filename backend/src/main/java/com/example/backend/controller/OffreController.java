@@ -11,7 +11,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/offres")
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201"})
+@CrossOrigin(origins = { "http://localhost:4200", "http://localhost:4201" })
 public class OffreController {
 
     @Autowired
@@ -34,19 +34,14 @@ public class OffreController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        String title = body.get("title") != null ? body.get("title").toString().trim() : null;
-        String description = body.get("description") != null ? body.get("description").toString().trim() : null;
-        if (title == null || title.isBlank()) {
-            return ResponseEntity.badRequest().body("Le titre est obligatoire.");
-        }
-        if (description == null || description.isBlank()) {
-            return ResponseEntity.badRequest().body("La description est obligatoire.");
-        }
+    public ResponseEntity<Offre> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         Offre existing = offreService.getOffreById(id);
-        if (existing == null) return ResponseEntity.notFound().build();
-        existing.setTitle(title);
-        existing.setDescription(description);
+        if (existing == null)
+            return ResponseEntity.notFound().build();
+        if (body.get("title") != null)
+            existing.setTitle(body.get("title").toString());
+        if (body.get("description") != null)
+            existing.setDescription(body.get("description").toString());
         return ResponseEntity.ok(offreService.updateOffre(id, existing));
     }
 
@@ -56,9 +51,4 @@ public class OffreController {
         return ResponseEntity.ok().build();
     }
 
-    
-
-    
-
-    
 }

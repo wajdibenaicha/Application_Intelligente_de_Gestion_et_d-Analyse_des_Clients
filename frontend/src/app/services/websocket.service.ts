@@ -14,6 +14,7 @@ export class WebSocketService {
   role$ = new Subject<any[]>();
   permission$ = new Subject<any[]>();
   offre$ = new Subject<any[]>();
+  adminNotifications$ = new Subject<any[]>();
 
   constructor(private ngZone: NgZone) {}
 
@@ -44,6 +45,9 @@ export class WebSocketService {
         });
         this.stompClient.subscribe('/topic/gestionnaires', (message) => {
           this.ngZone.run(() => this.gestionnaires$.next(JSON.parse(message.body)));
+        });
+        this.stompClient.subscribe('/topic/admin/notifications', (message) => {
+          this.ngZone.run(() => this.adminNotifications$.next(JSON.parse(message.body)));
         });
       }
     });

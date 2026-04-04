@@ -41,5 +41,16 @@ private base = 'http://localhost:8081/api';
   deleteoffre(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/offres/${id}`); }
   updateoffre(id: number, offre: any): Observable<any> { return this.http.put<any>(`${this.base}/offres/${id}`, offre); }
 
-
+  getNotifications(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/notifications/admin`); }
+  approuverPublication(id: number): Observable<any> { return this.http.post(`${this.base}/questionnaires/${id}/approuver`, {}); }
+  rejeterPublication(id: number, raison: string): Observable<any> {
+    return this.http.post(`${this.base}/questionnaires/${id}/rejeter`, {
+      raison: raison
+    });
+  }
+  demanderPublication(id: number, gestionnaireId: number): Observable<any> { return this.http.post(`${this.base}/questionnaires/${id}/demander-publication?gestionnaireId=${gestionnaireId}`, {}); }
+  retirerDemande(id: number): Observable<any> { return this.http.post(`${this.base}/questionnaires/${id}/retirer-demande`, {}); }
+  getClientsFiltres(params: any): Observable<any[]> { return this.http.get<any[]>(`${this.base}/envoi/clients`, { params }); }
+  genererLien(questionnaireId: number, clientId: number): Observable<string> { return this.http.post(`${this.base}/envoi/generer-lien?questionnaireId=${questionnaireId}&clientId=${clientId}`, {}, { responseType: 'text' }); }
+  
 }

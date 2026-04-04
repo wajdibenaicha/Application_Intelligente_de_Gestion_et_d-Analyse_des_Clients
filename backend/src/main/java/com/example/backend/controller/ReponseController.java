@@ -2,9 +2,12 @@ package com.example.backend.controller;
 
 import com.example.backend.models.Reponse;
 import com.example.backend.service.ReponseService;
+import com.example.backend.service.EnvoiService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reponses")
@@ -13,6 +16,9 @@ public class ReponseController {
 
     @Autowired
     private ReponseService reponseService;
+
+    @Autowired
+    private EnvoiService envoiService;
 
     @GetMapping
     public List<Reponse> getAll() {
@@ -32,5 +38,11 @@ public class ReponseController {
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         reponseService.deleteReponse(id);
+    }
+
+    @PostMapping("/repondre")
+    public ResponseEntity<?> repondre(@RequestParam String token, @RequestBody List<Map<String, Object>> reponses) {
+        boolean ok = envoiService.traiterReponse(token, reponses);
+        return ok ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
     }
 }

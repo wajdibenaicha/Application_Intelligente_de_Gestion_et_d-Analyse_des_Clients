@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import com.example.backend.Repository.OffreRepository;
 import com.example.backend.models.Offre;
 
-
 @Service
 public class OffreService {
     @Autowired

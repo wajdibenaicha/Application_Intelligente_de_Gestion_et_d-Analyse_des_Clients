@@ -14,9 +14,12 @@ import com.example.backend.models.Questionnaire;
 public class QuestionnaireService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
-    
+
     @Autowired
     private QuestionnaireRepository questionnaireRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public List<Questionnaire> getAll() {
         return questionnaireRepository.findAll();
@@ -28,20 +31,20 @@ public class QuestionnaireService {
 
     public Questionnaire save(Questionnaire q) {
         List<Long> newQuestionIds = q.getQuestions().stream()
-            .map(question -> question.getId())
-            .filter(id -> id != null)
-            .sorted()
-            .toList();
+                .map(question -> question.getId())
+                .filter(id -> id != null)
+                .sorted()
+                .toList();
         if (!newQuestionIds.isEmpty()) {
             for (Questionnaire existing : questionnaireRepository.findAll()) {
                 if (existing.getId() != null && existing.getId().equals(q.getId())) {
                     continue;
                 }
                 List<Long> existingIds = existing.getQuestions().stream()
-                    .map(question -> question.getId())
-                    .filter(id -> id != null)
-                    .sorted()
-                    .toList();
+                        .map(question -> question.getId())
+                        .filter(id -> id != null)
+                        .sorted()
+                        .toList();
                 if (existingIds.equals(newQuestionIds)) {
                     throw new RuntimeException("Un questionnaire avec les mêmes questions existe déjà");
                 }
@@ -89,14 +92,67 @@ public class QuestionnaireService {
         return null;
     }
 
-    public Questionnaire rejeterQuestionnaire(Long id) {
+    public Questionnaire rejeterQuestionnaire(Long id, String raison) {
         Questionnaire q = getQuestionnaireById(id);
-        if (q != null) {
+        if (q != null && "EN_ATTENTE".equals(q.getStatut())) {
             q.setStatut("REJETE");
             q.setConfirmed(false);
+            q.setRaisonRejet(raison);
             Questionnaire updated = questionnaireRepository.save(q);
+            if (q.getGestionnaire() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        q.getGestionnaire().getId().toString(),
+                        "/topic/notifications",
+                        "Votre questionnaire \"" + q.getTitre() + "\" a été rejeté. Motif : " + raison);
+            }
+            notificationService.deleteBySource(id, "QUESTIONNAIRE");
             messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
             return updated;
+        }
+        return null;
+    }
+
+    public Questionnaire demanderPublication(Long id, Long gestionnaireId) {
+        Questionnaire q = getQuestionnaireById(id);
+        if (q != null && "BROUILLON".equals(q.getStatut())) {
+            q.setStatut("EN_ATTENTE");
+            Questionnaire saved = questionnaireRepository.save(q);
+            notificationService.createNotification("DEMANDE_PUBLICATION",
+                    "Le gestionnaire demande la publication du questionnaire : " + q.getTitre(),
+                    id, "QUESTIONNAIRE");
+            messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
+            return saved;
+        }
+        return null;
+    }
+
+    public Questionnaire retirerDemande(Long id) {
+        Questionnaire q = getQuestionnaireById(id);
+        if (q != null && "EN_ATTENTE".equals(q.getStatut())) {
+            q.setStatut("BROUILLON");
+            Questionnaire saved = questionnaireRepository.save(q);
+            notificationService.deleteBySource(id, "QUESTIONNAIRE");
+            messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
+            return saved;
+        }
+        return null;
+    }
+
+    public Questionnaire approuverPublication(Long id) {
+        Questionnaire q = getQuestionnaireById(id);
+        if (q != null && "EN_ATTENTE".equals(q.getStatut())) {
+            q.setStatut("PUBLIE");
+            q.setConfirmed(true);
+            Questionnaire saved = questionnaireRepository.save(q);
+            notificationService.deleteBySource(id, "QUESTIONNAIRE");
+            if (q.getGestionnaire() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        q.getGestionnaire().getId().toString(),
+                        "/topic/notifications",
+                        "Votre questionnaire " + q.getTitre() + " a été publié.");
+            }
+            messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
+            return saved;
         }
         return null;
     }

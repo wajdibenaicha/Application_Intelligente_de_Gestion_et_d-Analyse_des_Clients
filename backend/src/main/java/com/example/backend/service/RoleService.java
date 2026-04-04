@@ -9,12 +9,11 @@ import org.springframework.stereotype.Service;
 import com.example.backend.Repository.RoleRepository;
 import com.example.backend.models.Role;
 
-
 @Service
 public class RoleService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
-    
+
     @Autowired
     private RoleRepository roleRepository;
 

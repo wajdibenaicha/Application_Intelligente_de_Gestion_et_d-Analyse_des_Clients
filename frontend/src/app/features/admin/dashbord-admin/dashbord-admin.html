@@ -62,6 +62,10 @@
         </h2>
       </div>
       <div class="topbar-right">
+        <div class="notif-icon" (click)="toggleNotifPanel()">
+          <span class="bell">🔔</span>
+          <span class="notif-badge" *ngIf="unreadNotifCount > 0">{{ unreadNotifCount }}</span>
+        </div>
         <span class="date-badge">{{ today | date:'dd MMM yyyy' }}</span>
       </div>
     </header>
@@ -137,9 +141,6 @@
         </div>
 
         <div *ngIf="activeTab === 'questionnaires'" class="table-wrapper">
-          <div class="section-toolbar" style="margin-bottom: 16px;">
-            <button class="btn-primary" (click)="openaddquestionnaire()">+ Créer</button>
-          </div>
           <table class="data-table">
             <thead>
               <tr><th>Titre</th><th>Gestionnaire</th><th>Questions</th><th>Statut</th><th>Actions</th></tr>
@@ -150,14 +151,12 @@
                 <td>{{ q.gestionnaire?.fullName || 'Admin' }}</td>
                 <td>{{ q.questions?.length || 0 }}</td>
                 <td>
-                  <span class="badge badge-brouillon" *ngIf="!q.confirmed">Brouillon</span>
-                  <span class="badge badge-confirmed" *ngIf="q.confirmed">✓ Confirmé</span>
+                  <span class="badge" [ngClass]="q.confirmed ? 'badge-confirmed' : 'badge-pending'">
+                    {{ q.confirmed ? 'Publié' : (q.statut === 'EN_ATTENTE' ? 'En attente' : 'Brouillon') }}
+                  </span>
                 </td>
                 <td class="actions-cell">
-                  <button class="btn-icon btn-edit" *ngIf="!q.confirmed" (click)="oppeneditquestionnaire(q)">✏️</button>
-                  <button class="btn-icon btn-confirm" *ngIf="!q.confirmed" (click)="confirmquestionnaire(q.id)" title="Confirmer">✅</button>
-                  <button class="btn-icon btn-view" *ngIf="q.confirmed" (click)="opendetailsquestionnaire(q)" title="Voir">👁️</button>
-                  <button class="btn-icon btn-delete" (click)="deletequestionnaire(q.id)">🗑️</button>
+                  <button class="btn-icon btn-view" (click)="opendetailsquestionnaire(q)" title="Voir">👁️</button>
                 </td>
               </tr>
               <tr *ngIf="questionnaires.length === 0">
@@ -173,8 +172,7 @@
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
-                  <tr><th>ID</th><th>Question</th><th>Réponse</th><th>Client</th><th>Actions</th></tr>
-                </thead>
+                  <tr><th>ID</th><th>Question</th><th>Réponse</th><th>Client</th><th>Actions</th> </thead>
                 <tbody>
                   <tr *ngFor="let r of group.reponses">
                     <td>{{ r.id }}</td>
@@ -199,8 +197,7 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Titre</th><th>Description</th><th>Actions</th></tr>
-            </thead>
+              <tr><th>ID</th><th>Titre</th><th>Description</th><th>Actions</th> </thead>
             <tbody>
               <tr *ngFor="let o of offres">
                 <td>{{ o.id }}</td>
@@ -224,8 +221,7 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th></tr>
-            </thead>
+              <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th> </thead>
             <tbody>
               <tr *ngFor="let r of roles">
                 <td>{{ r.id }}</td>
@@ -249,8 +245,7 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Nom</th><th>Actions</th></tr>
-            </thead>
+              <tr><th>ID</th><th>Nom</th><th>Actions</th> </thead>
             <tbody>
               <tr *ngFor="let p of permissions">
                 <td>{{ p.id }}</td>
@@ -293,80 +288,8 @@
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showgestform=false">Annuler</button>
       <button class="btn-save" (click)="savegestionnaire()"
-        [disabled]="!gestform.fullName || !gestform.email || (!editinggest && !gestform.password) || !gestform.role">
+        [disabled]="!gestform.fullName || !gestform.email || (!editinggest && !gestform.password)">
         {{ editinggest ? 'Modifier' : 'Ajouter' }}
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" *ngIf="showquestform" (click)="showquestform=false">
-  <div class="modal modal-large" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>{{ editingquest ? '✏️ Modifier Questionnaire' : '📋 Nouveau Questionnaire' }}</h2>
-      <button class="btn-close" (click)="showquestform=false">✕</button>
-    </div>
-    <label>Titre</label>
-    <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
-    <label>Description</label>
-    <input [(ngModel)]="questform.description" placeholder="Description" />
-
-    <div class="questions-section">
-      <div class="questions-pool">
-        <div class="section-title">📚 Questions existantes</div>
-        <div class="search-hint">Cliquez pour ajouter / retirer</div>
-        <div class="questions-list">
-          <div *ngFor="let q of questions"
-               class="q-chip"
-               [class.selected]="isselectedquestion(q.id)"
-               (click)="changequestion(q.id)">
-            <span class="q-type-badge">{{ q.type }}</span>
-            {{ q.titre || q.title }}
-            <span class="q-check" *ngIf="isselectedquestion(q.id)">✓</span>
-          </div>
-          <div *ngIf="questions.length===0" class="empty-pool">Aucune question disponible</div>
-        </div>
-        <button class="btn-new-q" (click)="showaddquestion=!showaddquestion">+ Créer nouvelle question</button>
-        <div *ngIf="showaddquestion" class="new-q-form">
-          <input [(ngModel)]="newquest.titre" placeholder="Titre de la question" />
-          <select [(ngModel)]="newquest.type">
-            <option value="text">Texte libre</option>
-            <option value="radio">Choix unique</option>
-            <option value="checkbox">Choix multiple</option>
-            <option value="select">Liste déroulante</option>
-          </select>
-          <input *ngIf="newquest.type!=='text'" [(ngModel)]="newquest.options" placeholder="Options séparées par virgule" />
-          <button class="btn-save-q" (click)="createaddquestion()"
-            [disabled]="!newquest.titre || (newquest.type !== 'text' && !newquest.options)">✓ Ajouter</button>
-        </div>
-      </div>
-      <div class="questions-selected">
-        <div class="section-title">📋 Questions sélectionnées</div>
-        <div class="search-hint">Glissez pour réorganiser</div>
-        <div class="drop-zone">
-          <div *ngFor="let q of selectedquestion; let i=index"
-               class="selected-chip"
-               draggable="true"
-               [class.drag-over]="dragoverIndex===i"
-               (dragstart)="dragStart(i,$event)"
-               (dragover)="dragover(i,$event)"
-               (drop)="drop(i,$event)">
-            <span class="drag-handle">⠿</span>
-            <span class="q-num">{{ i+1 }}</span>
-            <span class="q-type-badge">{{ q.type }}</span>
-            {{ q.titre || q.title }}
-            <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
-          </div>
-          <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn-cancel" (click)="showquestform=false">Annuler</button>
-      <button class="btn-save" (click)="savequestionnaire()"
-        [disabled]="!questform.titre || !questform.description || selectedquestion.length === 0">
-        {{ editingquest ? 'Modifier' : 'Créer' }}
       </button>
     </div>
   </div>
@@ -384,8 +307,7 @@
     <textarea [(ngModel)]="offreform.description" placeholder="Description de l'offre..." rows="4"></textarea>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showoffreform=false">Annuler</button>
-      <button class="btn-save" (click)="saveoffre()"
-        [disabled]="!offreform.title || !offreform.description">{{ editingoffre ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="saveoffre()">{{ editingoffre ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
@@ -405,8 +327,7 @@
     </select>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showroleform=false">Annuler</button>
-      <button class="btn-save" (click)="saverole()"
-        [disabled]="!roleform.name || !roleform.permission">{{ editingrole ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="saverole()">{{ editingrole ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
@@ -421,8 +342,7 @@
     <input [(ngModel)]="permissionform.description" placeholder="Nom de la permission" />
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showpermissionform=false">Annuler</button>
-      <button class="btn-save" (click)="savepermission()"
-        [disabled]="!permissionform.description">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="savepermission()">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
@@ -476,5 +396,15 @@
       <button class="btn-cancel" (click)="showsendoffreform=false">Annuler</button>
       <button class="btn-save" [disabled]="!selectedoffreid" (click)="sendoffre()">📤 Envoyer</button>
     </div>
+  </div>
+</div>
+
+<div class="notif-panel" *ngIf="showNotifPanel">
+  <div class="notif-header">Notifications</div>
+  <div *ngFor="let n of notifications" class="notif-item" [class.vue]="n.vue">
+    <p>{{ n.message }}</p>
+    <button *ngIf="n.type === 'DEMANDE_PUBLICATION'" (click)="approuverQuestionnaire(n.sourceId)">Approuver</button>
+    <button *ngIf="n.type === 'DEMANDE_PUBLICATION'" (click)="rejeterQuestionnaire(n.sourceId)">Rejeter</button>
+    <small>{{ n.dateCreation | date:'short' }}</small>
   </div>
 </div>

@@ -8,9 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
-
 @Entity
-@Table(name = "offre" ,uniqueConstraints = @UniqueConstraint(columnNames = {"title", "description"}))
+@Table(name = "offre", uniqueConstraints = @UniqueConstraint(columnNames = { "title", "description" }))
 public class Offre {
 
     @Id
@@ -21,15 +20,28 @@ public class Offre {
     @Column(name = "description")
     private String description;
 
+    public Long getId() {
+        return id;
+    }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public String getTitle() {
+        return title;
+    }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
 }

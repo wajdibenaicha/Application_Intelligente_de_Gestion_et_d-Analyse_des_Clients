@@ -9,12 +9,11 @@ import org.springframework.stereotype.Service;
 import com.example.backend.Repository.PermissionRepository;
 import com.example.backend.models.Permission;
 
-
 @Service
 public class PermissionService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
-    
+
     @Autowired
     private PermissionRepository permissionRepository;
 

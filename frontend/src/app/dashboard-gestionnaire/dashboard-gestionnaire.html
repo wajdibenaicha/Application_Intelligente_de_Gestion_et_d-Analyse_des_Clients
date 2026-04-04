@@ -13,7 +13,7 @@
       <div class="avatar">{{ getInitials() }}</div>
       <div class="user-details">
         <span class="user-name">{{ gestionnaire?.fullName }}</span>
-        <span class="user-role">Gestionnaire</span>
+        <span class="user-role">{{ gestionnaire?.role?.name || 'Gestionnaire' }}</span>
       </div>
     </div>
 
@@ -47,10 +47,13 @@
     <header class="topbar">
       <h2 class="section-title">{{ getSectionTitle() }}</h2>
       <div class="topbar-right">
+        <div class="notif-icon" *ngIf="canManageAll()" (click)="toggleNotifPanel()">
+          <span>🔔</span>
+          <span class="notif-badge" *ngIf="unreadNotifCount > 0">{{ unreadNotifCount }}</span>
+        </div>
         <span class="date-badge">{{ today | date:'dd MMM yyyy' }}</span>
       </div>
     </header>
-
 
     <section *ngIf="activeSection === 'home'" class="content-section">
       <div class="stats-grid">
@@ -103,50 +106,197 @@
       </div>
     </section>
 
-
     <section *ngIf="activeSection === 'questionnaires'" class="content-section">
 
-      <div *ngIf="!showCreateForm && !showEditForm && !showQuestionsView">
-        <div class="section-toolbar">
-          <button class="btn-primary" (click)="openCreateQuestionnaire()">➕ Nouveau questionnaire</button>
-        </div>
+      <div class="section-toolbar">
+        <button class="btn-primary" (click)="openCreateQuestionnaire()">➕ Nouveau questionnaire</button>
+        <span class="role-info-badge" *ngIf="canManageAll()">
+          🔑 {{ gestionnaire?.role?.name }} — vous gérez tous les questionnaires
+        </span>
+      </div>
 
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Titre</th>
-                <th>Description</th>
-                <th>Questions</th>
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let q of questionnaires">
-                <td><strong>{{ q.titre }}</strong></td>
-                <td class="td-desc">{{ q.description || '—' }}</td>
-                <td>{{ q.questions?.length || 0 }}</td>
-                <td>
-                  <span class="badge" [ngClass]="getBadgeClass(q.statut)">
-                    {{ getStatutLabel(q.statut) }}
-                  </span>
-                </td>
-                <td class="actions-cell">
-                  <button class="btn-icon btn-view" title="Voir les questions" (click)="viewQuestions(q)">👁</button>
-                  <button class="btn-icon btn-edit" title="Modifier" (click)="editQuestionnaire(q)" *ngIf="q.statut === 'BROUILLON'">✏️</button>
-                  <button class="btn-icon btn-send" title="Envoyer à l'admin" (click)="demanderPublication(q)" *ngIf="q.statut === 'BROUILLON'">📤</button>
-                  <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteQuestionnaire(q.id)" *ngIf="q.statut === 'BROUILLON'">🗑</button>
-                </td>
-              </tr>
-              <tr *ngIf="questionnaires.length === 0">
-                <td colspan="5" class="empty-row">Aucun questionnaire créé</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Description</th>
+              <th *ngIf="canManageAll()">Gestionnaire</th>
+              <th>Questions</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let q of questionnaires">
+              <td><strong>{{ q.titre }}</strong></td>
+              <td class="td-desc">{{ q.description || '—' }}</td>
+              <td *ngIf="canManageAll()">{{ q.gestionnaire?.fullName || '—' }}</td>
+              <td>{{ q.questions?.length || 0 }}</td>
+              <td>
+                <span class="badge" [ngClass]="getBadgeClass(q.statut)">{{ getStatutLabel(q.statut) }}</span>
+                <span *ngIf="q.statut === 'REJETE' && q.raisonRejet" class="rejet-reason" title="{{ q.raisonRejet }}">
+                  ⚠️ {{ q.raisonRejet.length > 30 ? (q.raisonRejet | slice:0:30) + '...' : q.raisonRejet }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon btn-view" title="Voir les questions" (click)="viewQuestions(q)">👁</button>
+                <button class="btn-icon btn-edit" title="Modifier" (click)="editQuestionnaire(q)" *ngIf="canEdit(q)">✏️</button>
+                <button class="btn-icon btn-send" title="Demander publication" (click)="demanderPublication(q)" *ngIf="canRequestPublication(q)">📤</button>
+                <button class="btn-icon btn-warning" title="Retirer la demande" (click)="retirerDemande(q)" *ngIf="canWithdraw(q)">⏪</button>
+                <button class="btn-icon btn-confirm" title="Approuver" (click)="approuverQuestionnaire(q.id)" *ngIf="canApprove(q)">✅</button>
+                <button class="btn-icon btn-reject" title="Rejeter" (click)="rejeterQuestionnaire(q.id)" *ngIf="canApprove(q)">❌</button>
+                <button class="btn-icon btn-success" title="Partager" (click)="ouvrirPartage(q)" *ngIf="canShare(q)">📤</button>
+                <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteQuestionnaire(q.id)" *ngIf="canDelete(q)">🗑</button>
+              </td>
+            </tr>
+            <tr *ngIf="questionnaires.length === 0">
+              <td [attr.colspan]="canManageAll() ? 6 : 5" class="empty-row">Aucun questionnaire</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <section *ngIf="activeSection === 'reponses'" class="content-section">
+      <div class="filter-bar">
+        <label>Questionnaire :</label>
+        <select [(ngModel)]="selectedQuestionnaireId" (change)="loadReponses()">
+          <option value="">-- Choisir un questionnaire --</option>
+          <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
+        </select>
+        <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">Exporter CSV</button>
+      </div>
+
+      <div class="table-wrapper" *ngIf="reponses.length > 0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Email client</th>
+              <th>Téléphone</th>
+              <th>Question</th>
+              <th>Type</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of reponses">
+              <td>{{ r.client?.mail || '—' }}</td>
+              <td>{{ r.client?.tel || '—' }}</td>
+              <td>{{ r.question?.titre || '—' }}</td>
+              <td><span class="q-type-badge">{{ r.question?.type || '—' }}</span></td>
+              <td>{{ r.reponse || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" *ngIf="reponses.length === 0 && selectedQuestionnaireId !== ''">
+        <span>💬</span>
+        <p>Aucune réponse reçue pour ce questionnaire</p>
+      </div>
+      <div class="empty-state" *ngIf="selectedQuestionnaireId === ''">
+        <span>📋</span>
+        <p>Sélectionnez un questionnaire pour voir les réponses</p>
+      </div>
+    </section>
+
+    <section *ngIf="activeSection === 'offres'" class="content-section">
+      <div class="offres-grid">
+        <div class="offre-card" *ngFor="let offre of offresIA">
+          <div class="offre-header">
+            <div class="offre-client">
+              <span class="client-avatar">{{ offre.client?.mail?.[0]?.toUpperCase() || 'C' }}</span>
+              <div>
+                <p class="client-name">{{ offre.client?.mail }}</p>
+                <p class="client-date">{{ offre.dateCreation | date:'dd/MM/yyyy' }}</p>
+              </div>
+            </div>
+            <span class="badge badge-published" *ngIf="offre.statut === 'ACCEPTE'">Accepté</span>
+            <span class="badge badge-danger" *ngIf="offre.statut === 'REJETE'">Rejeté</span>
+            <span class="badge badge-pending" *ngIf="offre.statut === 'EN_ATTENTE'">En attente</span>
+          </div>
+          <div class="offre-body">
+            <p class="offre-label">🤖 Recommandation IA :</p>
+            <p class="offre-text">{{ offre.recommandationIA || offre.description }}</p>
+          </div>
+          <div class="offre-actions" *ngIf="offre.statut === 'EN_ATTENTE'">
+            <button class="btn-success" (click)="accepterOffre(offre)">✅ Accepter</button>
+            <button class="btn-danger" (click)="rejeterOffre(offre)">❌ Rejeter et faire ma propre offre</button>
+          </div>
+          <div class="offre-manuelle" *ngIf="offre.showManualForm">
+            <p class="offre-label">✏️ Votre offre personnalisée :</p>
+            <textarea [(ngModel)]="offre.offreManuelle" placeholder="Décrivez votre offre..." rows="4"></textarea>
+            <div class="form-actions">
+              <button class="btn-outline" (click)="offre.showManualForm = false">Annuler</button>
+              <button class="btn-primary" (click)="soumettreOffreManuelle(offre)">Soumettre</button>
+            </div>
+          </div>
+          <div class="offre-manuelle-result" *ngIf="offre.statut === 'REJETE' && offre.offreManuelle && !offre.showManualForm">
+            <p class="offre-label">✏️ Votre offre :</p>
+            <p class="offre-text">{{ offre.offreManuelle }}</p>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="offresIA.length === 0">
+          <span>🤖</span>
+          <p>Aucune recommandation IA disponible</p>
         </div>
       </div>
-      <div class="modal-overlay" *ngIf="showquestform" (click)="showquestform=false">
+    </section>
+
+  </main>
+</div>
+
+<div class="notif-panel" *ngIf="showNotifPanel && canManageAll()">
+  <div class="notif-header">
+    Notifications
+    <button class="btn-close-panel" (click)="showNotifPanel=false">✕</button>
+  </div>
+  <div *ngIf="notifications.length === 0" style="padding:16px; color:#aaa; text-align:center;">Aucune notification</div>
+  <div *ngFor="let n of notifications" class="notif-item" [class.vue]="n.vue">
+    <p>{{ n.message }}</p>
+    <div style="display:flex; gap:6px; margin-top:6px;" *ngIf="n.type === 'DEMANDE_PUBLICATION'">
+      <button class="notif-btn-approve" (click)="approuverQuestionnaire(n.sourceId)">✅ Approuver</button>
+      <button class="notif-btn-reject" (click)="rejeterQuestionnaire(n.sourceId)">❌ Rejeter</button>
+    </div>
+    <small>{{ n.dateCreation | date:'dd/MM/yyyy HH:mm' }}</small>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showQuestionsView" (click)="showQuestionsView = false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>👁️ {{ selectedQuestionnaire?.titre }}</h2>
+      <button class="btn-close" (click)="showQuestionsView = false">✕</button>
+    </div>
+    <div style="padding: 0 24px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span class="badge" [ngClass]="getBadgeClass(selectedQuestionnaire?.statut)">{{ getStatutLabel(selectedQuestionnaire?.statut) }}</span>
+      <span *ngIf="canManageAll()" style="color:#666; font-size:13px;">Gestionnaire : {{ selectedQuestionnaire?.gestionnaire?.fullName || '—' }}</span>
+      <span *ngIf="selectedQuestionnaire?.description" style="color:#666; font-size:13px;">{{ selectedQuestionnaire?.description }}</span>
+    </div>
+    <div style="padding: 0 24px 8px; font-weight:700; color:#1a3d2b; font-size:14px;">Questions</div>
+    <div style="padding: 0 24px; display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto;">
+      <div *ngFor="let q of selectedQuestionnaire?.questions; let i = index" class="selected-chip" style="justify-content:flex-start;">
+        <span class="q-num">{{ i + 1 }}</span>
+        <span class="q-type-badge">{{ q.type }}</span>
+        <span style="flex:1;">{{ q.titre }}</span>
+        <span *ngIf="q.options && q.options !== ''" style="font-size:11px; color:#7f8c8d; font-style:italic;">{{ q.options }}</span>
+        <button class="btn-icon btn-delete" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'" (click)="deleteQuestion(q.id, selectedQuestionnaire)" title="Supprimer">🗑</button>
+      </div>
+      <div *ngIf="!selectedQuestionnaire?.questions?.length" class="empty-drop">Aucune question</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showQuestionsView = false">Fermer</button>
+      <button class="btn-outline" *ngIf="canEdit(selectedQuestionnaire)" (click)="editQuestionnaire(selectedQuestionnaire); showQuestionsView = false">✏️ Modifier</button>
+      <button class="btn-save" *ngIf="canRequestPublication(selectedQuestionnaire)" (click)="demanderPublication(selectedQuestionnaire); showQuestionsView = false">📤 Envoyer à l'administrateur</button>
+      <button class="btn-save" *ngIf="canApprove(selectedQuestionnaire)" (click)="approuverQuestionnaire(selectedQuestionnaire.id); showQuestionsView = false">✅ Approuver</button>
+      <button class="btn-danger-sm" *ngIf="canApprove(selectedQuestionnaire)" (click)="rejeterQuestionnaire(selectedQuestionnaire.id); showQuestionsView = false">❌ Rejeter</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showquestform" (click)="showquestform=false">
   <div class="modal modal-large" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>{{ editingquest ? '✏️ Modifier Questionnaire' : '📋 Nouveau Questionnaire' }}</h2>
@@ -214,165 +364,29 @@
   </div>
 </div>
 
-      
-
-
-
-
-
-    </section>
-
-
-    <section *ngIf="activeSection === 'reponses'" class="content-section">
-
-      <div class="filter-bar">
-        <label>Questionnaire :</label>
-        <select [(ngModel)]="selectedQuestionnaireId" (change)="loadReponses()">
-          <option value="">-- Choisir un questionnaire --</option>
-          <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
-        </select>
-        <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">
-          Exporter CSV
-        </button>
-      </div>
-
-      <div class="table-wrapper" *ngIf="reponses.length > 0">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Email client</th>
-              <th>Téléphone</th>
-              <th>Question</th>
-              <th>Type</th>
-              <th>Réponse</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let r of reponses">
-              <td>{{ r.client?.mail || '—' }}</td>
-              <td>{{ r.client?.tel || '—' }}</td>
-              <td>{{ r.question?.titre || '—' }}</td>
-              <td><span class="q-type-badge">{{ r.question?.type || '—' }}</span></td>
-              <td>{{ r.reponse || '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="empty-state" *ngIf="reponses.length === 0 && selectedQuestionnaireId !== ''">
-        <span>💬</span>
-        <p>Aucune réponse reçue pour ce questionnaire</p>
-      </div>
-
-      <div class="empty-state" *ngIf="selectedQuestionnaireId === ''">
-        <span>📋</span>
-        <p>Sélectionnez un questionnaire pour voir les réponses</p>
-      </div>
-
-    </section>
-
-
-    <section *ngIf="activeSection === 'offres'" class="content-section">
-      <div class="offres-grid">
-
-        <div class="offre-card" *ngFor="let offre of offresIA">
-          <div class="offre-header">
-            <div class="offre-client">
-              <span class="client-avatar">{{ offre.client?.mail?.[0]?.toUpperCase() || 'C' }}</span>
-              <div>
-                <p class="client-name">{{ offre.client?.mail }}</p>
-                <p class="client-date">{{ offre.dateCreation | date:'dd/MM/yyyy' }}</p>
-              </div>
-            </div>
-            <span class="badge badge-published" *ngIf="offre.statut === 'ACCEPTE'">Accepté</span>
-            <span class="badge badge-danger" *ngIf="offre.statut === 'REJETE'">Rejeté</span>
-            <span class="badge badge-pending" *ngIf="offre.statut === 'EN_ATTENTE'">En attente</span>
-          </div>
-
-          <div class="offre-body">
-            <p class="offre-label">🤖 Recommandation IA :</p>
-            <p class="offre-text">{{ offre.recommandationIA || offre.description }}</p>
-          </div>
-
-          <div class="offre-actions" *ngIf="offre.statut === 'EN_ATTENTE'">
-            <button class="btn-success" (click)="accepterOffre(offre)">✅ Accepter</button>
-            <button class="btn-danger" (click)="rejeterOffre(offre)">❌ Rejeter et faire ma propre offre</button>
-          </div>
-
-          <div class="offre-manuelle" *ngIf="offre.showManualForm">
-            <p class="offre-label">✏️ Votre offre personnalisée :</p>
-            <textarea [(ngModel)]="offre.offreManuelle" placeholder="Décrivez votre offre..." rows="4"></textarea>
-            <div class="form-actions">
-              <button class="btn-outline" (click)="offre.showManualForm = false">Annuler</button>
-              <button class="btn-primary" (click)="soumettreOffreManuelle(offre)">Soumettre</button>
-            </div>
-          </div>
-
-          <div class="offre-manuelle-result" *ngIf="offre.statut === 'REJETE' && offre.offreManuelle && !offre.showManualForm">
-            <p class="offre-label">✏️ Votre offre :</p>
-            <p class="offre-text">{{ offre.offreManuelle }}</p>
-          </div>
-        </div>
-
-        <div class="empty-state" *ngIf="offresIA.length === 0">
-          <span>🤖</span>
-          <p>Aucune recommandation IA disponible</p>
-        </div>
-      </div>
-    </section>
-
-  </main>
-</div>
-
-<div class="modal-overlay" *ngIf="showQuestionsView" (click)="showQuestionsView = false">
+<div class="modal-overlay" *ngIf="showPartageModal" (click)="showPartageModal=false">
   <div class="modal modal-large" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>👁️ {{ selectedQuestionnaire?.titre }}</h2>
-      <button class="btn-close" (click)="showQuestionsView = false">✕</button>
+      <h2>📨 Partager "{{ selectedQuestionnaire?.titre }}"</h2>
+      <button class="btn-close" (click)="showPartageModal=false">✕</button>
     </div>
-
-    <div style="padding: 0 24px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-      <span class="badge" [ngClass]="getBadgeClass(selectedQuestionnaire?.statut)">
-        {{ getStatutLabel(selectedQuestionnaire?.statut) }}
-      </span>
-      <span *ngIf="selectedQuestionnaire?.description" style="color:#666; font-size:13px;">
-        {{ selectedQuestionnaire?.description }}
-      </span>
+    <label>Filtrer les clients</label>
+    <div style="display:flex; gap:12px; margin:0 24px;">
+      <input [(ngModel)]="filtre.typeContrat" placeholder="Type contrat">
+      <input [(ngModel)]="filtre.anneeMin" type="number" placeholder="Année inscription min">
+      <input [(ngModel)]="filtre.profession" placeholder="Profession">
+      <button (click)="rechercherClients()">🔍 Rechercher</button>
     </div>
-
-    <div style="padding: 0 24px 8px;">
-      <div class="section-title">Questions</div>
-    </div>
-
-    <div style="padding: 0 24px; display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto;">
-      <div *ngFor="let q of selectedQuestionnaire?.questions; let i = index"
-           class="selected-chip"
-           style="justify-content: flex-start;">
-        <span class="q-num">{{ i + 1 }}</span>
-        <span class="q-type-badge">{{ q.type }}</span>
-        <span style="flex:1;">{{ q.titre }}</span>
-        <span *ngIf="q.options && q.options !== ''" style="font-size:11px; color:#7f8c8d; font-style:italic;">
-          {{ q.options }}
-        </span>
-        <button
-          class="btn-icon btn-delete"
-          *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'"
-          (click)="deleteQuestion(q.id, selectedQuestionnaire)"
-          title="Supprimer">🗑</button>
+    <div style="max-height:200px; overflow-y:auto; margin:16px 24px;">
+      <div *ngFor="let c of clientsFiltres" style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+        <span>{{ c.fullName }} ({{ c.mail }}) - {{ c.typeContrat }}</span>
+        <button (click)="envoyerLien(c.id)" class="btn-primary">📧 Envoyer</button>
       </div>
-      <div *ngIf="!selectedQuestionnaire?.questions?.length" class="empty-drop">Aucune question</div>
+      <div *ngIf="clientsFiltres.length === 0" style="padding:20px; text-align:center; color:#aaa;">Aucun client trouvé</div>
     </div>
-
     <div class="modal-actions">
-      <button class="btn-cancel" (click)="showQuestionsView = false">Fermer</button>
-      <button class="btn-outline" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'"
-        (click)="editQuestionnaire(selectedQuestionnaire); showQuestionsView = false">
-        ✏️ Modifier
-      </button>
-      <button class="btn-save" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'"
-        (click)="demanderPublication(selectedQuestionnaire); showQuestionsView = false">
-        📤 Envoyer à l'administrateur
-      </button>
+      <button class="btn-primary" (click)="envoyerATous()">📢 Envoyer à tous</button>
+      <button class="btn-cancel" (click)="showPartageModal=false">Fermer</button>
     </div>
   </div>
 </div>

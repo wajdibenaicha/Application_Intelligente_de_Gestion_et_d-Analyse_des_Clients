@@ -49,22 +49,12 @@ public class QuestionnaireController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Questionnaire> create(@RequestBody Map<String, Object> body) {
         try {
-            String titre = body.get("titre") != null ? body.get("titre").toString().trim() : null;
-            String description = body.get("description") != null ? body.get("description").toString().trim() : null;
-            if (titre == null || titre.isBlank()) {
-                return ResponseEntity.badRequest().body("Le titre est obligatoire.");
-            }
-            if (description == null || description.isBlank()) {
-                return ResponseEntity.badRequest().body("La description est obligatoire.");
-            }
-            List<?> rawQuestions = body.get("questions") instanceof List ? (List<?>) body.get("questions") : null;
-            if (rawQuestions == null || rawQuestions.isEmpty()) {
-                return ResponseEntity.badRequest().body("Au moins une question est obligatoire.");
-            }
-
             Questionnaire questionnaire = new Questionnaire();
+
+            String titre = (String) body.get("titre");
+            String description = (String) body.get("description");
             questionnaire.setTitre(titre);
             questionnaire.setDescription(description);
             questionnaire.setConfirmed(false);
@@ -81,24 +71,27 @@ public class QuestionnaireController {
                 }
             }
 
-            List<Question> questionList = new ArrayList<>();
-            for (Object item : rawQuestions) {
-                if (item instanceof Map) {
-                    Map<?, ?> qData = (Map<?, ?>) item;
-                    Question q;
-                    if (qData.get("id") != null) {
-                        Long qId = Long.valueOf(qData.get("id").toString());
-                        q = questionRepository.findById(qId).orElse(new Question());
-                    } else {
-                        q = new Question();
+            if (body.get("questions") != null && body.get("questions") instanceof List) {
+                List<?> rawList = (List<?>) body.get("questions");
+                List<Question> questionList = new ArrayList<>();
+                for (Object item : rawList) {
+                    if (item instanceof Map) {
+                        Map<?, ?> qData = (Map<?, ?>) item;
+                        Question q;
+                        if (qData.get("id") != null) {
+                            Long qId = Long.valueOf(qData.get("id").toString());
+                            q = questionRepository.findById(qId).orElse(new Question());
+                        } else {
+                            q = new Question();
+                        }
+                        q.setTitre(qData.get("titre") != null ? qData.get("titre").toString() : "");
+                        q.setType(qData.get("type") != null ? qData.get("type").toString() : "input");
+                        q.setOptions(qData.get("options") != null ? qData.get("options").toString() : "");
+                        questionList.add(q);
                     }
-                    q.setTitre(qData.get("titre") != null ? qData.get("titre").toString() : "");
-                    q.setType(qData.get("type") != null ? qData.get("type").toString() : "input");
-                    q.setOptions(qData.get("options") != null ? qData.get("options").toString() : "");
-                    questionList.add(q);
                 }
+                questionnaire.setQuestions(questionList);
             }
-            questionnaire.setQuestions(questionList);
 
             Questionnaire saved = questionnaireService.save(questionnaire);
             return ResponseEntity.ok(saved);
@@ -110,47 +103,44 @@ public class QuestionnaireController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<Questionnaire> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {
-            String titre = body.get("titre") != null ? body.get("titre").toString().trim() : null;
-            String description = body.get("description") != null ? body.get("description").toString().trim() : null;
-            if (titre == null || titre.isBlank()) {
-                return ResponseEntity.badRequest().body("Le titre est obligatoire.");
-            }
-            if (description == null || description.isBlank()) {
-                return ResponseEntity.badRequest().body("La description est obligatoire.");
-            }
-            List<?> rawQuestions = body.get("questions") instanceof List ? (List<?>) body.get("questions") : null;
-            if (rawQuestions == null || rawQuestions.isEmpty()) {
-                return ResponseEntity.badRequest().body("Au moins une question est obligatoire.");
-            }
-
             Questionnaire existing = questionnaireService.getQuestionnaireById(id);
             if (existing == null) {
                 return ResponseEntity.notFound().build();
             }
 
-            existing.setTitre(titre);
-            existing.setDescription(description);
-
-            List<Question> questionList = new ArrayList<>();
-            for (Object item : rawQuestions) {
-                if (item instanceof Map) {
-                    Map<?, ?> qData = (Map<?, ?>) item;
-                    Question q;
-                    if (qData.get("id") != null) {
-                        Long qId = Long.valueOf(qData.get("id").toString());
-                        q = questionRepository.findById(qId).orElse(new Question());
-                    } else {
-                        q = new Question();
-                    }
-                    q.setTitre(qData.get("titre") != null ? qData.get("titre").toString() : "");
-                    q.setType(qData.get("type") != null ? qData.get("type").toString() : "input");
-                    q.setOptions(qData.get("options") != null ? qData.get("options").toString() : "");
-                    questionList.add(q);
-                }
+            if (body.get("titre") != null) {
+                existing.setTitre(body.get("titre").toString());
             }
-            existing.setQuestions(questionList);
+            if (body.containsKey("description")) {
+                existing.setDescription(body.get("description") != null ? body.get("description").toString() : null);
+            }
+
+            if (body.get("questions") != null && body.get("questions") instanceof List) {
+                List<?> rawList = (List<?>) body.get("questions");
+                List<Question> questionList = new ArrayList<>();
+
+                for (Object item : rawList) {
+                    if (item instanceof Map) {
+                        Map<?, ?> qData = (Map<?, ?>) item;
+                        Question q;
+
+                        if (qData.get("id") != null) {
+                            Long qId = Long.valueOf(qData.get("id").toString());
+                            q = questionRepository.findById(qId).orElse(new Question());
+                        } else {
+                            q = new Question();
+                        }
+
+                        q.setTitre(qData.get("titre") != null ? qData.get("titre").toString() : "");
+                        q.setType(qData.get("type") != null ? qData.get("type").toString() : "input");
+                        q.setOptions(qData.get("options") != null ? qData.get("options").toString() : "");
+                        questionList.add(q);
+                    }
+                }
+                existing.setQuestions(questionList);
+            }
 
             Questionnaire saved = questionnaireService.save(existing);
             return ResponseEntity.ok(saved);
@@ -177,11 +167,32 @@ public class QuestionnaireController {
     }
 
     @PatchMapping("/{id}/rejeter")
-    public ResponseEntity<Questionnaire> rejeterQuestionnaire(@PathVariable Long id) {
-        Questionnaire q = questionnaireService.rejeterQuestionnaire(id);
-        if (q != null) {
-            return ResponseEntity.ok(q);
+    public ResponseEntity<Questionnaire> rejeterQuestionnaire(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String raison = body != null ? body.get("raison") : null;
+        if (raison == null || raison.isBlank()) {
+            return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.notFound().build();
+        Questionnaire q = questionnaireService.rejeterQuestionnaire(id, raison);
+        return q != null ? ResponseEntity.ok(q) : ResponseEntity.badRequest().build();
+    }
+
+    @PostMapping("/{id}/demander-publication")
+    public ResponseEntity<Questionnaire> demanderPublication(@PathVariable Long id, @RequestParam Long gestionnaireId) {
+        Questionnaire q = questionnaireService.demanderPublication(id, gestionnaireId);
+        return q != null ? ResponseEntity.ok(q) : ResponseEntity.badRequest().build();
+    }
+
+    @PostMapping("/{id}/retirer-demande")
+    public ResponseEntity<Questionnaire> retirerDemande(@PathVariable Long id) {
+        Questionnaire q = questionnaireService.retirerDemande(id);
+        return q != null ? ResponseEntity.ok(q) : ResponseEntity.badRequest().build();
+    }
+
+    @PostMapping("/{id}/approuver")
+    public ResponseEntity<Questionnaire> approuverPublication(@PathVariable Long id) {
+        Questionnaire q = questionnaireService.approuverPublication(id);
+        return q != null ? ResponseEntity.ok(q) : ResponseEntity.badRequest().build();
     }
 }

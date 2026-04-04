@@ -43,8 +43,7 @@ public class GestionnaireController {
     public ResponseEntity<Gestionnaire> addGestionnaire(@RequestBody Gestionnaire gestionnaire) {
         if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank()
                 || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()
-                || gestionnaire.getPassword() == null || gestionnaire.getPassword().isBlank()
-                || gestionnaire.getRole() == null) {
+                || gestionnaire.getPassword() == null || gestionnaire.getPassword().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
         Gestionnaire saved = gestionnaireService.addGestionnaire(gestionnaire);
@@ -55,8 +54,7 @@ public class GestionnaireController {
     public ResponseEntity<Gestionnaire> updateGestionnaire(@PathVariable Long id,
             @RequestBody Gestionnaire gestionnaire) {
         if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank()
-                || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()
-                || gestionnaire.getRole() == null) {
+                || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
         Gestionnaire updated = gestionnaireService.updateGestionnaire(id, gestionnaire);

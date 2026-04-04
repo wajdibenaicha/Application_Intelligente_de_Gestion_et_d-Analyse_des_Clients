@@ -64,6 +64,10 @@ export class DashbordAdmin implements OnInit {
     showsendoffreform = false;
     sendoffreform: any = { offreId: null, email: '' };
 
+    notifications: any[] = [];
+    unreadNotifCount = 0;
+    showNotifPanel = false;
+
     constructor(private api: Api, private router: Router, private wsService: WebSocketService, private ngZone: NgZone, private cdr: ChangeDetectorRef) {}
 
     toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
@@ -77,8 +81,14 @@ export class DashbordAdmin implements OnInit {
         this.wsService.role$.subscribe(data => { this.roles = data; this.cdr.detectChanges(); });
         this.wsService.permission$.subscribe(data => { this.permissions = data; this.cdr.detectChanges(); });
         this.wsService.offre$.subscribe(data => { this.offres = data; this.cdr.detectChanges(); });
+        this.wsService.adminNotifications$.subscribe(data => {
+            this.notifications = data;
+            this.unreadNotifCount = data.filter(n => !n.vue).length;
+            this.cdr.detectChanges();
+        });
 
         this.loadInitialData();
+        this.loadNotifications();
     }
 
     private loadInitialData(): void {
@@ -117,6 +127,31 @@ export class DashbordAdmin implements OnInit {
         }, 5000);
     }
 
+    loadNotifications() {
+        this.api.getNotifications().subscribe(data => {
+            this.notifications = data;
+            this.unreadNotifCount = data.filter(n => !n.vue).length;
+        });
+    }
+
+    toggleNotifPanel() { this.showNotifPanel = !this.showNotifPanel; }
+
+    approuverQuestionnaire(id: number) {
+        this.api.approuverPublication(id).subscribe(() => {
+            Swal.fire('Approuve', 'Questionnaire publie', 'success');
+            this.loadNotifications();
+            this.loadInitialData();
+        });
+    }
+
+    rejeterQuestionnaire(id: number , raison:string) {
+        this.api.rejeterPublication(id,raison).subscribe(() => {
+            Swal.fire('Rejete', 'Demande rejetee', 'info');
+            this.loadNotifications();
+            this.loadInitialData();
+        });
+    }
+
     openaddgestionnaire() {
         this.editinggest = null;
         this.gestform = { fullName: '', email: '', password: '', role: null };
@@ -133,20 +168,14 @@ export class DashbordAdmin implements OnInit {
         this.showgestform = false;
         if (this.editinggest) {
             this.api.updateGestionnaire(this.editinggest.id, this.gestform).subscribe({
-                next: (updated: any) => {
-                    this.gestionnaire = this.gestionnaire.map(g => g.id === updated.id ? updated : g);
-                    this.cdr.detectChanges();
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Gestionnaire modifié', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier le gestionnaire.' })
             });
         } else {
             this.api.addGestionnaire(this.gestform).subscribe({
-                next: (newgest: any) => {
-                    if (!this.gestionnaire.find((g: any) => g.id === newgest.id)) {
-                        this.gestionnaire = [...this.gestionnaire, newgest];
-                        this.cdr.detectChanges();
-                    }
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Gestionnaire ajouté', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'ajouter le gestionnaire.' })
@@ -169,187 +198,12 @@ export class DashbordAdmin implements OnInit {
             this.ngZone.run(() => {
                 this.api.deleteGestionnaire(id).subscribe({
                     next: () => {
-                        this.gestionnaire = this.gestionnaire.filter(g => g.id !== id);
-                        this.cdr.detectChanges();
                         Swal.fire({ icon: 'success', title: 'Supprimé !', timer: 1200, showConfirmButton: false });
                     },
                     error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
                 });
             });
         }
-    }
-
-    openaddquestionnaire() {
-        this.editingquest = null;
-        this.selectedquestion = [];
-        this.questform = { titre: '', description: '', questions: [] };
-        this.showquestform = true;
-    }
-
-    oppeneditquestionnaire(quest: any) {
-        this.editingquest = quest;
-        this.questform = {
-            titre: quest.titre,
-            description: quest.description,
-            questions: quest.questions ? quest.questions.map((q: any) => q.id) : []
-        };
-        this.selectedquestion = quest.questions ? [...quest.questions] : [];
-        this.showquestform = true;
-    }
-
-    savequestionnaire() {
-        this.questform.questions = this.selectedquestion;
-        this.showquestform = false;
-        if (this.editingquest) {
-            this.api.updateQuestionnaire(this.editingquest.id, this.questform).subscribe({
-                next: (updated: any) => {
-                    this.questionnaires = this.questionnaires.map(q => q.id === updated.id ? updated : q);
-                    this.cdr.detectChanges();
-                    Swal.fire({ icon: 'success', title: 'Questionnaire modifié', timer: 1500, showConfirmButton: false });
-                },
-                error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier le questionnaire.' })
-            });
-        } else {
-            this.api.addQuestionnaire(this.questform).subscribe({
-                next: (newquest: any) => {
-                    if (!this.questionnaires.find((q: any) => q.id === newquest.id)) {
-                        this.questionnaires = [...this.questionnaires, newquest];
-                        this.cdr.detectChanges();
-                    }
-                    Swal.fire({ icon: 'success', title: 'Questionnaire créé', timer: 1500, showConfirmButton: false });
-                },
-                error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de créer le questionnaire.' })
-            });
-        }
-    }
-
-    async deletequestionnaire(id: number) {
-        const result = await Swal.fire({
-            title: 'Supprimer ce questionnaire ?',
-            text: 'Cette action est irréversible.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Supprimer',
-            cancelButtonText: 'Annuler'
-        });
-        if (result.isConfirmed) {
-            this.ngZone.run(() => {
-                this.api.deleteQuestionnaire(id).subscribe({
-                    next: () => {
-                        this.questionnaires = this.questionnaires.filter(q => q.id !== id);
-                        this.cdr.detectChanges();
-                        Swal.fire({ icon: 'success', title: 'Supprimé !', timer: 1200, showConfirmButton: false });
-                    },
-                    error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
-                });
-            });
-        }
-    }
-
-    opendetailsquestionnaire(quest: any) {
-        this.detailsquest = quest;
-        this.showdetailsform = true;
-    }
-
-    async confirmquestionnaire(id: number) {
-        const result = await Swal.fire({
-            title: 'Confirmer ce questionnaire ?',
-            text: 'Il sera publié et visible par les clients.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Confirmer',
-            cancelButtonText: 'Annuler'
-        });
-        if (result.isConfirmed) {
-            this.ngZone.run(() => {
-                this.api.confirmQuestionnaire(id).subscribe({
-                    next: (updated: any) => {
-                        this.questionnaires = this.questionnaires.map(q => q.id === updated.id ? updated : q);
-                        this.cdr.detectChanges();
-                        Swal.fire({ icon: 'success', title: 'Questionnaire confirmé !', timer: 1500, showConfirmButton: false });
-                    },
-                    error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la confirmation' })
-                });
-            });
-        }
-    }
-
-    isselectedquestion(id: number): boolean {
-        for (let i = 0; i < this.questform.questions.length; i++) {
-            if (this.questform.questions[i] === id) return true;
-        }
-        return false;
-    }
-
-    changequestion(id: number) {
-        let found = false;
-        for (let i = 0; i < this.questform.questions.length; i++) {
-            if (this.questform.questions[i] === id) {
-                found = true;
-                break;
-            }
-        }
-        if (found) {
-            const newIds = [];
-            for (let i = 0; i < this.questform.questions.length; i++) {
-                if (this.questform.questions[i] !== id) newIds.push(this.questform.questions[i]);
-            }
-            this.questform.questions = newIds;
-            const newSelected = [];
-            for (let i = 0; i < this.selectedquestion.length; i++) {
-                if (this.selectedquestion[i].id !== id) newSelected.push(this.selectedquestion[i]);
-            }
-            this.selectedquestion = newSelected;
-        } else {
-            this.questform.questions.push(id);
-            for (let i = 0; i < this.questions.length; i++) {
-                if (this.questions[i].id === id) {
-                    this.selectedquestion.push(this.questions[i]);
-                    break;
-                }
-            }
-        }
-    }
-
-    removeselectedquestion(id: number) {
-        const newIds = [];
-        for (let i = 0; i < this.questform.questions.length; i++) {
-            if (this.questform.questions[i] !== id) newIds.push(this.questform.questions[i]);
-        }
-        this.questform.questions = newIds;
-        const newSelected = [];
-        for (let i = 0; i < this.selectedquestion.length; i++) {
-            if (this.selectedquestion[i].id !== id) newSelected.push(this.selectedquestion[i]);
-        }
-        this.selectedquestion = newSelected;
-    }
-
-    createaddquestion() {
-        if (!this.newquest.titre) return;
-        if (this.newquest.type !== 'text' && (!this.newquest.options || this.newquest.options.trim() === '')) return;
-        this.api.addQuestion(this.newquest).subscribe((c: any) => {
-            this.selectedquestion.push(c);
-            this.questions.push(c);
-            this.newquest = { titre: '', type: 'text', options: [] };
-            this.showaddquestion = false;
-        });
-    }
-
-    dragStart(i: number, e: DragEvent) { e.dataTransfer?.setData('text/plain', i.toString()); }
-    dragover(i: number, e: DragEvent) { e.preventDefault(); this.dragoverIndex = i; }
-    drop(toindex: number, e: DragEvent) {
-        e.preventDefault();
-        const from = parseInt(e.dataTransfer?.getData('text/plain') || '0');
-        const item = this.selectedquestion.splice(from, 1)[0];
-        this.selectedquestion.splice(toindex, 0, item);
-        this.dragoverIndex = -1;
-        const newIds = [];
-        for (let i = 0; i < this.selectedquestion.length; i++) newIds.push(this.selectedquestion[i].id);
-        this.questform.questions = newIds;
     }
 
     openaddoffre() {
@@ -368,20 +222,14 @@ export class DashbordAdmin implements OnInit {
         this.showoffreform = false;
         if (this.editingoffre) {
             this.api.updateoffre(this.editingoffre.id, this.offreform).subscribe({
-                next: (updated: any) => {
-                    this.offres = this.offres.map(o => o.id === updated.id ? updated : o);
-                    this.cdr.detectChanges();
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Offre modifiée', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier l\'offre.' })
             });
         } else {
             this.api.addoffre(this.offreform).subscribe({
-                next: (newoffre: any) => {
-                    if (!this.offres.find((o: any) => o.id === newoffre.id)) {
-                        this.offres = [...this.offres, newoffre];
-                        this.cdr.detectChanges();
-                    }
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Offre ajoutée', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'ajouter l\'offre.' })
@@ -404,8 +252,6 @@ export class DashbordAdmin implements OnInit {
             this.ngZone.run(() => {
                 this.api.deleteoffre(id).subscribe({
                     next: () => {
-                        this.offres = this.offres.filter(o => o.id !== id);
-                        this.cdr.detectChanges();
                         Swal.fire({ icon: 'success', title: 'Supprimée !', timer: 1200, showConfirmButton: false });
                     },
                     error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
@@ -494,20 +340,14 @@ export class DashbordAdmin implements OnInit {
         this.showroleform = false;
         if (this.editingrole) {
             this.api.updaterole(this.editingrole.id, this.roleform).subscribe({
-                next: (updated: any) => {
-                    this.roles = this.roles.map(r => r.id === updated.id ? updated : r);
-                    this.cdr.detectChanges();
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Rôle modifié', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier le rôle.' })
             });
         } else {
             this.api.addrole(this.roleform).subscribe({
-                next: (newrole: any) => {
-                    if (!this.roles.find((r: any) => r.id === newrole.id)) {
-                        this.roles = [...this.roles, newrole];
-                        this.cdr.detectChanges();
-                    }
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Rôle ajouté', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'ajouter le rôle.' })
@@ -530,8 +370,6 @@ export class DashbordAdmin implements OnInit {
             this.ngZone.run(() => {
                 this.api.deleterole(id).subscribe({
                     next: () => {
-                        this.roles = this.roles.filter(r => r.id !== id);
-                        this.cdr.detectChanges();
                         Swal.fire({ icon: 'success', title: 'Supprimé !', timer: 1200, showConfirmButton: false });
                     },
                     error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
@@ -556,20 +394,14 @@ export class DashbordAdmin implements OnInit {
         this.showpermissionform = false;
         if (this.editingpermission) {
             this.api.updatepermission(this.editingpermission.id, this.permissionform).subscribe({
-                next: (updated: any) => {
-                    this.permissions = this.permissions.map(p => p.id === updated.id ? updated : p);
-                    this.cdr.detectChanges();
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Permission modifiée', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier la permission.' })
             });
         } else {
             this.api.addpermission(this.permissionform).subscribe({
-                next: (newperm: any) => {
-                    if (!this.permissions.find((p: any) => p.id === newperm.id)) {
-                        this.permissions = [...this.permissions, newperm];
-                        this.cdr.detectChanges();
-                    }
+                next: () => {
                     Swal.fire({ icon: 'success', title: 'Permission ajoutée', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'ajouter la permission.' })
@@ -592,14 +424,17 @@ export class DashbordAdmin implements OnInit {
             this.ngZone.run(() => {
                 this.api.deletepermission(id).subscribe({
                     next: () => {
-                        this.permissions = this.permissions.filter(p => p.id !== id);
-                        this.cdr.detectChanges();
                         Swal.fire({ icon: 'success', title: 'Supprimée !', timer: 1200, showConfirmButton: false });
                     },
                     error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
                 });
             });
         }
+    }
+
+    opendetailsquestionnaire(quest: any) {
+        this.detailsquest = quest;
+        this.showdetailsform = true;
     }
 
     get unconfirmedCount() {
