@@ -10,6 +10,7 @@
 @if (!loading && error) {
   <div class="page-wrapper">
     <div class="state-card state-error">
+      <img src="/images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="state-logo">
       <div class="state-icon">❌</div>
       <h2>Lien invalide</h2>
       <p>{{ error }}</p>
@@ -20,6 +21,7 @@
 @if (!loading && !error && submitted) {
   <div class="page-wrapper">
     <div class="state-card state-success">
+      <img src="/images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="state-logo">
       <div class="state-icon">✅</div>
       <h2>Merci !</h2>
       <p>Vos réponses ont bien été enregistrées.</p>
@@ -30,6 +32,11 @@
 @if (!loading && !error && !submitted && questionnaire) {
   <div class="page-wrapper">
     <div class="form-container">
+
+      <div class="brand-header">
+        <img src="/images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="brand-logo">
+        <span class="brand-name">STAR Assurances</span>
+      </div>
 
       <div class="form-header">
         <h1>{{ questionnaire.titre }}</h1>

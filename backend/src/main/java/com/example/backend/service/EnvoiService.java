@@ -2,16 +2,20 @@ package com.example.backend.service;
 
 import com.example.backend.Repository.ClientRepository;
 import com.example.backend.Repository.EnvoiQuestionnaireRepository;
+import com.example.backend.Repository.QuestionRepository;
+import com.example.backend.Repository.QuestionnaireRepository;
+import com.example.backend.Repository.ReponseRepository;
 import com.example.backend.models.Client;
 import com.example.backend.models.EnvoiQuestionnaire;
+import com.example.backend.models.Question;
+import com.example.backend.models.Questionnaire;
+import com.example.backend.models.Reponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import java.util.Base64;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class EnvoiService {
@@ -19,35 +23,30 @@ public class EnvoiService {
     private EnvoiQuestionnaireRepository envoiRepository;
     @Autowired
     private ClientRepository clientRepository;
-
-    private static final String ALGO = "AES";
-    private static SecretKey key;
-    static {
-        try {
-            KeyGenerator kg = KeyGenerator.getInstance(ALGO);
-            kg.init(128);
-            key = kg.generateKey();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    @Autowired
+    private QuestionRepository questionRepository;
+    @Autowired
+    private QuestionnaireRepository questionnaireRepository;
+    @Autowired
+    private ReponseRepository reponseRepository;
 
     public String genererLienChiffre(Long questionnaireId, Long clientId) {
-        try {
-            String data = questionnaireId + "|" + clientId;
-            Cipher cipher = Cipher.getInstance(ALGO);
-            cipher.init(Cipher.ENCRYPT_MODE, key);
-            byte[] encrypted = cipher.doFinal(data.getBytes());
-            String token = Base64.getUrlEncoder().encodeToString(encrypted);
-            EnvoiQuestionnaire envoi = new EnvoiQuestionnaire();
-            envoi.setQuestionnaireId(questionnaireId);
-            envoi.setClientId(clientId);
-            envoi.setToken(token);
-            envoiRepository.save(envoi);
-            return "http://localhost:4200/repondre?token=" + token;
-        } catch (Exception e) {
+        String token = UUID.randomUUID().toString();
+        EnvoiQuestionnaire envoi = new EnvoiQuestionnaire();
+        envoi.setQuestionnaireId(questionnaireId);
+        envoi.setClientId(clientId);
+        envoi.setToken(token);
+        envoi.setRepondu(false);
+        envoiRepository.save(envoi);
+        return token;
+    }
+
+    public Long dechiffrerToken(String token) {
+        EnvoiQuestionnaire envoi = envoiRepository.findByToken(token).orElse(null);
+        if (envoi == null || envoi.isRepondu()) {
             return null;
         }
+        return envoi.getQuestionnaireId();
     }
 
     public List<Client> filtrerClients(String typeContrat, Integer anneeMin, String profession) {
@@ -63,19 +62,37 @@ public class EnvoiService {
         }).toList();
     }
 
+    @Transactional
     public boolean traiterReponse(String token, List<Map<String, Object>> reponses) {
-        try {
-            Cipher cipher = Cipher.getInstance(ALGO);
-            cipher.init(Cipher.DECRYPT_MODE, key);
-            byte[] decoded = Base64.getUrlDecoder().decode(token);
-            byte[] decrypted = cipher.doFinal(decoded);
-            String[] parts = new String(decrypted).split("\\|");
-            Long questionnaireId = Long.parseLong(parts[0]);
-            Long clientId = Long.parseLong(parts[1]);
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
+        EnvoiQuestionnaire envoi = envoiRepository.findByToken(token).orElse(null);
+        if (envoi == null || envoi.isRepondu()) {
             return false;
         }
+        Long questionnaireId = envoi.getQuestionnaireId();
+        Long clientId = envoi.getClientId();
+        Client client = clientRepository.findById(clientId).orElse(null);
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId).orElse(null);
+        if (client == null || questionnaire == null) {
+            return false;
+        }
+        for (Map<String, Object> item : reponses) {
+            Object qidObj = item.get("questionId");
+            if (qidObj == null)
+                continue;
+            Long questionId = Long.valueOf(qidObj.toString());
+            String reponseTexte = (String) item.get("reponse");
+            Question question = questionRepository.findById(questionId).orElse(null);
+            if (question != null) {
+                Reponse reponse = new Reponse();
+                reponse.setClient(client);
+                reponse.setQuestion(question);
+                reponse.setQuestionnaire(questionnaire);
+                reponse.setReponse(reponseTexte);
+                reponseRepository.save(reponse);
+            }
+        }
+        envoi.setRepondu(true);
+        envoiRepository.save(envoi);
+        return true;
     }
 }

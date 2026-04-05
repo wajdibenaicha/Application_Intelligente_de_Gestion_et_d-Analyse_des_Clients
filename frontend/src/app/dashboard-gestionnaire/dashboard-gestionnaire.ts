@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, Inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -62,10 +62,11 @@ export class DashboardGestionnaire implements OnInit {
   unreadNotifCount = 0;
   showNotifPanel = false;
 
+  private platformId = inject(PLATFORM_ID);
+
   constructor(
     private http: HttpClient,
     private router: Router,
-    @Inject(PLATFORM_ID) private platformId: Object,
     private cdr: ChangeDetectorRef,
     private wsService: WebSocketService,
     private api: Api
@@ -91,7 +92,7 @@ export class DashboardGestionnaire implements OnInit {
       this.updateStats();
       this.cdr.detectChanges();
     });
-    this.wsService.question$.subscribe(data => { this.questions = data; });
+    this.wsService.question$.subscribe(data => { this.questions = data; this.cdr.detectChanges(); });
 
     if (this.canManageAll()) {
       this.wsService.adminNotifications$.subscribe(data => {
@@ -510,6 +511,7 @@ export class DashboardGestionnaire implements OnInit {
       this.questform.questions.push(c.id);
       this.newquest = { titre: '', type: 'text', options: '' };
       this.showaddquestion = false;
+      this.cdr.detectChanges();
     });
   }
 
@@ -524,43 +526,142 @@ export class DashboardGestionnaire implements OnInit {
     this.questform.questions = this.selectedquestion.map(q => q.id);
   }
 
+  allClients: any[] = [];
+  typeContrats: string[] = [];
+  professions: string[] = [];
+  annees: number[] = [];
+
   ouvrirPartage(q: any) {
     this.selectedQuestionnaire = q;
     this.clientsFiltres = [];
     this.clientChannels = {};
+    this.filtre = { typeContrat: '', anneeMin: null, profession: '' };
     this.showPartageModal = true;
-  }
-
-  rechercherClients() {
-    this.api.getClientsFiltres(this.filtre).subscribe(data => {
+    this.api.getClientsFiltres({}).subscribe(data => {
+      this.allClients = data;
       this.clientsFiltres = data;
-      this.clientChannels = {};
       data.forEach((c: any) => this.clientChannels[c.id] = 'email');
+      this.typeContrats = [...new Set(data.map((c: any) => c.typeContrat).filter(Boolean))];
+      this.professions  = [...new Set(data.map((c: any) => c.profession).filter(Boolean))];
+      this.annees       = [...new Set(data.map((c: any) => c.anneeInscription).filter(Boolean))].sort((a: any, b: any) => a - b);
+      this.cdr.detectChanges();
     });
   }
 
+  appliquerFiltre() {
+    this.clientsFiltres = this.allClients.filter(c => {
+      if (this.filtre.typeContrat && c.typeContrat !== this.filtre.typeContrat) return false;
+      if (this.filtre.anneeMin   && c.anneeInscription < this.filtre.anneeMin)  return false;
+      if (this.filtre.profession && c.profession !== this.filtre.profession)     return false;
+      return true;
+    });
+    this.clientChannels = {};
+    this.clientsFiltres.forEach((c: any) => this.clientChannels[c.id] = 'email');
+    this.cdr.detectChanges();
+  }
+
+  // Flow A: generates link and copies to clipboard → client uses /repondre
+  envoyerLien(clientId: number) {
+    this.api.genererLien(this.selectedQuestionnaire.id, clientId).subscribe((token: string) => {
+      const lien = `http://localhost:4200/repondre?token=${token}`;
+      navigator.clipboard.writeText(lien);
+      this.showToastMessage('Lien copié ! Envoyez-le au client.');
+    });
+  }
+
+  // Flow B: sends email or SMS directly → client uses /fill-questionnaire
   envoyerDirectement(client: any) {
     const channel = this.clientChannels[client.id] || 'email';
-    this.http.post('http://localhost:8081/api/envoi/distribuer', {
-      questionnaireId: this.selectedQuestionnaire.id,
-      distributions: [{ clientId: client.id, channel }]
-    }).subscribe({
-      next: () => this.showToastMessage(channel === 'sms' ? 'SMS envoyé !' : 'Email envoyé !'),
-      error: () => this.showToastMessage('Erreur lors de l\'envoi', 'error')
+    const icon = channel === 'sms' ? '💬' : '📧';
+    Swal.fire({
+      title: `Envoyer à ${client.fullName} ?`,
+      html: `${icon} <b>${channel === 'sms' ? 'SMS' : 'Email'}</b> → ${channel === 'sms' ? client.tel : client.mail}`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#27ae60',
+      cancelButtonColor: '#95a5a6',
+      confirmButtonText: 'Envoyer',
+      cancelButtonText: 'Annuler',
+      reverseButtons: true
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.http.post('/api/envoi/distribuer', {
+        questionnaireId: this.selectedQuestionnaire.id,
+        distributions: [{ clientId: client.id, channel }]
+      }).subscribe({
+        next: () => {
+          this.cdr.detectChanges();
+          Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: channel === 'sms' ? '💬 SMS envoyé !' : '📧 Email envoyé !',
+            showConfirmButton: false, timer: 2500, timerProgressBar: true
+          });
+        },
+        error: (err) => {
+          const msg = err?.error?.message || 'Erreur lors de l\'envoi';
+          Swal.fire({ icon: 'error', title: 'Échec', text: msg, confirmButtonColor: '#27ae60' });
+        }
+      });
     });
   }
 
   envoyerATous() {
-    const distributions = this.clientsFiltres.map(c => ({
-      clientId: c.id,
-      channel: this.clientChannels[c.id] || 'email'
-    }));
-    this.http.post('http://localhost:8081/api/envoi/distribuer', {
-      questionnaireId: this.selectedQuestionnaire.id,
-      distributions
-    }).subscribe({
-      next: () => this.showToastMessage('Tous les liens envoyés !'),
-      error: () => this.showToastMessage('Erreur lors de l\'envoi', 'error')
+    const count = this.clientsFiltres.length;
+    if (count === 0) {
+      Swal.fire({ icon: 'warning', title: 'Aucun client', text: 'Aucun client à contacter.', confirmButtonColor: '#27ae60' });
+      return;
+    }
+
+    Swal.fire({
+      title: 'Envoyer à tous ?',
+      html: `Vous allez envoyer le questionnaire <b>"${this.selectedQuestionnaire?.titre}"</b><br>à <b>${count} client${count > 1 ? 's' : ''}</b>.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#27ae60',
+      cancelButtonColor: '#95a5a6',
+      confirmButtonText: '📢 Envoyer maintenant',
+      cancelButtonText: 'Annuler',
+      reverseButtons: true
+    }).then(result => {
+      if (!result.isConfirmed) return;
+
+      Swal.fire({
+        title: 'Envoi en cours...',
+        html: `Envoi à <b>${count}</b> client${count > 1 ? 's' : ''}...`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const distributions = this.clientsFiltres.map(c => ({
+        clientId: c.id,
+        channel: this.clientChannels[c.id] || 'email'
+      }));
+
+      this.http.post('/api/envoi/distribuer', {
+        questionnaireId: this.selectedQuestionnaire.id,
+        distributions
+      }).subscribe({
+        next: () => {
+          this.showPartageModal = false;
+          this.cdr.detectChanges();
+          Swal.fire({
+            icon: 'success',
+            title: 'Envoyé !',
+            html: `Le questionnaire a été envoyé à <b>${count} client${count > 1 ? 's' : ''}</b> avec succès.`,
+            confirmButtonColor: '#27ae60',
+            confirmButtonText: 'Parfait !'
+          });
+        },
+        error: () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Erreur d\'envoi',
+            text: 'Une erreur est survenue. Veuillez réessayer.',
+            confirmButtonColor: '#27ae60'
+          });
+        }
+      });
     });
   }
 

@@ -6,4 +6,6 @@ import java.util.Optional;
 
 public interface EnvoiQuestionnaireRepository extends JpaRepository<EnvoiQuestionnaire, Long> {
     Optional<EnvoiQuestionnaire> findByToken(String token);
+    Optional<EnvoiQuestionnaire> findFirstByTokenAndReponduFalse(String token);
+    Optional<EnvoiQuestionnaire> findFirstByQuestionnaireIdAndClientIdAndReponduFalse(Long questionnaireId, Long clientId);
 }

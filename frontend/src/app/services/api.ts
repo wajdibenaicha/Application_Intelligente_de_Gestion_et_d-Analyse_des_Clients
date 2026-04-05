@@ -6,8 +6,9 @@ import { Observable } from 'rxjs';
   providedIn: 'root',
 })
 export class Api {
-private base = 'http://localhost:8081/api';
+  private base = 'http://localhost:8081/api';
   constructor(private http: HttpClient) {}
+
   getGestionnaires(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/gestionnaires`);}
   addGestionnaire(gestionnaire: any): Observable<any> { return this.http.post<any>(`${this.base}/gestionnaires`, gestionnaire);}
   deleteGestionnaire(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/gestionnaires/${id}`);}
@@ -24,8 +25,8 @@ private base = 'http://localhost:8081/api';
   deleteQuestion(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/questions/${id}`);}
 
   getResponses(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/reponses`);}
-  deleteResponse(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/reponses/${id}`); } 
-  
+  deleteResponse(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/reponses/${id}`); }
+
   getroles(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/roles`);}
   addrole(role: any): Observable<any> { return this.http.post<any>(`${this.base}/roles`, role);}
   deleterole(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/roles/${id}`); }
@@ -43,14 +44,27 @@ private base = 'http://localhost:8081/api';
 
   getNotifications(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/notifications/admin`); }
   approuverPublication(id: number): Observable<any> { return this.http.post(`${this.base}/questionnaires/${id}/approuver`, {}); }
+
+
   rejeterPublication(id: number, raison: string): Observable<any> {
-    return this.http.post(`${this.base}/questionnaires/${id}/rejeter`, {
-      raison: raison
-    });
+    return this.http.patch(`${this.base}/questionnaires/${id}/rejeter`, { raison });
   }
-  demanderPublication(id: number, gestionnaireId: number): Observable<any> { return this.http.post(`${this.base}/questionnaires/${id}/demander-publication?gestionnaireId=${gestionnaireId}`, {}); }
-  retirerDemande(id: number): Observable<any> { return this.http.post(`${this.base}/questionnaires/${id}/retirer-demande`, {}); }
-  getClientsFiltres(params: any): Observable<any[]> { return this.http.get<any[]>(`${this.base}/envoi/clients`, { params }); }
-  genererLien(questionnaireId: number, clientId: number): Observable<string> { return this.http.post(`${this.base}/envoi/generer-lien?questionnaireId=${questionnaireId}&clientId=${clientId}`, {}, { responseType: 'text' }); }
-  
+
+  demanderPublication(id: number, gestionnaireId: number): Observable<any> {
+    return this.http.post(`${this.base}/questionnaires/${id}/demander-publication?gestionnaireId=${gestionnaireId}`, {});
+  }
+  retirerDemande(id: number): Observable<any> {
+    return this.http.post(`${this.base}/questionnaires/${id}/retirer-demande`, {});
+  }
+  getClientsFiltres(params: any): Observable<any[]> {
+    const clean: any = {};
+    Object.keys(params).forEach(k => {
+      const v = params[k];
+      if (v !== null && v !== undefined && v !== '') clean[k] = v;
+    });
+    return this.http.get<any[]>(`${this.base}/envoi/clients`, { params: clean });
+  }
+  genererLien(questionnaireId: number, clientId: number): Observable<string> {
+    return this.http.post(`${this.base}/envoi/generer-lien?questionnaireId=${questionnaireId}&clientId=${clientId}`, {}, { responseType: 'text' });
+  }
 }

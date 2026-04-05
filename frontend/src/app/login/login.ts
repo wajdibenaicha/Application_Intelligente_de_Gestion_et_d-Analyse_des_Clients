@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, NgZone } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -21,7 +21,8 @@ export class Login {
   constructor(
     private http: HttpClient,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   verifRobot() {
@@ -44,31 +45,37 @@ export class Login {
     this.isLoading = true;
     this.cdr.detectChanges();
 
-    this.http.post<any>('http://localhost:8081/api/administrateurs/login', {
+    this.http.post<any>('/api/administrateurs/login', {
       fullName: this.full_name,
       password: this.password
     }).subscribe({
       next: (admin) => {
-        this.isLoading = false;
-        sessionStorage.setItem('user', JSON.stringify(admin));
-        sessionStorage.setItem('role', 'administrateur');
-        this.router.navigate(['/dashbord-admin']);
+        this.ngZone.run(() => {
+          this.isLoading = false;
+          sessionStorage.setItem('user', JSON.stringify(admin));
+          sessionStorage.setItem('role', 'administrateur');
+          this.router.navigate(['/dashbord-admin']);
+        });
       },
       error: () => {
-        this.http.post<any>('http://localhost:8081/api/gestionnaires/login', {
+        this.http.post<any>('/api/gestionnaires/login', {
           fullName: this.full_name,
           password: this.password
         }).subscribe({
           next: (gest) => {
-            this.isLoading = false;
-            sessionStorage.setItem('user', JSON.stringify(gest));
-            sessionStorage.setItem('role', 'gestionnaire');
-            this.router.navigate(['/dashboard-gestionnaire']);
+            this.ngZone.run(() => {
+              this.isLoading = false;
+              sessionStorage.setItem('user', JSON.stringify(gest));
+              sessionStorage.setItem('role', 'gestionnaire');
+              this.router.navigate(['/dashboard-gestionnaire']);
+            });
           },
           error: () => {
-            this.isLoading = false;
-            this.errorMessage = 'Nom complet ou mot de passe incorrect.';
-            this.cdr.detectChanges();
+            this.ngZone.run(() => {
+              this.isLoading = false;
+              this.errorMessage = 'Nom complet ou mot de passe incorrect.';
+              this.cdr.detectChanges();
+            });
           }
         });
       }

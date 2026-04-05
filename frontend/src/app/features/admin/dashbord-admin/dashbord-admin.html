@@ -151,8 +151,12 @@
                 <td>{{ q.gestionnaire?.fullName || 'Admin' }}</td>
                 <td>{{ q.questions?.length || 0 }}</td>
                 <td>
-                  <span class="badge" [ngClass]="q.confirmed ? 'badge-confirmed' : 'badge-pending'">
-                    {{ q.confirmed ? 'Publié' : (q.statut === 'EN_ATTENTE' ? 'En attente' : 'Brouillon') }}
+                  <span class="badge" 
+                        [ngClass]="q.statut === 'REJETE' ? 'badge-danger' : (q.confirmed ? 'badge-confirmed' : (q.statut === 'EN_ATTENTE' ? 'badge-pending' : 'badge-brouillon'))">
+                    {{ q.statut === 'REJETE' ? 'Rejeté' : (q.confirmed ? 'Publié' : (q.statut === 'EN_ATTENTE' ? 'En attente' : 'Brouillon')) }}
+                  </span>
+                  <span *ngIf="q.statut === 'REJETE' && q.raisonRejet" class="rejet-reason" title="{{ q.raisonRejet }}">
+                    ⚠️ {{ q.raisonRejet.length > 20 ? (q.raisonRejet | slice:0:20) + '...' : q.raisonRejet }}
                   </span>
                 </td>
                 <td class="actions-cell">

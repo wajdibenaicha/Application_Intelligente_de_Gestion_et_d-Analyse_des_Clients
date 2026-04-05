@@ -1,69 +1,74 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STAR Assurances - Connexion</title>
-    <link rel="stylesheet" href="login.css">
-</head>
-<body>
-    <div class="container">
-        <div class="login-box">
+<div class="login-page">
+  <div class="login-wrapper">
 
-            <div class="logo-container">
-                <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="logo">
-            </div>
+    <div class="login-card">
 
-            <h1>STAR Assurances</h1>
-            <div class="error-message" *ngIf="errorMessage">
-                {{ errorMessage }}
-            </div>
+      <div class="brand">
+        <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="logo">
+        <h1>STAR Assurances</h1>
+        <p class="subtitle">Plateforme de gestion intelligente</p>
+      </div>
 
-            <form>
-                <div class="form-group">
-                    <label>Nom Complet :</label>
-                    <input
-                        type="text"
-                        [(ngModel)]="full_name"
-                        name="full_name"
-                        placeholder="Nom Complet"
-                    >
-                </div>
+      <div class="error-message" *ngIf="errorMessage">
+        <span>⚠</span> {{ errorMessage }}
+      </div>
 
-                <div class="form-group">
-                    <label>Mot de passe :</label>
-                    <input
-                        type="password"
-                        [(ngModel)]="password"
-                        name="password"
-                        placeholder="Mot de Passe"
-                    >
-                </div>
-
-                <div class="robot-check">
-                    <input
-                        type="checkbox"
-                        (click)="verifRobot()"
-                        [checked]="isRobot"
-                        id="robot"
-                    >
-                    <label for="robot">Je ne suis pas un robot</label>
-                </div>
-
-                <button type="button" (click)="verifUser()" [disabled]="isLoading">
-                    <span *ngIf="!isLoading">Se Connecter</span>
-                    <span *ngIf="isLoading">Connexion en cours...</span>
-                </button>
-
-                <div class="forgot-password">
-                    <a routerLink="/forgot-password">Mot de passe oublié ?</a>
-                </div>
-            </form>
+      <form>
+        <div class="form-group">
+          <label for="full_name">Nom Complet</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input
+              id="full_name"
+              type="text"
+              [(ngModel)]="full_name"
+              name="full_name"
+              placeholder="Entrez votre nom complet"
+              autocomplete="username"
+            >
+          </div>
         </div>
 
-        <div class="footer">
-            © 2026 STAR Assurances - Tous droits réservés
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input
+              id="password"
+              type="password"
+              [(ngModel)]="password"
+              name="password"
+              placeholder="Entrez votre mot de passe"
+              autocomplete="current-password"
+            >
+          </div>
         </div>
+
+        <div class="robot-check">
+          <input
+            type="checkbox"
+            (click)="verifRobot()"
+            [checked]="isRobot"
+            id="robot"
+          >
+          <label for="robot">Je ne suis pas un robot</label>
+        </div>
+
+        <button type="button" (click)="verifUser()" [disabled]="isLoading" class="btn-login">
+          <span *ngIf="!isLoading">Se Connecter</span>
+          <span *ngIf="isLoading" class="loading-text">
+            <span class="spinner"></span> Connexion en cours...
+          </span>
+        </button>
+
+        <div class="forgot-password">
+          <a routerLink="/forgot-password">Mot de passe oublié ?</a>
+        </div>
+      </form>
     </div>
-</body>
-</html>
+
+    <div class="footer">
+      © 2026 STAR Assurances — Tous droits réservés
+    </div>
+  </div>
+</div>

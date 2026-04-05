@@ -5,7 +5,6 @@ import com.example.backend.Repository.*;
 import com.example.backend.service.TokenEncryptionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -24,41 +23,55 @@ public class PublicQuestionnaireController {
 
     @GetMapping("/questionnaire")
     public ResponseEntity<?> getByToken(@RequestParam String token) {
-        String decrypted = tokenService.decrypt(token);
-        String[] parts = decrypted.split(":");
-        Long qId = Long.parseLong(parts[0]);
-        Long clientId = Long.parseLong(parts[1]);
+        try {
+            long[] ids = decryptIds(token);
+            Long qId = ids[0], clientId = ids[1];
 
-        EnvoiQuestionnaire envoi = envoiRepo.findByToken(token).orElse(null);
+            EnvoiQuestionnaire envoi = envoiRepo
+                .findFirstByQuestionnaireIdAndClientIdAndReponduFalse(qId, clientId)
+                .orElse(null);
 
-        if (envoi == null)
-            return ResponseEntity.status(404).body(Map.of("error", "Lien invalide"));
-        if (envoi.isRepondu())
-            return ResponseEntity.badRequest().body(Map.of("error", "Deja rempli"));
+            if (envoi == null)
+                return ResponseEntity.badRequest().body(Map.of("error", "Ce lien a déjà été utilisé ou est invalide."));
 
-        return ResponseEntity.ok(qRepo.findById(qId).orElseThrow());
+            return ResponseEntity.ok(qRepo.findById(qId).orElseThrow());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Lien invalide ou expiré."));
+        }
     }
 
+    // No @Transactional — avoids "marked as rollback-only" when inner JPA call fails
     @PostMapping("/questionnaire/submit")
-    @Transactional
     public ResponseEntity<?> submit(@RequestBody SubmitRequest request) {
-        String decrypted = tokenService.decrypt(request.getToken());
-        String[] parts = decrypted.split(":");
-        Long qId = Long.parseLong(parts[0]);
-        Long clientId = Long.parseLong(parts[1]);
+        long[] ids;
+        try {
+            ids = decryptIds(request.getToken());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Lien invalide."));
+        }
 
-        EnvoiQuestionnaire envoi = envoiRepo.findByToken(request.getToken()).orElse(null);
-        if (envoi == null || envoi.isRepondu())
-            return ResponseEntity.badRequest().body("Invalid or already used");
+        Long qId = ids[0], clientId = ids[1];
 
-        Client client = clientRepo.findById(clientId).orElseThrow();
-        Questionnaire q = qRepo.findById(qId).orElseThrow();
+        EnvoiQuestionnaire envoi = envoiRepo
+            .findFirstByQuestionnaireIdAndClientIdAndReponduFalse(qId, clientId)
+            .orElse(null);
 
-        for (var a : request.getResponses()) {
+        if (envoi == null)
+            return ResponseEntity.badRequest().body(Map.of("message", "Ce lien a déjà été utilisé."));
+
+        Client client = clientRepo.findById(clientId).orElse(null);
+        Questionnaire q = qRepo.findById(qId).orElse(null);
+
+        if (client == null || q == null)
+            return ResponseEntity.badRequest().body(Map.of("message", "Données introuvables."));
+
+        for (AnswerItem a : request.getResponses()) {
+            Question question = questionRepo.findById(a.getQuestionId()).orElse(null);
+            if (question == null) continue; // skip unknown questions gracefully
             Reponse r = new Reponse();
             r.setClient(client);
             r.setQuestionnaire(q);
-            r.setQuestion(questionRepo.findById(a.getQuestionId()).orElseThrow());
+            r.setQuestion(question);
             r.setReponse(a.getAnswer());
             reponseRepo.save(r);
         }
@@ -66,10 +79,15 @@ public class PublicQuestionnaireController {
         envoi.setRepondu(true);
         envoiRepo.save(envoi);
 
-        return ResponseEntity.ok(Map.of("message", "Merci !"));
+        return ResponseEntity.ok(Map.of("message", "Merci pour vos réponses !"));
     }
 
-    
+    private long[] decryptIds(String token) {
+        String decrypted = tokenService.decrypt(token);
+        String[] parts = decrypted.split(":");
+        return new long[]{ Long.parseLong(parts[0]), Long.parseLong(parts[1]) };
+    }
+
     static class SubmitRequest {
         private String token;
         private List<AnswerItem> responses;

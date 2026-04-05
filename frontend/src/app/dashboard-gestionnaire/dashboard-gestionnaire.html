@@ -370,23 +370,40 @@
       <h2>📨 Partager "{{ selectedQuestionnaire?.titre }}"</h2>
       <button class="btn-close" (click)="showPartageModal=false">✕</button>
     </div>
-    <label>Filtrer les clients</label>
-    <div style="display:flex; gap:12px; margin:0 24px;">
-      <input [(ngModel)]="filtre.typeContrat" placeholder="Type contrat">
-      <input [(ngModel)]="filtre.anneeMin" type="number" placeholder="Année inscription min">
-      <input [(ngModel)]="filtre.profession" placeholder="Profession">
-      <button (click)="rechercherClients()">🔍 Rechercher</button>
+    <div class="partage-filters">
+      <select [(ngModel)]="filtre.typeContrat" (ngModelChange)="appliquerFiltre()">
+        <option value="">Tous les types de contrat</option>
+        <option *ngFor="let t of typeContrats" [value]="t">{{ t }}</option>
+      </select>
+      <select [(ngModel)]="filtre.anneeMin" (ngModelChange)="appliquerFiltre()">
+        <option [ngValue]="null">Toutes les années</option>
+        <option *ngFor="let a of annees" [ngValue]="a">≥ {{ a }}</option>
+      </select>
+      <select [(ngModel)]="filtre.profession" (ngModelChange)="appliquerFiltre()">
+        <option value="">Toutes les professions</option>
+        <option *ngFor="let p of professions" [value]="p">{{ p }}</option>
+      </select>
     </div>
-    <div style="max-height:200px; overflow-y:auto; margin:16px 24px;">
-      <div *ngFor="let c of clientsFiltres" style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-        <span style="flex:1">{{ c.fullName }} ({{ c.mail }}) - {{ c.typeContrat }}</span>
-        <select [(ngModel)]="clientChannels[c.id]" style="padding:4px 8px; border-radius:4px; border:1px solid #ccc;">
-          <option value="email">Email ({{ c.mail }})</option>
-          <option value="sms" [disabled]="!c.tel">SMS{{ c.tel ? ' (' + c.tel + ')' : ' (non disponible)' }}</option>
+    <div class="partage-count">
+      <strong>{{ clientsFiltres.length }}</strong> client{{ clientsFiltres.length !== 1 ? 's' : '' }} trouvé{{ clientsFiltres.length !== 1 ? 's' : '' }}
+    </div>
+    <div class="partage-client-list">
+      <div *ngFor="let c of clientsFiltres" class="partage-client-row">
+        <div class="partage-avatar">{{ (c.fullName || '?').charAt(0) }}</div>
+        <div class="partage-client-info">
+          <span class="partage-client-name">{{ c.fullName }}</span>
+          <span class="partage-client-meta">{{ c.mail }} · {{ c.typeContrat }}</span>
+        </div>
+        <select [(ngModel)]="clientChannels[c.id]" class="channel-select">
+          <option value="email">📧 Email</option>
+          <option value="sms" [disabled]="!c.tel">💬 SMS</option>
         </select>
-        <button (click)="envoyerDirectement(c)" class="btn-primary">Envoyer</button>
+        <button (click)="envoyerDirectement(c)" class="btn-send">Envoyer</button>
       </div>
-      <div *ngIf="clientsFiltres.length === 0" style="padding:20px; text-align:center; color:#aaa;">Aucun client trouvé</div>
+      <div *ngIf="clientsFiltres.length === 0" class="partage-empty">
+        <span class="partage-empty-icon">👥</span>
+        <p>Aucun client ne correspond aux filtres</p>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" (click)="envoyerATous()">📢 Envoyer à tous</button>

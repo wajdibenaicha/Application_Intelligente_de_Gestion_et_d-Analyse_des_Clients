@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
@@ -19,7 +19,11 @@ export class FillQuestionnaireComponent implements OnInit {
   submitting = false;
   private token = '';
 
-  constructor(private route: ActivatedRoute, private http: HttpClient) {}
+  constructor(
+    private route: ActivatedRoute,
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.token = this.route.snapshot.queryParamMap.get('token') || '';
@@ -27,22 +31,24 @@ export class FillQuestionnaireComponent implements OnInit {
     if (!this.token) {
       this.error = 'Lien invalide ou expiré.';
       this.loading = false;
+      this.cdr.detectChanges();
       return;
     }
 
-    this.http.get<any>(
-      `http://localhost:8081/api/public/questionnaire?token=${encodeURIComponent(this.token)}`
-    ).subscribe({
-      next: (data) => {
-        this.questionnaire = data;
-        this.responses = data.questions.map((q: any) => ({ questionId: q.id, answer: '' }));
-        this.loading = false;
-      },
-      error: (err) => {
-        this.error = err.error?.error || 'Ce lien est invalide ou a déjà été utilisé.';
-        this.loading = false;
-      }
-    });
+    this.http.get<any>('/api/public/questionnaire?token=' + encodeURIComponent(this.token))
+      .subscribe({
+        next: (data) => {
+          this.questionnaire = data;
+          this.responses = data.questions.map((q: any) => ({ questionId: q.id, answer: '' }));
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = err.error?.error || 'Ce lien est invalide ou a déjà été utilisé.';
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   parseOptions(opts: string): string[] {
@@ -63,24 +69,23 @@ export class FillQuestionnaireComponent implements OnInit {
     this.responses[i].answer = selected.join(',');
   }
 
-  allAnswered(): boolean {
-    return this.responses.every(r => r.answer.trim() !== '');
-  }
-
   submit() {
     if (this.submitting) return;
     this.submitting = true;
-    this.http.post<any>(
-      'http://localhost:8081/api/public/questionnaire/submit',
+    this.cdr.detectChanges();
+
+    this.http.post<any>('/api/public/questionnaire/submit',
       { token: this.token, responses: this.responses }
     ).subscribe({
       next: () => {
         this.submitted = true;
         this.submitting = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.error = err.error?.message || 'Une erreur est survenue. Veuillez réessayer.';
         this.submitting = false;
+        this.cdr.detectChanges();
       }
     });
   }
