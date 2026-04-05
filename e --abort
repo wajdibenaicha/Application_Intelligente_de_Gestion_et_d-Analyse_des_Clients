@@ -1,0 +1,51 @@
+[33m62c71be[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m add send forms via mail or sms
+[33m4748f86[m add send forms via mail or sms
+[33m8634e57[m envoi questionnaire
+[33mbb4d699[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m reglage questionnaire(lien du formulaire a envoye crypter)  statut questionnaire,reponse questionnaire,accept/rejet du questionnaire
+[33me615c11[m zyedet directeur w notification w barcha hajet o5rin
+[33mdc181f0[m fix
+[33m88233b0[m fix forms
+[33m61f30e9[m saving
+[33mdc3299b[m fix forms and add sweat alert
+[33mcd5f8a9[m backend fix
+[33mf31fada[m gestionnaire
+[33m4a27fa9[m resolve merge conflict in GestionnaireService
+[33m08c44b2[m commit
+[33mcfd0a29[m saving
+[33mf1df6af[m Merge branch 'main' of https://github.com/wajdibenaicha/Application_Intelligente_de_Gestion_et_d-Analyse_des_Clients
+[33ma0d0a85[m saving
+[33m3a72519[m update database schema
+[33mf0d66d3[m update database dump and gitignore
+[33m69d2773[m 1
+[33meaf0725[m fix: admin dashboard - confirmed workflow, offre title, questionnaire delete, permissions, gestionnaire update
+[33me7c574b[m Merge branch 'main' of https://github.com/wajdibenaicha/Application_Intelligente_de_Gestion_et_d-Analyse_des_Clients
+[33m2ec6c44[m Merge collaborator changes: statut workflow, sidebar collapse, questionnaire updates
+[33m5173e81[m save37
+[33m21da174[m fix: admin dashboard bugs
+[33mbb0856c[m save35
+[33mefec012[m save36
+[33mee9ac8a[m save34
+[33mf84c0df[m remove CLAUDE.md from tracking
+[33m31fcb97[m admin dashboard
+[33m808641c[m admin
+[33m02462c5[m commit1
+[33mfd3bb1e[m save34
+[33m385b473[m save32
+[33m0f67c0f[m save 32
+[33md5e31d8[m save31
+[33m47dcb3b[m saving
+[33m6d1fd8d[m tsejel
+[33m844dfcc[m saver
+[33mf93c564[m save
+[33m0b5f719[m commit6
+[33m93cfe3b[m commit1
+[33mce742f7[m save1
+[33mce28850[m saved
+[33mc89d1c6[m commit1
+[33maf72661[m commit1
+[33ma18e9be[m commit
+[33m9ff14ee[m commit
+[33m81d0bcb[m commit
+[33m5696729[m saved
+[33m6e784e4[m commit
+[33m6266e00[m first commit
