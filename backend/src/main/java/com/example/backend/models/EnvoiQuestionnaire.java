@@ -1,7 +1,13 @@
 package com.example.backend.models;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "envoi_questionnaire")
@@ -14,6 +20,8 @@ public class EnvoiQuestionnaire {
     private String token;
     private boolean repondu = false;
     private LocalDateTime dateEnvoi = LocalDateTime.now();
+    @Column(nullable = false)
+private String channel = "email"; 
 
     public Long getId() {
         return id;
@@ -29,6 +37,12 @@ public class EnvoiQuestionnaire {
 
     public void setQuestionnaireId(Long questionnaireId) {
         this.questionnaireId = questionnaireId;
+    }
+    public void setChannel(String channel) {
+        this.channel = channel;
+    }
+    public String getChannel() {
+        return channel;
     }
 
     public Long getClientId() {

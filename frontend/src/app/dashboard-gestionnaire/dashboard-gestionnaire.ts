@@ -56,6 +56,7 @@ export class DashboardGestionnaire implements OnInit {
   showPartageModal = false;
   clientsFiltres: any[] = [];
   filtre = { typeContrat: '', anneeMin: null, profession: '' };
+  clientChannels: { [id: number]: string } = {};
 
   notifications: any[] = [];
   unreadNotifCount = 0;
@@ -287,35 +288,47 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   deleteQuestionnaire(id: number) {
-    if (!confirm('Supprimer ce questionnaire ?')) return;
-    this.http.delete(this.apiUrl + '/questionnaires/' + id).subscribe({
-      next: () => {
-        this.loadQuestionnaires();
-        this.showToastMessage('Questionnaire supprimé');
-      },
-      error: () => this.showToastMessage('Erreur lors de la suppression', 'error')
+    Swal.fire({
+      title: 'Supprimer ce questionnaire ?', text: 'Cette action est irréversible.', icon: 'warning',
+      showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Supprimer', cancelButtonText: 'Annuler'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.http.delete(this.apiUrl + '/questionnaires/' + id).subscribe({
+          next: () => { this.loadQuestionnaires(); Swal.fire({ icon: 'success', title: 'Supprimé !', timer: 1200, showConfirmButton: false }); },
+          error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
+        });
+      }
     });
   }
 
   demanderPublication(q: any) {
-    if (!confirm('Envoyer "' + q.titre + '" pour publication ?')) return;
-    this.api.demanderPublication(q.id, this.gestionnaire.id).subscribe({
-      next: () => {
-        this.loadQuestionnaires();
-        this.showToastMessage('Demande envoyée');
-      },
-      error: () => this.showToastMessage('Erreur lors de l\'envoi', 'error')
+    Swal.fire({
+      title: 'Demander la publication ?', text: `"${q.titre}" sera soumis pour approbation.`, icon: 'question',
+      showCancelButton: true, confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Envoyer', cancelButtonText: 'Annuler'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.api.demanderPublication(q.id, this.gestionnaire.id).subscribe({
+          next: () => { this.loadQuestionnaires(); Swal.fire({ icon: 'success', title: 'Demande envoyée !', timer: 1500, showConfirmButton: false }); },
+          error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de l\'envoi' })
+        });
+      }
     });
   }
 
   retirerDemande(q: any) {
-    if (!confirm('Retirer la demande de publication ?')) return;
-    this.api.retirerDemande(q.id).subscribe({
-      next: () => {
-        this.loadQuestionnaires();
-        this.showToastMessage('Demande retirée');
-      },
-      error: () => this.showToastMessage('Erreur', 'error')
+    Swal.fire({
+      title: 'Retirer la demande ?', text: 'Le questionnaire reviendra en brouillon.', icon: 'warning',
+      showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Retirer', cancelButtonText: 'Annuler'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.api.retirerDemande(q.id).subscribe({
+          next: () => { this.loadQuestionnaires(); Swal.fire({ icon: 'success', title: 'Demande retirée', timer: 1500, showConfirmButton: false }); },
+          error: () => Swal.fire({ icon: 'error', title: 'Erreur' })
+        });
+      }
     });
   }
 
@@ -325,18 +338,25 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   deleteQuestion(questionId: number, questionnaire: any) {
-    if (!confirm('Supprimer cette question ?')) return;
-    this.http.delete(this.apiUrl + '/questions/' + questionId).subscribe({
-      next: () => {
-        questionnaire.questions = questionnaire.questions.filter((q: any) => q.id !== questionId);
-        this.selectedQuestionnaire = { ...questionnaire };
-        this.questionnaires = this.questionnaires.map((item: any) =>
-          item.id === questionnaire.id ? { ...questionnaire } : item
-        );
-        this.cdr.detectChanges();
-        this.showToastMessage('Question supprimée');
-      },
-      error: () => this.showToastMessage('Erreur lors de la suppression', 'error')
+    Swal.fire({
+      title: 'Supprimer cette question ?', text: 'Cette action est irréversible.', icon: 'warning',
+      showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Supprimer', cancelButtonText: 'Annuler'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.http.delete(this.apiUrl + '/questions/' + questionId).subscribe({
+          next: () => {
+            questionnaire.questions = questionnaire.questions.filter((q: any) => q.id !== questionId);
+            this.selectedQuestionnaire = { ...questionnaire };
+            this.questionnaires = this.questionnaires.map((item: any) =>
+              item.id === questionnaire.id ? { ...questionnaire } : item
+            );
+            this.cdr.detectChanges();
+            Swal.fire({ icon: 'success', title: 'Question supprimée', timer: 1200, showConfirmButton: false });
+          },
+          error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
+        });
+      }
     });
   }
 
@@ -507,34 +527,52 @@ export class DashboardGestionnaire implements OnInit {
   ouvrirPartage(q: any) {
     this.selectedQuestionnaire = q;
     this.clientsFiltres = [];
+    this.clientChannels = {};
     this.showPartageModal = true;
   }
 
   rechercherClients() {
-    this.api.getClientsFiltres(this.filtre).subscribe(data => this.clientsFiltres = data);
+    this.api.getClientsFiltres(this.filtre).subscribe(data => {
+      this.clientsFiltres = data;
+      this.clientChannels = {};
+      data.forEach((c: any) => this.clientChannels[c.id] = 'email');
+    });
   }
 
-  envoyerLien(clientId: number) {
-    this.api.genererLien(this.selectedQuestionnaire.id, clientId).subscribe(lien => {
-      navigator.clipboard.writeText(lien);
-      this.showToastMessage('Lien copié ! Envoyez-le au client.');
+  envoyerDirectement(client: any) {
+    const channel = this.clientChannels[client.id] || 'email';
+    this.http.post('http://localhost:8081/api/envoi/distribuer', {
+      questionnaireId: this.selectedQuestionnaire.id,
+      distributions: [{ clientId: client.id, channel }]
+    }).subscribe({
+      next: () => this.showToastMessage(channel === 'sms' ? 'SMS envoyé !' : 'Email envoyé !'),
+      error: () => this.showToastMessage('Erreur lors de l\'envoi', 'error')
     });
   }
 
   envoyerATous() {
-    for (let c of this.clientsFiltres) {
-      this.api.genererLien(this.selectedQuestionnaire.id, c.id).subscribe(() => {});
-    }
-    this.showToastMessage('Envoi en cours...');
+    const distributions = this.clientsFiltres.map(c => ({
+      clientId: c.id,
+      channel: this.clientChannels[c.id] || 'email'
+    }));
+    this.http.post('http://localhost:8081/api/envoi/distribuer', {
+      questionnaireId: this.selectedQuestionnaire.id,
+      distributions
+    }).subscribe({
+      next: () => this.showToastMessage('Tous les liens envoyés !'),
+      error: () => this.showToastMessage('Erreur lors de l\'envoi', 'error')
+    });
   }
 
   showToastMessage(message: string, type = 'success') {
-    this.toastMessage = message;
-    this.toastType = type;
-    this.showToast = true;
-    setTimeout(() => {
-      this.showToast = false;
-      this.cdr.detectChanges();
-    }, 3000);
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: type === 'error' ? 'error' : 'success',
+      title: message,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    });
   }
 }

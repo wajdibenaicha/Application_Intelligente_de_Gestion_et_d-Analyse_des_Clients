@@ -1,0 +1,104 @@
+@if (loading) {
+  <div class="page-wrapper">
+    <div class="state-card">
+      <div class="spinner"></div>
+      <p>Chargement du questionnaire...</p>
+    </div>
+  </div>
+}
+
+@if (!loading && error) {
+  <div class="page-wrapper">
+    <div class="state-card state-error">
+      <div class="state-icon">❌</div>
+      <h2>Lien invalide</h2>
+      <p>{{ error }}</p>
+    </div>
+  </div>
+}
+
+@if (!loading && !error && submitted) {
+  <div class="page-wrapper">
+    <div class="state-card state-success">
+      <div class="state-icon">✅</div>
+      <h2>Merci !</h2>
+      <p>Vos réponses ont bien été enregistrées.</p>
+    </div>
+  </div>
+}
+
+@if (!loading && !error && !submitted && questionnaire) {
+  <div class="page-wrapper">
+    <div class="form-container">
+
+      <div class="form-header">
+        <h1>{{ questionnaire.titre }}</h1>
+        @if (questionnaire.description) {
+          <p>{{ questionnaire.description }}</p>
+        }
+      </div>
+
+      <div class="questions-list">
+        @for (q of questionnaire.questions; track q.id; let i = $index) {
+          <div class="question-card">
+
+            <div class="question-label">
+              <span class="question-number">{{ i + 1 }}</span>
+              {{ q.titre }}
+            </div>
+
+            @if (q.type === 'text') {
+              <textarea
+                [(ngModel)]="responses[i].answer"
+                placeholder="Votre réponse..."
+                rows="3">
+              </textarea>
+            }
+
+            @if (q.type === 'radio') {
+              <div class="options-list">
+                @for (opt of parseOptions(q.options); track opt) {
+                  <label class="option-item">
+                    <input
+                      type="radio"
+                      [name]="'q_' + q.id"
+                      [value]="opt"
+                      (change)="responses[i].answer = opt"
+                      [checked]="responses[i].answer === opt">
+                    <span class="option-text">{{ opt }}</span>
+                  </label>
+                }
+              </div>
+            }
+
+            @if (q.type === 'checkbox') {
+              <div class="options-list">
+                @for (opt of parseOptions(q.options); track opt) {
+                  <label class="option-item">
+                    <input
+                      type="checkbox"
+                      [value]="opt"
+                      [checked]="isChecked(i, opt)"
+                      (change)="toggleCheckbox(i, opt)">
+                    <span class="option-text">{{ opt }}</span>
+                  </label>
+                }
+              </div>
+            }
+
+          </div>
+        }
+      </div>
+
+      <div class="form-footer">
+        <button
+          class="submit-btn"
+          (click)="submit()"
+          [disabled]="submitting">
+          {{ submitting ? 'Envoi en cours...' : 'Envoyer mes réponses' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

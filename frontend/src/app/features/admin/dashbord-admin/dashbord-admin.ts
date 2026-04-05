@@ -137,18 +137,53 @@ export class DashbordAdmin implements OnInit {
     toggleNotifPanel() { this.showNotifPanel = !this.showNotifPanel; }
 
     approuverQuestionnaire(id: number) {
-        this.api.approuverPublication(id).subscribe(() => {
-            Swal.fire('Approuve', 'Questionnaire publie', 'success');
-            this.loadNotifications();
-            this.loadInitialData();
+        Swal.fire({
+            title: 'Approuver ce questionnaire ?',
+            text: 'Il sera publié et visible par les clients.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Approuver',
+            cancelButtonText: 'Annuler'
+        }).then(result => {
+            if (result.isConfirmed) {
+                this.api.approuverPublication(id).subscribe({
+                    next: () => {
+                        this.loadNotifications();
+                        this.loadInitialData();
+                        Swal.fire({ icon: 'success', title: 'Approuvé !', text: 'Questionnaire publié avec succès.', timer: 1500, showConfirmButton: false });
+                    },
+                    error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'approuver le questionnaire.' })
+                });
+            }
         });
     }
 
-    rejeterQuestionnaire(id: number , raison:string) {
-        this.api.rejeterPublication(id,raison).subscribe(() => {
-            Swal.fire('Rejete', 'Demande rejetee', 'info');
-            this.loadNotifications();
-            this.loadInitialData();
+    demanderRaisonEtRejeter(id: number) {
+        Swal.fire({
+            title: 'Raison du rejet',
+            input: 'textarea',
+            inputPlaceholder: 'Expliquez la raison du rejet...',
+            showCancelButton: true,
+            confirmButtonText: 'Rejeter',
+            cancelButtonText: 'Annuler',
+            inputValidator: (value) => { if (!value || !value.trim()) return 'La raison est obligatoire.'; return null; }
+        }).then(result => {
+            if (result.isConfirmed && result.value) {
+                this.rejeterQuestionnaire(id, result.value);
+            }
+        });
+    }
+
+    rejeterQuestionnaire(id: number, raison: string) {
+        this.api.rejeterPublication(id, raison).subscribe({
+            next: () => {
+                this.loadNotifications();
+                this.loadInitialData();
+                Swal.fire({ icon: 'info', title: 'Rejeté', text: 'La demande a été rejetée.', timer: 1500, showConfirmButton: false });
+            },
+            error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de rejeter la demande.' })
         });
     }
 

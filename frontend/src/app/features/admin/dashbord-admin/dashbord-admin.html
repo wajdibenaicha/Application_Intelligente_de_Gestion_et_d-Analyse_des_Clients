@@ -172,13 +172,15 @@
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
-                  <tr><th>ID</th><th>Question</th><th>Réponse</th><th>Client</th><th>Actions</th> </thead>
+                  <tr><th>Question</th><th>Réponse</th><th>Client</th><th>Email</th><th>Téléphone</th><th>Actions</th></tr>
+                </thead>
                 <tbody>
                   <tr *ngFor="let r of group.reponses">
-                    <td>{{ r.id }}</td>
                     <td>{{ r.question?.titre || '—' }}</td>
                     <td>{{ r.reponse }}</td>
-                    <td>{{ r.client?.fullName || r.client?.full_name || r.client?.mail || '—' }}</td>
+                    <td>{{ r.client?.fullName || '—' }}</td>
+                    <td>{{ r.client?.mail || '—' }}</td>
+                    <td>{{ r.client?.tel || '—' }}</td>
                     <td class="actions-cell">
                       <button class="btn-icon btn-confirm" (click)="opensendoffres(r)">🎁</button>
                       <button class="btn-icon btn-delete" (click)="deletereponse(r.id)">🗑️</button>
@@ -404,7 +406,7 @@
   <div *ngFor="let n of notifications" class="notif-item" [class.vue]="n.vue">
     <p>{{ n.message }}</p>
     <button *ngIf="n.type === 'DEMANDE_PUBLICATION'" (click)="approuverQuestionnaire(n.sourceId)">Approuver</button>
-    <button *ngIf="n.type === 'DEMANDE_PUBLICATION'" (click)="rejeterQuestionnaire(n.sourceId)">Rejeter</button>
+    <button *ngIf="n.type === 'DEMANDE_PUBLICATION'" (click)="demanderRaisonEtRejeter(n.sourceId)">Rejeter</button>
     <small>{{ n.dateCreation | date:'short' }}</small>
   </div>
 </div>

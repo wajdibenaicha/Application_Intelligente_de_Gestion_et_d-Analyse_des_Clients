@@ -32,13 +32,21 @@ public class ClientController {
     }
 
     @PostMapping
-    public ResponseEntity<Client> addClient(@RequestBody Client client) {
+    public ResponseEntity<?> addClient(@RequestBody Client client) {
+        if ((client.getMail() == null || client.getMail().isBlank()) &&
+            (client.getTel() == null || client.getTel().isBlank())) {
+            return ResponseEntity.badRequest().body("Au moins un email ou un téléphone est requis.");
+        }
         Client savedClient = clientService.addClient(client);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedClient);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Client> updateClient(@PathVariable Long id, @RequestBody Client client) {
+    public ResponseEntity<?> updateClient(@PathVariable Long id, @RequestBody Client client) {
+        if ((client.getMail() == null || client.getMail().isBlank()) &&
+            (client.getTel() == null || client.getTel().isBlank())) {
+            return ResponseEntity.badRequest().body("Au moins un email ou un téléphone est requis.");
+        }
         Client updatedClient = clientService.updateClient(id, client);
         if (updatedClient != null) {
             return ResponseEntity.ok(updatedClient);

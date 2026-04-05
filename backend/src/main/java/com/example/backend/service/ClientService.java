@@ -15,11 +15,11 @@ public class ClientService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
     private ClientRepository clientRepository;
 
     public List<Client> getAllClients() {
         return clientRepository.findAll();
-
     }
 
     public Client getClientById(Long id) {
@@ -29,27 +29,24 @@ public class ClientService {
     public Client addClient(Client client) {
         Client saved = clientRepository.save(client);
         messagingTemplate.convertAndSend("/topic/clients", getAllClients());
-        messagingTemplate.convertAndSend("/topic/notifications", "Nouveau client ajouté");
         return saved;
     }
 
     public Client updateClient(Long id, Client client) {
         Client exist = getClientById(id);
-        if (exist != null) {
-            client.setId(id);
-            return clientRepository.save(client);
-        }
-        return null;
+        if (exist == null) return null;
+        client.setId(id);
+        Client updated = clientRepository.save(client);
+        messagingTemplate.convertAndSend("/topic/clients", getAllClients());
+        return updated;
     }
 
     public Client deleteClient(Long id) {
         Client exist = getClientById(id);
-        if (exist != null) {
-            clientRepository.delete(exist);
-            return exist;
-        } else {
-            return null;
-        }
+        if (exist == null) return null;
+        clientRepository.delete(exist);
+        messagingTemplate.convertAndSend("/topic/clients", getAllClients());
+        return exist;
     }
 
 }
