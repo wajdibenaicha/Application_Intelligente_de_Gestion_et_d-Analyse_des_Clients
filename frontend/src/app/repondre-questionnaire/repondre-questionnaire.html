@@ -1,46 +1,34 @@
-<div class="container" *ngIf="chargement">
+<div *ngIf="chargement" class="loading">
   <p>Chargement du questionnaire...</p>
 </div>
 
-<div *ngIf="!chargement && questionnaire" class="questionnaire-container">
+<div *ngIf="!chargement && questionnaire && !erreur" class="questionnaire-container">
   <h2>{{ questionnaire.titre }}</h2>
   <p *ngIf="questionnaire.description">{{ questionnaire.description }}</p>
-
   <form (ngSubmit)="soumettre()">
     <div *ngFor="let q of questionnaire.questions; let i = index" class="question-block">
       <label class="question-label">{{ i+1 }}. {{ q.titre }}</label>
-
       <div [ngSwitch]="q.type">
-        <!-- Texte libre -->
-        <input *ngSwitchCase="'text'" type="text" [(ngModel)]="reponses[i]" [name]="'q'+i" class="form-control">
-
-        <!-- Radio (choix unique) -->
+        <input *ngSwitchCase="'text'" type="text" [(ngModel)]="reponses[i]" [name]="'q'+i">
         <div *ngSwitchCase="'radio'">
           <label *ngFor="let opt of q.options.split(',')" class="radio-label">
-            <input type="radio" [name]="'q'+i" [value]="opt.trim()" [(ngModel)]="reponses[i]">
-            {{ opt.trim() }}
+            <input type="radio" [name]="'q'+i" [value]="opt.trim()" [(ngModel)]="reponses[i]"> {{ opt.trim() }}
           </label>
         </div>
-
-        <!-- Checkbox (choix multiple) -->
         <div *ngSwitchCase="'checkbox'">
           <label *ngFor="let opt of q.options.split(',')" class="checkbox-label">
-            <input type="checkbox" [value]="opt.trim()" (change)="toggleCheckbox(i, opt.trim())">
-            {{ opt.trim() }}
+            <input type="checkbox" [value]="opt.trim()" (change)="toggleCheckbox(i, opt.trim())"> {{ opt.trim() }}
           </label>
         </div>
-
-        <!-- Select (liste déroulante) -->
-        <select *ngSwitchCase="'select'" [(ngModel)]="reponses[i]" [name]="'q'+i" class="form-control">
+        <select *ngSwitchCase="'select'" [(ngModel)]="reponses[i]" [name]="'q'+i">
           <option *ngFor="let opt of q.options.split(',')" [value]="opt.trim()">{{ opt.trim() }}</option>
         </select>
       </div>
     </div>
-
-    <button type="submit" class="btn-submit">Envoyer mes réponses</button>
+    <button type="submit">Envoyer mes réponses</button>
   </form>
 </div>
 
-<div *ngIf="!chargement && !questionnaire" class="error-message">
+<div *ngIf="!chargement && erreur" class="error-message">
   <p>Questionnaire invalide ou lien expiré.</p>
 </div>

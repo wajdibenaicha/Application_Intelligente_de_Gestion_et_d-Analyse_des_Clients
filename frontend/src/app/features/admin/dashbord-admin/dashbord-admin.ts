@@ -138,17 +138,38 @@ export class DashbordAdmin implements OnInit {
 
     approuverQuestionnaire(id: number) {
         this.api.approuverPublication(id).subscribe(() => {
-            Swal.fire('Approuve', 'Questionnaire publie', 'success');
+            Swal.fire('Approuvé', 'Questionnaire publié', 'success');
             this.loadNotifications();
             this.loadInitialData();
         });
     }
 
-    rejeterQuestionnaire(id: number , raison:string) {
-        this.api.rejeterPublication(id,raison).subscribe(() => {
-            Swal.fire('Rejete', 'Demande rejetee', 'info');
-            this.loadNotifications();
-            this.loadInitialData();
+    rejeterAvecRaison(id: number) {
+        Swal.fire({
+            title: 'Motif du rejet',
+            input: 'textarea',
+            inputLabel: 'Veuillez indiquer la raison du rejet',
+            inputPlaceholder: 'Expliquez pourquoi ce questionnaire est rejeté...',
+            showCancelButton: true,
+            confirmButtonText: 'Rejeter',
+            cancelButtonText: 'Annuler',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'La raison est obligatoire';
+                }
+                return null;
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                this.api.rejeterPublication(id, result.value).subscribe({
+                    next: () => {
+                        Swal.fire('Rejeté', 'Le questionnaire a été rejeté et le gestionnaire a été notifié.', 'info');
+                        this.loadNotifications();
+                        this.loadInitialData();
+                    },
+                    error: () => Swal.fire('Erreur', 'Impossible de rejeter le questionnaire', 'error')
+                });
+            }
         });
     }
 

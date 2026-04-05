@@ -515,9 +515,10 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   envoyerLien(clientId: number) {
-    this.api.genererLien(this.selectedQuestionnaire.id, clientId).subscribe(lien => {
-      navigator.clipboard.writeText(lien);
-      this.showToastMessage('Lien copié ! Envoyez-le au client.');
+    this.api.genererLien(this.selectedQuestionnaire.id, clientId).subscribe((token: string) => {
+        const lien = `http://localhost:4200/repondre?token=${token}`;
+        navigator.clipboard.writeText(lien);
+        this.showToastMessage('Lien copié ! Envoyez-le au client.');
     });
   }
 
