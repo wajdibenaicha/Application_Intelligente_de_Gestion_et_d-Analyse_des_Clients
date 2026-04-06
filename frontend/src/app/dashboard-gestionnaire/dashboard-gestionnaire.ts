@@ -407,46 +407,109 @@ export class DashboardGestionnaire implements OnInit {
     return q.statut === 'PUBLIE';
   }
 
+  showClientReponsesModal = false;
+  selectedClientData: any = null;
+  selectedClientReponses: any[] = [];
+
   loadReponses() {
     if (!this.selectedQuestionnaireId) { this.reponses = []; return; }
+    const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
     this.http.get<any[]>(this.apiUrl + '/reponses/questionnaire/' + this.selectedQuestionnaireId).subscribe({
       next: (data) => {
         this.reponses = data;
         this.totalReponses = data.length;
         this.cdr.detectChanges();
+        const nb = data.length;
+        const clients = new Set(data.map((r: any) => r.client?.id)).size;
+        Swal.fire({
+          title: `📋 ${titre}`,
+          html: nb === 0
+            ? `<p>Aucune réponse reçue pour ce questionnaire.</p>`
+            : `<p>Ce questionnaire a reçu <b>${nb} réponse${nb > 1 ? 's' : ''}</b> de <b>${clients} client${clients > 1 ? 's' : ''}</b>.</p>`,
+          icon: nb === 0 ? 'info' : 'success',
+          confirmButtonText: nb === 0 ? 'OK' : '📊 Voir les réponses',
+          confirmButtonColor: '#27ae60',
+          timer: nb === 0 ? 2500 : undefined,
+          showConfirmButton: true
+        });
       },
       error: () => this.showToastMessage('Erreur lors du chargement des réponses', 'error')
     });
   }
 
+  // Group flat responses into one entry per client
+  get clientsReponses(): any[] {
+    const map = new Map<number, any>();
+    for (const r of this.reponses) {
+      const id = r.client?.id;
+      if (!map.has(id)) {
+        map.set(id, {
+          client: r.client,
+          reponses: [],
+          nbReponses: 0
+        });
+      }
+      const entry = map.get(id);
+      entry.reponses.push(r);
+      entry.nbReponses++;
+    }
+    return Array.from(map.values());
+  }
+
+  voirReponsesClient(entry: any) {
+    const questionnaireTitre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
+    const nb = entry.nbReponses;
+    const clientName = entry.client?.fullName || entry.client?.mail || 'Client';
+
+    Swal.fire({
+      title: `📋 ${questionnaireTitre}`,
+      html: `<b>${clientName}</b> a soumis <b>${nb} réponse${nb > 1 ? 's' : ''}</b> à ce questionnaire.`,
+      icon: 'info',
+      confirmButtonText: '👁 Voir les réponses',
+      showCancelButton: true,
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#27ae60',
+      cancelButtonColor: '#95a5a6',
+      reverseButtons: true
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.selectedClientData = entry.client;
+      this.selectedClientReponses = entry.reponses;
+      this.showClientReponsesModal = true;
+      this.cdr.detectChanges();
+    });
+  }
+
   exportReponsesCSV() {
     if (this.reponses.length === 0) { this.showToastMessage('Aucune réponse à exporter', 'error'); return; }
-    let nomFichier = 'questionnaire';
-    for (let i = 0; i < this.questionnaires.length; i++) {
-      if (this.questionnaires[i].id == this.selectedQuestionnaireId) {
-        nomFichier = this.questionnaires[i].titre.replace(/ /g, '_');
-        break;
+    const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'questionnaire';
+    const nomFichier = titre.replace(/ /g, '_');
+    const d = new Date();
+    const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+
+    // Group by client for a cleaner CSV
+    let lignes = 'Client;Email;Téléphone;Question;Type;Réponse\r\n';
+    for (const entry of this.clientsReponses) {
+      for (const r of entry.reponses) {
+        const esc = (v: string) => '"' + (v || '').replace(/"/g, '""') + '"';
+        lignes += [
+          esc(entry.client?.fullName || ''),
+          esc(entry.client?.mail || ''),
+          esc(entry.client?.tel || ''),
+          esc(r.question?.titre || ''),
+          esc(r.question?.type || ''),
+          esc(r.reponse || '')
+        ].join(';') + '\r\n';
       }
+      lignes += '\r\n'; // blank line between clients
     }
-    const date = new Date();
-    const jour = String(date.getDate()).padStart(2, '0');
-    const mois = String(date.getMonth() + 1).padStart(2, '0');
-    const annee = date.getFullYear();
-    let lignes = 'Email client;Téléphone;Question;Type de question;Réponse\r\n';
-    for (let i = 0; i < this.reponses.length; i++) {
-      const r = this.reponses[i];
-      lignes += '"' + (r.client?.mail || '') + '";"' + (r.client?.tel || '') + '";"' +
-        (r.question?.titre || '') + '";"' + (r.question?.type || '') + '";"' + (r.reponse || '') + '"\r\n';
-    }
+
     const blob = new Blob(['\uFEFF' + lignes], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const lien = document.createElement('a');
-    lien.href = url;
-    lien.download = 'reponses_' + nomFichier + '_' + jour + '-' + mois + '-' + annee + '.csv';
-    document.body.appendChild(lien);
-    lien.click();
-    document.body.removeChild(lien);
-    URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href = url; a.download = `reponses_${nomFichier}_${dateStr}.csv`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
     this.showToastMessage('Export CSV téléchargé');
   }
 

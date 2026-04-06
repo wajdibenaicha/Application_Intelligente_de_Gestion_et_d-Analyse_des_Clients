@@ -160,45 +160,63 @@
     </section>
 
     <section *ngIf="activeSection === 'reponses'" class="content-section">
+
+      <!-- Filter bar -->
       <div class="filter-bar">
         <label>Questionnaire :</label>
         <select [(ngModel)]="selectedQuestionnaireId" (change)="loadReponses()">
           <option value="">-- Choisir un questionnaire --</option>
           <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
         </select>
-        <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">Exporter CSV</button>
+        <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">
+          ⬇️ Exporter CSV
+        </button>
       </div>
 
+      <!-- Summary bar -->
+      <div class="reponses-summary" *ngIf="reponses.length > 0">
+        <span class="summary-chip">👥 <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
+        <span class="summary-chip">💬 <strong>{{ reponses.length }}</strong> réponse{{ reponses.length > 1 ? 's' : '' }} au total</span>
+      </div>
+
+      <!-- Clients table -->
       <div class="table-wrapper" *ngIf="reponses.length > 0">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Email client</th>
+              <th>Client</th>
+              <th>Email</th>
               <th>Téléphone</th>
-              <th>Question</th>
-              <th>Type</th>
-              <th>Réponse</th>
+              <th>Réponses</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let r of reponses">
-              <td>{{ r.client?.mail || '—' }}</td>
-              <td>{{ r.client?.tel || '—' }}</td>
-              <td>{{ r.question?.titre || '—' }}</td>
-              <td><span class="q-type-badge">{{ r.question?.type || '—' }}</span></td>
-              <td>{{ r.reponse || '—' }}</td>
+            <tr *ngFor="let entry of clientsReponses">
+              <td>
+                <div class="client-cell">
+                  <div class="client-avatar-sm">{{ (entry.client?.fullName || entry.client?.mail || '?').charAt(0).toUpperCase() }}</div>
+                  <span>{{ entry.client?.fullName || '—' }}</span>
+                </div>
+              </td>
+              <td>{{ entry.client?.mail || '—' }}</td>
+              <td>{{ entry.client?.tel || '—' }}</td>
+              <td>
+                <span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span>
+              </td>
+              <td>
+                <button class="btn-voir" (click)="voirReponsesClient(entry)">👁 Voir</button>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="empty-state" *ngIf="reponses.length === 0 && selectedQuestionnaireId !== ''">
-        <span>💬</span>
-        <p>Aucune réponse reçue pour ce questionnaire</p>
+        <span>💬</span><p>Aucune réponse reçue pour ce questionnaire</p>
       </div>
       <div class="empty-state" *ngIf="selectedQuestionnaireId === ''">
-        <span>📋</span>
-        <p>Sélectionnez un questionnaire pour voir les réponses</p>
+        <span>📋</span><p>Sélectionnez un questionnaire pour voir les réponses</p>
       </div>
     </section>
 
@@ -408,6 +426,43 @@
     <div class="modal-actions">
       <button class="btn-primary" (click)="envoyerATous()">📢 Envoyer à tous</button>
       <button class="btn-cancel" (click)="showPartageModal=false">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Client responses detail modal ── -->
+<div class="modal-overlay" *ngIf="showClientReponsesModal" (click)="showClientReponsesModal=false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="client-modal-title">
+        <div class="client-avatar-lg">{{ (selectedClientData?.fullName || selectedClientData?.mail || '?').charAt(0).toUpperCase() }}</div>
+        <div>
+          <h2>{{ selectedClientData?.fullName || 'Client' }}</h2>
+          <div class="client-modal-meta">
+            <span *ngIf="selectedClientData?.mail">📧 {{ selectedClientData.mail }}</span>
+            <span *ngIf="selectedClientData?.tel">📞 {{ selectedClientData.tel }}</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-close" (click)="showClientReponsesModal=false">✕</button>
+    </div>
+
+    <div class="client-reponses-body">
+      <div class="reponse-qa-card" *ngFor="let r of selectedClientReponses; let i = index">
+        <div class="reponse-qa-num">{{ i + 1 }}</div>
+        <div class="reponse-qa-content">
+          <div class="reponse-qa-question">
+            {{ r.question?.titre || '—' }}
+            <span class="q-type-badge">{{ r.question?.type }}</span>
+          </div>
+          <div class="reponse-qa-answer">{{ r.reponse || '—' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-close-modal" (click)="showClientReponsesModal=false">✕ Fermer</button>
     </div>
   </div>
 </div>
