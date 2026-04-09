@@ -29,6 +29,16 @@ public class NotificationService {
         return notificationRepository.findByVueFalseOrderByDateCreationDesc();
     }
 
+    // Only password reset notifications → for admin
+    public List<Notification> getAdminNotifications() {
+        return notificationRepository.findByTypeAndVueFalseOrderByDateCreationDesc("DEMANDE_MOT_DE_PASSE");
+    }
+
+    // Everything except password reset → for directeur/gestionnaire
+    public List<Notification> getGestionnaireNotifications() {
+        return notificationRepository.findByTypeNotAndVueFalseOrderByDateCreationDesc("DEMANDE_MOT_DE_PASSE");
+    }
+
     public void marquerVue(Long id) {
         notificationRepository.findById(id).ifPresent(n -> {
             n.setVue(true);
