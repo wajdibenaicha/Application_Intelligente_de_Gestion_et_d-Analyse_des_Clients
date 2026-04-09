@@ -114,8 +114,9 @@ public class QuestionnaireService {
 
     public Questionnaire demanderPublication(Long id, Long gestionnaireId) {
         Questionnaire q = getQuestionnaireById(id);
-        if (q != null && "BROUILLON".equals(q.getStatut())) {
+        if (q != null && ("BROUILLON".equals(q.getStatut()) || "REJETE".equals(q.getStatut()))) {
             q.setStatut("EN_ATTENTE");
+            q.setRaisonRejet(null);
             Questionnaire saved = questionnaireRepository.save(q);
             notificationService.createNotification("DEMANDE_PUBLICATION",
                     "Le gestionnaire demande la publication du questionnaire : " + q.getTitre(),

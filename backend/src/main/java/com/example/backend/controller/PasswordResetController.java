@@ -24,4 +24,18 @@ public class PasswordResetController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    @PostMapping("/reset/{gestionnaireId}")
+    public ResponseEntity<?> resetByAdmin(@PathVariable Long gestionnaireId,
+                                          @RequestBody Map<String, String> body) {
+        String newPassword = body.get("newPassword");
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Le mot de passe ne peut pas être vide.");
+        }
+        boolean ok = passwordResetService.resetPassword(gestionnaireId, newPassword);
+        if (ok) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 }

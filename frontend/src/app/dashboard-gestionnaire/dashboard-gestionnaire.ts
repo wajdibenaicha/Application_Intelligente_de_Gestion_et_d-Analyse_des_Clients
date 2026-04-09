@@ -38,6 +38,7 @@ export class DashboardGestionnaire implements OnInit {
   selectedQuestionnaireId = '';
 
   offresIA: any[] = [];
+  offres: any[] = [];
 
   totalQuestionnaires = 0;
   pendingCount = 0;
@@ -128,7 +129,7 @@ export class DashboardGestionnaire implements OnInit {
     if (this.activeSection === 'home') return 'Tableau de bord';
     if (this.activeSection === 'questionnaires') return 'Questionnaires';
     if (this.activeSection === 'reponses') return 'Réponses des clients';
-    if (this.activeSection === 'offres') return 'Recommandations IA';
+    if (this.activeSection === 'offres') return 'Offres';
     return '';
   }
 
@@ -165,6 +166,21 @@ export class DashboardGestionnaire implements OnInit {
     this.totalQuestionnaires = mine.length;
     this.pendingCount = mine.filter(q => q.statut === 'EN_ATTENTE').length;
     this.publishedCount = mine.filter(q => q.statut === 'PUBLIE').length;
+    this.loadTotalReponses(mine.map(q => q.id));
+  }
+
+  private loadTotalReponses(questionnaireIds: number[]) {
+    if (!questionnaireIds.length) { this.totalReponses = 0; this.cdr.detectChanges(); return; }
+    this.http.get<any[]>(this.apiUrl + '/reponses').subscribe({
+      next: (all) => {
+        const idSet = new Set(questionnaireIds);
+        const relevant = all.filter(r => idSet.has(r.questionnaire?.id));
+        const unique = new Set(relevant.map(r => `${r.client?.id}-${r.questionnaire?.id}`));
+        this.totalReponses = unique.size;
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
   }
 
   loadQuestionnaires() {
@@ -257,11 +273,13 @@ export class DashboardGestionnaire implements OnInit {
   savequestionnaire() {
     this.questform.questions = this.selectedquestion;
     if (this.editingquest) {
-      const payload = {
+      const wasNotBrouillon = this.editingquest.statut !== 'BROUILLON';
+      const payload: any = {
         titre: this.questform.titre,
         description: this.questform.description,
         questions: this.selectedquestion
       };
+      if (wasNotBrouillon) payload.statut = 'BROUILLON';
       this.http.put<any>(this.apiUrl + '/questionnaires/' + this.editingquest.id, payload).subscribe({
         next: () => {
           this.showquestform = false;
@@ -382,17 +400,16 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   canEdit(q: any): boolean {
-    if (this.canManageAll()) return q.statut !== 'PUBLIE';
-    return this.isMyQuestionnaire(q) && q.statut === 'BROUILLON';
+    return this.canManageAll() || this.isMyQuestionnaire(q);
   }
 
   canDelete(q: any): boolean {
-    if (this.canManageAll()) return q.statut !== 'PUBLIE';
-    return this.isMyQuestionnaire(q) && q.statut === 'BROUILLON';
+    return this.canManageAll() || this.isMyQuestionnaire(q);
   }
 
   canRequestPublication(q: any): boolean {
-    return !this.canManageAll() && this.isMyQuestionnaire(q) && q.statut === 'BROUILLON';
+    return !this.canManageAll() && this.isMyQuestionnaire(q) &&
+      (q.statut === 'BROUILLON' || q.statut === 'REJETE');
   }
 
   canWithdraw(q: any): boolean {
@@ -417,15 +434,15 @@ export class DashboardGestionnaire implements OnInit {
     this.http.get<any[]>(this.apiUrl + '/reponses/questionnaire/' + this.selectedQuestionnaireId).subscribe({
       next: (data) => {
         this.reponses = data;
-        this.totalReponses = data.length;
+        const clients = new Set(data.map((r: any) => r.client?.id)).size;
+        this.totalReponses = clients;
         this.cdr.detectChanges();
         const nb = data.length;
-        const clients = new Set(data.map((r: any) => r.client?.id)).size;
         Swal.fire({
           title: `📋 ${titre}`,
           html: nb === 0
             ? `<p>Aucune réponse reçue pour ce questionnaire.</p>`
-            : `<p>Ce questionnaire a reçu <b>${nb} réponse${nb > 1 ? 's' : ''}</b> de <b>${clients} client${clients > 1 ? 's' : ''}</b>.</p>`,
+            : `<p><b>${clients} client${clients > 1 ? 's' : ''}</b> ont répondu à ce questionnaire.</p>`,
           icon: nb === 0 ? 'info' : 'success',
           confirmButtonText: nb === 0 ? 'OK' : '📊 Voir les réponses',
           confirmButtonColor: '#27ae60',
@@ -513,9 +530,82 @@ export class DashboardGestionnaire implements OnInit {
     this.showToastMessage('Export CSV téléchargé');
   }
 
+  private buildOffreSelectHtml(): string {
+    if (!this.offres.length) return '<p style="color:#e74c3c">Aucune offre disponible.</p>';
+    let opts = this.offres.map(o =>
+      `<option value="${o.id}">${o.title}</option>`
+    ).join('');
+    return `<select id="swal-offre-select" class="swal2-input" style="margin-top:8px">
+              <option value="">-- Choisir une offre --</option>${opts}
+            </select>`;
+  }
+
+  envoyerOffreClient(client: any) {
+    if (!this.offres.length) {
+      Swal.fire({ icon: 'warning', title: 'Aucune offre', text: 'Créez d\'abord des offres dans l\'espace admin.', confirmButtonColor: '#27ae60' });
+      return;
+    }
+    Swal.fire({
+      title: `📤 Envoyer une offre à ${client.fullName || 'ce client'}`,
+      html: this.buildOffreSelectHtml(),
+      showCancelButton: true,
+      confirmButtonText: '📧 Envoyer par email',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#27ae60',
+      cancelButtonColor: '#95a5a6',
+      reverseButtons: true,
+      preConfirm: () => {
+        const sel = document.getElementById('swal-offre-select') as HTMLSelectElement;
+        if (!sel || !sel.value) { Swal.showValidationMessage('Veuillez sélectionner une offre.'); return false; }
+        return sel.value;
+      }
+    }).then(result => {
+      if (!result.isConfirmed || !result.value) return;
+      const offreId = Number(result.value);
+      this.api.envoyerOffre(offreId, [client.id]).subscribe({
+        next: () => Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '📧 Offre envoyée !', showConfirmButton: false, timer: 2500, timerProgressBar: true }),
+        error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer l\'offre.', confirmButtonColor: '#27ae60' })
+      });
+    });
+  }
+
+  envoyerOffreTous() {
+    if (!this.offres.length) {
+      Swal.fire({ icon: 'warning', title: 'Aucune offre', text: 'Créez d\'abord des offres dans l\'espace admin.', confirmButtonColor: '#27ae60' });
+      return;
+    }
+    const count = this.clientsReponses.length;
+    const clientIds = this.clientsReponses.map(e => e.client?.id).filter(Boolean);
+    const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'ce questionnaire';
+    Swal.fire({
+      title: `📢 Envoyer une offre à tous`,
+      html: `<p style="margin-bottom:10px;color:#555">Questionnaire : <b>${titre}</b><br>${count} client${count > 1 ? 's' : ''} concerné${count > 1 ? 's' : ''}</p>` + this.buildOffreSelectHtml(),
+      showCancelButton: true,
+      confirmButtonText: `📧 Envoyer à ${count} client${count > 1 ? 's' : ''}`,
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#27ae60',
+      cancelButtonColor: '#95a5a6',
+      reverseButtons: true,
+      preConfirm: () => {
+        const sel = document.getElementById('swal-offre-select') as HTMLSelectElement;
+        if (!sel || !sel.value) { Swal.showValidationMessage('Veuillez sélectionner une offre.'); return false; }
+        return sel.value;
+      }
+    }).then(result => {
+      if (!result.isConfirmed || !result.value) return;
+      const offreId = Number(result.value);
+      Swal.fire({ title: 'Envoi en cours...', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+      this.api.envoyerOffre(offreId, clientIds).subscribe({
+        next: (res: any) => Swal.fire({ icon: 'success', title: 'Envoyé !', html: `L'offre a été envoyée à <b>${res.sent} client${res.sent > 1 ? 's' : ''}</b> par email.`, confirmButtonColor: '#27ae60' }),
+        error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer les offres.', confirmButtonColor: '#27ae60' })
+      });
+    });
+  }
+
   loadOffresIA() {
     this.http.get<any[]>(this.apiUrl + '/offres').subscribe({
       next: (data) => {
+        this.offres = data;
         this.offresIA = data.map(offre => ({
           ...offre,
           showManualForm: false,
@@ -524,6 +614,50 @@ export class DashboardGestionnaire implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {}
+    });
+  }
+
+  // ── Directeur offer catalog management ──────────
+  showOffreForm = false;
+  offreForm: any = { title: '', description: '' };
+  editingOffre: any = null;
+
+  openAddOffre() {
+    this.editingOffre = null;
+    this.offreForm = { title: '', description: '' };
+    this.showOffreForm = true;
+  }
+
+  saveOffre() {
+    if (!this.offreForm.title?.trim() || !this.offreForm.description?.trim()) {
+      this.showToastMessage('Titre et description sont obligatoires', 'error'); return;
+    }
+    if (this.editingOffre) {
+      this.api.updateoffre(this.editingOffre.id, this.offreForm).subscribe({
+        next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre modifiée'); },
+        error: () => this.showToastMessage('Erreur lors de la modification', 'error')
+      });
+    } else {
+      this.api.addoffre(this.offreForm).subscribe({
+        next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre ajoutée'); },
+        error: () => this.showToastMessage('Erreur lors de l\'ajout', 'error')
+      });
+    }
+  }
+
+  supprimerOffre(offre: any) {
+    Swal.fire({
+      title: 'Supprimer cette offre ?', text: `"${offre.title}" sera supprimée définitivement.`,
+      icon: 'warning', showCancelButton: true,
+      confirmButtonColor: '#e74c3c', cancelButtonColor: '#95a5a6',
+      confirmButtonText: 'Supprimer', cancelButtonText: 'Annuler'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.api.deleteoffre(offre.id).subscribe({
+          next: () => { this.loadOffresIA(); Swal.fire({ icon: 'success', title: 'Supprimée !', timer: 1200, showConfirmButton: false }); },
+          error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
+        });
+      }
     });
   }
 

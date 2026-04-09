@@ -67,4 +67,12 @@ export class Api {
   genererLien(questionnaireId: number, clientId: number): Observable<string> {
     return this.http.post(`${this.base}/envoi/generer-lien?questionnaireId=${questionnaireId}&clientId=${clientId}`, {}, { responseType: 'text' });
   }
+
+  resetPasswordByAdmin(gestionnaireId: number, newPassword: string): Observable<any> {
+    return this.http.post(`${this.base}/password/reset/${gestionnaireId}`, { newPassword });
+  }
+
+  envoyerOffre(offreId: number, clientIds: number[]): Observable<any> {
+    return this.http.post(`${this.base}/offres/envoyer`, { offreId, clientIds });
+  }
 }

@@ -31,8 +31,8 @@
         <span class="nav-label">Réponses clients</span>
       </button>
       <button class="nav-item" [class.active]="activeSection === 'offres'" (click)="setSection('offres')">
-        <span class="nav-icon">🤖</span>
-        <span class="nav-label">Recommandations IA</span>
+        <span class="nav-icon">🎁</span>
+        <span class="nav-label">Offres</span>
       </button>
     </nav>
 
@@ -99,8 +99,8 @@
             <span>Voir les réponses</span>
           </button>
           <button class="action-card" (click)="setSection('offres')">
-            <span class="action-icon">🤖</span>
-            <span>Recommandations IA</span>
+            <span class="action-icon">🎁</span>
+            <span>Offres</span>
           </button>
         </div>
       </div>
@@ -171,12 +171,15 @@
         <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">
           ⬇️ Exporter CSV
         </button>
+        <button class="btn-offre-tous" (click)="envoyerOffreTous()" *ngIf="reponses.length > 0">
+          🎁 Offre à tous
+        </button>
       </div>
 
       <!-- Summary bar -->
       <div class="reponses-summary" *ngIf="reponses.length > 0">
         <span class="summary-chip">👥 <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
-        <span class="summary-chip">💬 <strong>{{ reponses.length }}</strong> réponse{{ reponses.length > 1 ? 's' : '' }} au total</span>
+        <span class="summary-chip">💬 <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
       </div>
 
       <!-- Clients table -->
@@ -221,64 +224,106 @@
     </section>
 
     <section *ngIf="activeSection === 'offres'" class="content-section">
-      <div class="offres-grid">
-        <div class="offre-card" *ngFor="let offre of offresIA">
-          <div class="offre-header">
-            <div class="offre-client">
-              <span class="client-avatar">{{ offre.client?.mail?.[0]?.toUpperCase() || 'C' }}</span>
-              <div>
-                <p class="client-name">{{ offre.client?.mail }}</p>
-                <p class="client-date">{{ offre.dateCreation | date:'dd/MM/yyyy' }}</p>
-              </div>
-            </div>
-            <span class="badge badge-published" *ngIf="offre.statut === 'ACCEPTE'">Accepté</span>
-            <span class="badge badge-danger" *ngIf="offre.statut === 'REJETE'">Rejeté</span>
-            <span class="badge badge-pending" *ngIf="offre.statut === 'EN_ATTENTE'">En attente</span>
-          </div>
-          <div class="offre-body">
-            <p class="offre-label">🤖 Recommandation IA :</p>
-            <p class="offre-text">{{ offre.recommandationIA || offre.description }}</p>
-          </div>
-          <div class="offre-actions" *ngIf="offre.statut === 'EN_ATTENTE'">
-            <button class="btn-success" (click)="accepterOffre(offre)">✅ Accepter</button>
-            <button class="btn-danger" (click)="rejeterOffre(offre)">❌ Rejeter et faire ma propre offre</button>
-          </div>
-          <div class="offre-manuelle" *ngIf="offre.showManualForm">
-            <p class="offre-label">✏️ Votre offre personnalisée :</p>
-            <textarea [(ngModel)]="offre.offreManuelle" placeholder="Décrivez votre offre..." rows="4"></textarea>
-            <div class="form-actions">
-              <button class="btn-outline" (click)="offre.showManualForm = false">Annuler</button>
-              <button class="btn-primary" (click)="soumettreOffreManuelle(offre)">Soumettre</button>
-            </div>
-          </div>
-          <div class="offre-manuelle-result" *ngIf="offre.statut === 'REJETE' && offre.offreManuelle && !offre.showManualForm">
-            <p class="offre-label">✏️ Votre offre :</p>
-            <p class="offre-text">{{ offre.offreManuelle }}</p>
-          </div>
+
+      <!-- Directeur: catalog management -->
+      <div *ngIf="canManageAll()">
+        <div class="section-toolbar" style="margin-bottom:18px">
+          <button class="btn-primary" (click)="openAddOffre()">+ Ajouter une offre</button>
         </div>
-        <div class="empty-state" *ngIf="offresIA.length === 0">
-          <span>🤖</span>
-          <p>Aucune recommandation IA disponible</p>
+        <div class="offres-catalog-grid">
+          <div class="offre-catalog-card" *ngFor="let o of offres">
+            <div class="offre-catalog-body">
+              <div class="offre-catalog-title">🎁 {{ o.title }}</div>
+              <div class="offre-catalog-desc">{{ o.description }}</div>
+            </div>
+            <div class="offre-catalog-actions">
+              <button class="btn-icon btn-delete" title="Supprimer" (click)="supprimerOffre(o)">🗑</button>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="offres.length === 0">
+            <span>🎁</span><p>Aucune offre dans le catalogue</p>
+          </div>
         </div>
       </div>
+
+      <!-- Regular gestionnaire: AI recommendations -->
+      <div *ngIf="!canManageAll()">
+        <div class="offres-grid">
+          <div class="offre-card" *ngFor="let offre of offresIA">
+            <div class="offre-header">
+              <div class="offre-client">
+                <span class="client-avatar">{{ offre.client?.mail?.[0]?.toUpperCase() || 'C' }}</span>
+                <div>
+                  <p class="client-name">{{ offre.client?.mail }}</p>
+                  <p class="client-date">{{ offre.dateCreation | date:'dd/MM/yyyy' }}</p>
+                </div>
+              </div>
+              <span class="badge badge-published" *ngIf="offre.statut === 'ACCEPTE'">Accepté</span>
+              <span class="badge badge-danger" *ngIf="offre.statut === 'REJETE'">Rejeté</span>
+              <span class="badge badge-pending" *ngIf="offre.statut === 'EN_ATTENTE'">En attente</span>
+            </div>
+            <div class="offre-body">
+              <p class="offre-label">🤖 Recommandation IA :</p>
+              <p class="offre-text">{{ offre.recommandationIA || offre.description }}</p>
+            </div>
+            <div class="offre-actions" *ngIf="offre.statut === 'EN_ATTENTE'">
+              <button class="btn-success" (click)="accepterOffre(offre)">✅ Accepter</button>
+              <button class="btn-danger" (click)="rejeterOffre(offre)">❌ Rejeter et faire ma propre offre</button>
+            </div>
+            <div class="offre-manuelle" *ngIf="offre.showManualForm">
+              <p class="offre-label">✏️ Votre offre personnalisée :</p>
+              <textarea [(ngModel)]="offre.offreManuelle" placeholder="Décrivez votre offre..." rows="4"></textarea>
+              <div class="form-actions">
+                <button class="btn-outline" (click)="offre.showManualForm = false">Annuler</button>
+                <button class="btn-primary" (click)="soumettreOffreManuelle(offre)">Soumettre</button>
+              </div>
+            </div>
+            <div class="offre-manuelle-result" *ngIf="offre.statut === 'REJETE' && offre.offreManuelle && !offre.showManualForm">
+              <p class="offre-label">✏️ Votre offre :</p>
+              <p class="offre-text">{{ offre.offreManuelle }}</p>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="offresIA.length === 0">
+            <span>🤖</span><p>Aucune recommandation IA disponible</p>
+          </div>
+        </div>
+      </div>
+
     </section>
+
+    <!-- Directeur: add/edit offer modal -->
+    <div class="modal-overlay" *ngIf="showOffreForm" (click)="showOffreForm=false">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ editingOffre ? '✏️ Modifier l\'offre' : '🎁 Nouvelle offre' }}</h2>
+          <button class="btn-close" (click)="showOffreForm=false">✕</button>
+        </div>
+        <label>Titre <span style="color:red">*</span></label>
+        <input [(ngModel)]="offreForm.title" placeholder="Titre de l'offre" />
+        <label>Description <span style="color:red">*</span></label>
+        <textarea [(ngModel)]="offreForm.description" placeholder="Description de l'offre..." rows="4"></textarea>
+        <div class="modal-actions">
+          <button class="btn-cancel" (click)="showOffreForm=false">Annuler</button>
+          <button class="btn-save" (click)="saveOffre()">{{ editingOffre ? 'Modifier' : 'Ajouter' }}</button>
+        </div>
+      </div>
+    </div>
 
   </main>
 </div>
 
 <div class="notif-panel" *ngIf="showNotifPanel && canManageAll()">
   <div class="notif-header">
-    Notifications
+    <span>🔔 Notifications</span>
     <button class="btn-close-panel" (click)="showNotifPanel=false">✕</button>
   </div>
-  <div *ngIf="notifications.length === 0" style="padding:16px; color:#aaa; text-align:center;">Aucune notification</div>
+  <div *ngIf="notifications.length === 0" class="notif-empty">Aucune notification</div>
   <div *ngFor="let n of notifications" class="notif-item" [class.vue]="n.vue">
-    <p>{{ n.message }}</p>
-    <div style="display:flex; gap:6px; margin-top:6px;" *ngIf="n.type === 'DEMANDE_PUBLICATION'">
-      <button class="notif-btn-approve" (click)="approuverQuestionnaire(n.sourceId)">✅ Approuver</button>
-      <button class="notif-btn-reject" (click)="rejeterQuestionnaire(n.sourceId)">❌ Rejeter</button>
+    <span class="notif-dot"></span>
+    <div class="notif-content">
+      <p>{{ n.message }}</p>
+      <small>{{ n.dateCreation | date:'dd MMM, HH:mm' }}</small>
     </div>
-    <small>{{ n.dateCreation | date:'dd/MM/yyyy HH:mm' }}</small>
   </div>
 </div>
 
@@ -462,6 +507,7 @@
     </div>
 
     <div class="modal-actions">
+      <button class="btn-send-offre" (click)="envoyerOffreClient(selectedClientData)">🎁 Envoyer une offre</button>
       <button class="btn-close-modal" (click)="showClientReponsesModal=false">✕ Fermer</button>
     </div>
   </div>

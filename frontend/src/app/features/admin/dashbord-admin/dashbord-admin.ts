@@ -2,6 +2,7 @@ import { Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
@@ -31,6 +32,10 @@ export class DashbordAdmin implements OnInit {
 
     selectdreponse: any = null;
     selectedoffreid: number | null = null;
+
+    showClientReponsesModal = false;
+    selectedClientData: any = null;
+    selectedClientReponses: any[] = [];
 
     showgestform = false;
     editinggest: any = null;
@@ -68,7 +73,10 @@ export class DashbordAdmin implements OnInit {
     unreadNotifCount = 0;
     showNotifPanel = false;
 
-    constructor(private api: Api, private router: Router, private wsService: WebSocketService, private ngZone: NgZone, private cdr: ChangeDetectorRef) {}
+    selectedQuestionnaireId: string = '';
+    adminReponses: any[] = [];
+
+    constructor(private api: Api, private router: Router, private wsService: WebSocketService, private ngZone: NgZone, private cdr: ChangeDetectorRef, private http: HttpClient) {}
 
     toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
     logout() { this.router.navigate(['/login']); }
@@ -141,6 +149,43 @@ export class DashbordAdmin implements OnInit {
             Swal.fire('Approuve', 'Questionnaire publie', 'success');
             this.loadNotifications();
             this.loadInitialData();
+        });
+    }
+
+    reinitialiserMotDePasse(gestionnaireId: number) {
+        Swal.fire({
+            title: '🔑 Réinitialiser le mot de passe',
+            html: `<p style="margin-bottom:12px;color:#555">Entrez le nouveau mot de passe pour ce gestionnaire.</p>`,
+            input: 'password',
+            inputPlaceholder: 'Nouveau mot de passe...',
+            inputAttributes: { autocomplete: 'new-password', minlength: '4' },
+            showCancelButton: true,
+            confirmButtonText: 'Réinitialiser',
+            cancelButtonText: 'Annuler',
+            confirmButtonColor: '#27ae60',
+            cancelButtonColor: '#95a5a6',
+            reverseButtons: true,
+            inputValidator: (value) => {
+                if (!value || value.trim().length < 4) return 'Le mot de passe doit contenir au moins 4 caractères.';
+                return null;
+            }
+        }).then(result => {
+            if (!result.isConfirmed || !result.value) return;
+            this.api.resetPasswordByAdmin(gestionnaireId, result.value).subscribe({
+                next: () => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Mot de passe réinitialisé',
+                        text: 'Le gestionnaire a reçu un email avec son nouveau mot de passe.',
+                        confirmButtonColor: '#27ae60',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                    this.loadNotifications();
+                    this.cdr.detectChanges();
+                },
+                error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de réinitialiser le mot de passe.' })
+            });
         });
     }
 
@@ -346,6 +391,96 @@ export class DashbordAdmin implements OnInit {
         return result;
     }
 
+    loadAdminReponses() {
+        if (!this.selectedQuestionnaireId) { this.adminReponses = []; return; }
+        const titre = this.questionnaires.find(q => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
+        this.http.get<any[]>(`http://localhost:8081/api/reponses/questionnaire/${this.selectedQuestionnaireId}`).subscribe({
+            next: (data) => {
+                this.adminReponses = data;
+                this.cdr.detectChanges();
+                const nb = data.length;
+                const clients = new Set(data.map(r => r.client?.id)).size;
+                Swal.fire({
+                    title: `📋 ${titre}`,
+                    html: nb === 0
+                        ? `<p>Aucune réponse reçue pour ce questionnaire.</p>`
+                        : `<p><b>${clients} client${clients > 1 ? 's' : ''}</b> ont répondu à ce questionnaire.</p>`,
+                    icon: nb === 0 ? 'info' : 'success',
+                    confirmButtonText: nb === 0 ? 'OK' : '📊 Voir les réponses',
+                    confirmButtonColor: '#27ae60',
+                    timer: nb === 0 ? 2500 : undefined,
+                    showConfirmButton: true
+                });
+            },
+            error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de charger les réponses.' })
+        });
+    }
+
+    get clientsReponses(): any[] {
+        const map = new Map<any, any>();
+        for (const r of this.adminReponses) {
+            const id = r.client?.id ?? 'unknown';
+            if (!map.has(id)) {
+                map.set(id, { client: r.client, reponses: [], nbReponses: 0 });
+            }
+            const entry = map.get(id);
+            entry.reponses.push(r);
+            entry.nbReponses++;
+        }
+        return Array.from(map.values());
+    }
+
+    deleteReponseFromModal(id: number) {
+        this.deletereponse(id);
+        this.adminReponses = this.adminReponses.filter(r => r.id !== id);
+        this.selectedClientReponses = this.selectedClientReponses.filter(r => r.id !== id);
+        this.cdr.detectChanges();
+    }
+
+    voirReponsesClient(entry: any) {
+        const questionnaireTitre = this.questionnaires.find(q => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
+        const nb = entry.nbReponses;
+        const clientName = entry.client?.fullName || entry.client?.mail || 'Client';
+        Swal.fire({
+            title: `📋 ${questionnaireTitre}`,
+            html: `<b>${clientName}</b> a soumis <b>${nb} réponse${nb > 1 ? 's' : ''}</b> à ce questionnaire.`,
+            icon: 'info',
+            confirmButtonText: '👁 Voir les réponses',
+            showCancelButton: true,
+            cancelButtonText: 'Annuler',
+            confirmButtonColor: '#27ae60',
+            cancelButtonColor: '#95a5a6',
+            reverseButtons: true
+        }).then(result => {
+            if (!result.isConfirmed) return;
+            this.selectedClientData = entry.client;
+            this.selectedClientReponses = entry.reponses;
+            this.showClientReponsesModal = true;
+            this.cdr.detectChanges();
+        });
+    }
+
+    exportReponsesCSV() {
+        if (this.adminReponses.length === 0) return;
+        const titre = this.questionnaires.find(q => q.id == this.selectedQuestionnaireId)?.titre || 'questionnaire';
+        const nomFichier = titre.replace(/ /g, '_');
+        const d = new Date();
+        const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+        let lignes = 'Client;Email;Téléphone;Question;Type;Réponse\r\n';
+        for (const entry of this.clientsReponses) {
+            for (const r of entry.reponses) {
+                const esc = (v: string) => '"' + (v || '').replace(/"/g, '""') + '"';
+                lignes += [esc(entry.client?.fullName || ''), esc(entry.client?.mail || ''), esc(entry.client?.tel || ''), esc(r.question?.titre || ''), esc(r.question?.type || ''), esc(r.reponse || '')].join(';') + '\r\n';
+            }
+            lignes += '\r\n';
+        }
+        const blob = new Blob(['\uFEFF' + lignes], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `reponses_${nomFichier}_${dateStr}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+    }
+
     openaddrole() {
         this.editingrole = null;
         this.roleform = { name: '', permission: null };
@@ -457,6 +592,11 @@ export class DashbordAdmin implements OnInit {
     opendetailsquestionnaire(quest: any) {
         this.detailsquest = quest;
         this.showdetailsform = true;
+    }
+
+    get totalReponsesCount(): number {
+        const unique = new Set(this.responses.map(r => `${r.client?.id}-${r.questionnaire?.id}`));
+        return unique.size;
     }
 
     get unconfirmedCount() {

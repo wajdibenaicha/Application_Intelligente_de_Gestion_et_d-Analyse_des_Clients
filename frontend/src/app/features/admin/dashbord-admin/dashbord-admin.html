@@ -95,7 +95,7 @@
           <div class="stat-card">
             <div class="stat-icon">💬</div>
             <div>
-              <div class="stat-value">{{ responses.length }}</div>
+              <div class="stat-value">{{ totalReponsesCount }}</div>
               <div class="stat-label">Réponses</div>
             </div>
           </div>
@@ -171,54 +171,82 @@
         </div>
 
         <div *ngIf="activeTab === 'reponses'">
-          <div *ngFor="let group of groupresponses()" class="reponse-group">
-            <div class="group-title">📋 {{ group.questionnaire?.titre || 'Questionnaire inconnu' }}</div>
-            <div class="table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr><th>Question</th><th>Réponse</th><th>Client</th><th>Email</th><th>Téléphone</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let r of group.reponses">
-                    <td>{{ r.question?.titre || '—' }}</td>
-                    <td>{{ r.reponse }}</td>
-                    <td>{{ r.client?.fullName || '—' }}</td>
-                    <td>{{ r.client?.mail || '—' }}</td>
-                    <td>{{ r.client?.tel || '—' }}</td>
-                    <td class="actions-cell">
-                      <button class="btn-icon btn-confirm" (click)="opensendoffres(r)">🎁</button>
-                      <button class="btn-icon btn-delete" (click)="deletereponse(r.id)">🗑️</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <!-- Questionnaire selector -->
+          <div class="filter-bar">
+            <label>Questionnaire :</label>
+            <select [(ngModel)]="selectedQuestionnaireId" (change)="loadAdminReponses()">
+              <option value="">-- Choisir un questionnaire --</option>
+              <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
+            </select>
+            <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="adminReponses.length > 0">
+              ⬇️ Exporter CSV
+            </button>
           </div>
-          <div *ngIf="responses.length === 0" class="empty-row">Aucune réponse disponible</div>
+
+          <!-- Summary bar -->
+          <div class="reponses-summary" *ngIf="adminReponses.length > 0">
+            <span class="summary-chip">👥 <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
+            <span class="summary-chip">💬 <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
+          </div>
+
+          <!-- Clients table -->
+          <div class="table-wrapper" *ngIf="adminReponses.length > 0">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Email</th>
+                  <th>Téléphone</th>
+                  <th>Réponses</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let entry of clientsReponses">
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar-sm">{{ (entry.client?.fullName || entry.client?.mail || '?').charAt(0).toUpperCase() }}</div>
+                      <span>{{ entry.client?.fullName || '—' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ entry.client?.mail || '—' }}</td>
+                  <td>{{ entry.client?.tel || '—' }}</td>
+                  <td><span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span></td>
+                  <td>
+                    <button class="btn-voir" (click)="voirReponsesClient(entry)">👁 Voir</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="empty-state" *ngIf="adminReponses.length === 0 && selectedQuestionnaireId !== ''">
+            <span>💬</span><p>Aucune réponse reçue pour ce questionnaire</p>
+          </div>
+          <div class="empty-state" *ngIf="selectedQuestionnaireId === ''">
+            <span>📋</span><p>Sélectionnez un questionnaire pour voir les réponses</p>
+          </div>
         </div>
 
-        <div *ngIf="activeTab === 'offres'" class="table-wrapper">
-          <div class="section-toolbar" style="margin-bottom: 16px;">
-            <button class="btn-primary" (click)="openaddoffre()">+ Ajouter offre</button>
+        <div *ngIf="activeTab === 'offres'">
+          <div class="section-toolbar" style="margin-bottom: 18px;">
+            <button class="btn-primary" (click)="openaddoffre()">+ Ajouter une offre</button>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr><th>ID</th><th>Titre</th><th>Description</th><th>Actions</th> </thead>
-            <tbody>
-              <tr *ngFor="let o of offres">
-                <td>{{ o.id }}</td>
-                <td>{{ o.title }}</td>
-                <td>{{ o.description }}</td>
-                <td class="actions-cell">
-                  <button class="btn-icon btn-edit" (click)="openeditoffre(o)">✏️</button>
-                  <button class="btn-icon btn-delete" (click)="deleteoffre(o.id)">🗑️</button>
-                </td>
-              </tr>
-              <tr *ngIf="offres.length === 0">
-                <td colspan="4" class="empty-row">Aucune offre</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="offres-catalog-grid">
+            <div class="offre-catalog-card" *ngFor="let o of offres">
+              <div class="offre-catalog-body">
+                <div class="offre-catalog-title">🎁 {{ o.title }}</div>
+                <div class="offre-catalog-desc">{{ o.description }}</div>
+              </div>
+              <div class="offre-catalog-actions">
+                <button class="btn-icon btn-edit" title="Modifier" (click)="openeditoffre(o)">✏️</button>
+                <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteoffre(o.id)">🗑️</button>
+              </div>
+            </div>
+            <div class="empty-state" *ngIf="offres.length === 0">
+              <span>🎁</span><p>Aucune offre disponible</p>
+            </div>
+          </div>
         </div>
 
         <div *ngIf="activeTab === 'roles'" class="table-wrapper">
@@ -405,12 +433,57 @@
   </div>
 </div>
 
+<div class="notif-overlay" *ngIf="showNotifPanel" (click)="showNotifPanel=false"></div>
 <div class="notif-panel" *ngIf="showNotifPanel">
-  <div class="notif-header">Notifications</div>
-  <div *ngFor="let n of notifications" class="notif-item" [class.vue]="n.vue">
-    <p>{{ n.message }}</p>
-    <button *ngIf="n.type === 'DEMANDE_PUBLICATION'" (click)="approuverQuestionnaire(n.sourceId)">Approuver</button>
-    <button *ngIf="n.type === 'DEMANDE_PUBLICATION'" (click)="demanderRaisonEtRejeter(n.sourceId)">Rejeter</button>
-    <small>{{ n.dateCreation | date:'short' }}</small>
+  <div class="notif-panel-header">
+    <span>🔔 Notifications</span>
+    <button class="notif-close-btn" (click)="showNotifPanel=false">✕</button>
+  </div>
+  <div class="notif-list">
+    <div *ngIf="notifications.length === 0" class="notif-empty">Aucune notification</div>
+    <div *ngFor="let n of notifications" class="notif-item" [class.notif-unread]="!n.vue">
+      <div class="notif-dot" *ngIf="!n.vue"></div>
+      <div class="notif-body">
+        <p class="notif-msg">{{ n.message }}</p>
+        <small class="notif-date">{{ n.dateCreation | date:'dd MMM, HH:mm' }}</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showClientReponsesModal" (click)="showClientReponsesModal=false">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="client-modal-title">
+        <div class="client-avatar-lg">{{ (selectedClientData?.fullName || selectedClientData?.mail || '?').charAt(0).toUpperCase() }}</div>
+        <div>
+          <h2>{{ selectedClientData?.fullName || 'Client' }}</h2>
+          <div class="client-modal-meta">
+            <span *ngIf="selectedClientData?.mail">📧 {{ selectedClientData.mail }}</span>
+            <span *ngIf="selectedClientData?.tel">📞 {{ selectedClientData.tel }}</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-close" (click)="showClientReponsesModal=false">✕</button>
+    </div>
+    <div class="client-reponses-body">
+      <div class="reponse-qa-card" *ngFor="let r of selectedClientReponses; let i=index">
+        <div class="reponse-qa-num">{{ i + 1 }}</div>
+        <div class="reponse-qa-content">
+          <div class="reponse-qa-question">
+            {{ r.question?.titre || '—' }}
+            <span class="q-type-badge">{{ r.question?.type }}</span>
+          </div>
+          <div class="reponse-qa-answer">{{ r.reponse || '—' }}</div>
+        </div>
+        <div class="qa-actions">
+          <button class="btn-icon btn-confirm" title="Envoyer une offre" (click)="opensendoffres(r)">🎁</button>
+          <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteReponseFromModal(r.id)">🗑️</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-close-modal" (click)="showClientReponsesModal=false">✕ Fermer</button>
+    </div>
   </div>
 </div>

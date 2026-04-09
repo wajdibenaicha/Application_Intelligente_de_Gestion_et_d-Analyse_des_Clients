@@ -64,9 +64,13 @@ public class QuestionnaireDistributionService {
     }
 
     private void sendSms(Client c, Questionnaire q, String link) {
+        String tel = c.getTel() != null ? c.getTel().replaceAll("\\s+", "") : "";
+        if (!tel.startsWith("+")) {
+            tel = "+216" + tel;
+        }
         Message.creator(
-            new PhoneNumber(c.getTel()),
-            new PhoneNumber(twilioPhone),
+            new PhoneNumber(tel),
+            new PhoneNumber(twilioPhone.replaceAll("\\s+", "")),
             "Questionnaire \"" + q.getTitre() + "\": " + link
         ).create();
     }

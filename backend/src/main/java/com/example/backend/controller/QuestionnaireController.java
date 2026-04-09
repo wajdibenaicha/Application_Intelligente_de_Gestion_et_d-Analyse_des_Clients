@@ -142,6 +142,14 @@ public class QuestionnaireController {
                 existing.setQuestions(questionList);
             }
 
+            if (body.get("statut") != null) {
+                existing.setStatut(body.get("statut").toString());
+                existing.setConfirmed("PUBLIE".equals(body.get("statut").toString()));
+                if ("BROUILLON".equals(body.get("statut").toString())) {
+                    existing.setRaisonRejet(null);
+                }
+            }
+
             Questionnaire saved = questionnaireService.save(existing);
             return ResponseEntity.ok(saved);
 
