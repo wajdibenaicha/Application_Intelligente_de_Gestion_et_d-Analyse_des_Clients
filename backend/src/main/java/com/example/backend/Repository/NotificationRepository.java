@@ -8,4 +8,5 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByVueFalseOrderByDateCreationDesc();
     List<Notification> findByTypeAndVueFalseOrderByDateCreationDesc(String type);
     List<Notification> findByTypeNotAndVueFalseOrderByDateCreationDesc(String type);
+    List<Notification> findByTypeInAndVueFalseOrderByDateCreationDesc(java.util.List<String> types);
 }

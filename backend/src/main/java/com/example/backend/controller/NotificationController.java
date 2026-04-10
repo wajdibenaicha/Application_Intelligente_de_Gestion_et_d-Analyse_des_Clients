@@ -14,8 +14,13 @@ public class NotificationController {
     private NotificationService notificationService;
 
     @GetMapping("/admin")
-    public List<Notification> getNonVues() {
-        return notificationService.getAllNonVues();
+    public List<Notification> getAdminNotifications() {
+        return notificationService.getAdminNotifications();
+    }
+
+    @GetMapping("/gestionnaire")
+    public List<Notification> getGestionnaireNotifications() {
+        return notificationService.getGestionnaireNotifications();
     }
 
     @PostMapping("/{id}/vue")

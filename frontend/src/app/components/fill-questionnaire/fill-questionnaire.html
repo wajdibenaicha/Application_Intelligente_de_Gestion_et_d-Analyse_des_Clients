@@ -52,6 +52,7 @@
             <div class="question-label">
               <span class="question-number">{{ i + 1 }}</span>
               {{ q.titre }}
+              <span *ngIf="q.required" class="required-star" title="Question obligatoire"> *</span>
             </div>
 
             @if (q.type === 'text') {

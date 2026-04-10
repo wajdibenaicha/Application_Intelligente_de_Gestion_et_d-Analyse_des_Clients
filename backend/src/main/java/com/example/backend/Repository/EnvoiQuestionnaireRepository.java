@@ -8,4 +8,6 @@ public interface EnvoiQuestionnaireRepository extends JpaRepository<EnvoiQuestio
     Optional<EnvoiQuestionnaire> findByToken(String token);
     Optional<EnvoiQuestionnaire> findFirstByTokenAndReponduFalse(String token);
     Optional<EnvoiQuestionnaire> findFirstByQuestionnaireIdAndClientIdAndReponduFalse(Long questionnaireId, Long clientId);
+    java.util.List<EnvoiQuestionnaire> findByQuestionnaireId(Long questionnaireId);
+    boolean existsByQuestionnaireIdAndReponduFalse(Long questionnaireId);
 }

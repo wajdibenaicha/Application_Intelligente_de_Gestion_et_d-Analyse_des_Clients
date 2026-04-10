@@ -343,6 +343,7 @@
       <div *ngFor="let q of selectedQuestionnaire?.questions; let i = index" class="selected-chip" style="justify-content:flex-start;">
         <span class="q-num">{{ i + 1 }}</span>
         <span class="q-type-badge">{{ q.type }}</span>
+        <span class="q-required-badge" *ngIf="q.required" title="Question obligatoire">*</span>
         <span style="flex:1;">{{ q.titre }}</span>
         <span *ngIf="q.options && q.options !== ''" style="font-size:11px; color:#7f8c8d; font-style:italic;">{{ q.options }}</span>
         <button class="btn-icon btn-delete" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'" (click)="deleteQuestion(q.id, selectedQuestionnaire)" title="Supprimer">🗑</button>
@@ -394,7 +395,14 @@
             <option value="checkbox">Choix multiple</option>
             <option value="select">Liste déroulante</option>
           </select>
-          <input *ngIf="newquest.type!=='text'" [(ngModel)]="newquest.options" placeholder="Options séparées par virgule" />
+          <div *ngIf="newquest.type!=='text'" class="options-input-wrapper">
+            <input [(ngModel)]="newquest.options" placeholder="Options séparées par virgule (ex: Oui, Non, Peut-être)" [class.input-error]="newquest.type!=='text' && !newquest.options?.trim()" />
+            <span class="options-hint">* Obligatoire pour ce type</span>
+          </div>
+          <label class="required-toggle">
+            <input type="checkbox" [(ngModel)]="newquest.required" />
+            <span>Question obligatoire</span>
+          </label>
           <button class="btn-save-q" (click)="createaddquestion()">✓ Ajouter</button>
         </div>
       </div>

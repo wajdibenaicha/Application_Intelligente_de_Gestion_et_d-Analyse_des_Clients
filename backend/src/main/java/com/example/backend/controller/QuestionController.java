@@ -27,16 +27,27 @@ public class QuestionController {
     }
 
     @PostMapping
-    public Question create(@RequestBody Question question) {
-        return questionRepository.save(question);
+    public ResponseEntity<?> create(@RequestBody Question question) {
+        if (!"text".equals(question.getType()) &&
+                (question.getOptions() == null || question.getOptions().isBlank())) {
+            return ResponseEntity.badRequest()
+                    .body("Les choix sont obligatoires pour une question de type " + question.getType() + ".");
+        }
+        return ResponseEntity.ok(questionRepository.save(question));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Question> update(@PathVariable Long id, @RequestBody Question question) {
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Question question) {
+        if (!"text".equals(question.getType()) &&
+                (question.getOptions() == null || question.getOptions().isBlank())) {
+            return ResponseEntity.badRequest()
+                    .body("Les choix sont obligatoires pour une question de type " + question.getType() + ".");
+        }
         return questionRepository.findById(id).map(existing -> {
             existing.setTitre(question.getTitre());
             existing.setType(question.getType());
             existing.setOptions(question.getOptions());
+            existing.setRequired(question.isRequired());
             return ResponseEntity.ok(questionRepository.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }

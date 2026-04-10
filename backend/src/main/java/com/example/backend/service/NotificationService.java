@@ -34,9 +34,10 @@ public class NotificationService {
         return notificationRepository.findByTypeAndVueFalseOrderByDateCreationDesc("DEMANDE_MOT_DE_PASSE");
     }
 
-    // Everything except password reset → for directeur/gestionnaire
+    // Only questionnaire-related notifications → for directeur/gestionnaire
     public List<Notification> getGestionnaireNotifications() {
-        return notificationRepository.findByTypeNotAndVueFalseOrderByDateCreationDesc("DEMANDE_MOT_DE_PASSE");
+        List<String> types = java.util.List.of("DEMANDE_PUBLICATION", "TOUS_ONT_REPONDU");
+        return notificationRepository.findByTypeInAndVueFalseOrderByDateCreationDesc(types);
     }
 
     public void marquerVue(Long id) {

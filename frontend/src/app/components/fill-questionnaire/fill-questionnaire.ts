@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-fill-questionnaire',
@@ -71,6 +72,24 @@ export class FillQuestionnaireComponent implements OnInit {
 
   submit() {
     if (this.submitting) return;
+
+    // Validate required questions
+    const missing = this.questionnaire.questions
+      .map((q: any, i: number) => ({ q, i }))
+      .filter(({ q, i }: { q: any; i: number }) => q.required && !this.responses[i].answer?.trim());
+
+    if (missing.length > 0) {
+      const list = missing.map(({ q, i }: { q: any; i: number }) => `<li><b>Q${i + 1}</b> — ${q.titre}</li>`).join('');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Questions obligatoires',
+        html: `Veuillez répondre aux questions suivantes :<ul style="text-align:left;margin-top:10px;">${list}</ul>`,
+        confirmButtonColor: '#27ae60',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
     this.submitting = true;
     this.cdr.detectChanges();
 

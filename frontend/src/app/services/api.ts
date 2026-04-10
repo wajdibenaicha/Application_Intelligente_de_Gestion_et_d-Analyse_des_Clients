@@ -42,7 +42,8 @@ export class Api {
   deleteoffre(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/offres/${id}`); }
   updateoffre(id: number, offre: any): Observable<any> { return this.http.put<any>(`${this.base}/offres/${id}`, offre); }
 
-  getNotifications(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/notifications/admin`); }
+  getNotifications(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/notifications/gestionnaire`); }
+  getAdminNotifications(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/notifications/admin`); }
   approuverPublication(id: number): Observable<any> { return this.http.post(`${this.base}/questionnaires/${id}/approuver`, {}); }
 
 

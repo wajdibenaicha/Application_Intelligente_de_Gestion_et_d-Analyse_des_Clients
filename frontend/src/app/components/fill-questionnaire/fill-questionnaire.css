@@ -258,3 +258,16 @@ textarea:focus {
     padding-right: 20px;
   }
 }
+
+/* Required question */
+.required-star { color: #e74c3c; font-weight: 700; margin-left: 2px; }
+.submit-error {
+  color: #c0392b;
+  background: #fdf0ef;
+  border: 1px solid #f5c6c4;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  white-space: pre-line;
+}

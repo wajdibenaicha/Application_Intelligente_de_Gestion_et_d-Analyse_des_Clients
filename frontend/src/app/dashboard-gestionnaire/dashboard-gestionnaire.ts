@@ -50,7 +50,7 @@ export class DashboardGestionnaire implements OnInit {
   questform: any = { titre: '', description: '', questions: [] };
   questions: any[] = [];
   showaddquestion = false;
-  newquest: any = { titre: '', type: 'text', options: '' };
+  newquest: any = { titre: '', type: 'text', options: '', required: false };
   selectedquestion: any[] = [];
   dragoverIndex = -1;
 
@@ -97,8 +97,10 @@ export class DashboardGestionnaire implements OnInit {
 
     if (this.canManageAll()) {
       this.wsService.adminNotifications$.subscribe(data => {
-        this.notifications = data;
-        this.unreadNotifCount = data.filter((n: any) => !n.vue).length;
+        const allowed = ['DEMANDE_PUBLICATION', 'TOUS_ONT_REPONDU'];
+        const filtered = data.filter((n: any) => allowed.includes(n.type));
+        this.notifications = filtered;
+        this.unreadNotifCount = filtered.filter((n: any) => !n.vue).length;
         this.cdr.detectChanges();
       });
       this.loadNotifications();
@@ -702,13 +704,22 @@ export class DashboardGestionnaire implements OnInit {
 
   createaddquestion() {
     if (!this.newquest.titre) return;
-    this.http.post<any>(this.apiUrl + '/questions', this.newquest).subscribe((c: any) => {
-      this.selectedquestion.push(c);
-      this.questions.push(c);
-      this.questform.questions.push(c.id);
-      this.newquest = { titre: '', type: 'text', options: '' };
-      this.showaddquestion = false;
-      this.cdr.detectChanges();
+    if (this.newquest.type !== 'text' && !this.newquest.options?.trim()) {
+      Swal.fire({ icon: 'warning', title: 'Choix manquants', text: 'Les choix sont obligatoires pour une question de type "' + this.newquest.type + '". Séparez-les par des virgules.', confirmButtonColor: '#27ae60' });
+      return;
+    }
+    this.http.post<any>(this.apiUrl + '/questions', this.newquest).subscribe({
+      next: (c: any) => {
+        this.selectedquestion.push(c);
+        this.questions.push(c);
+        this.questform.questions.push(c.id);
+        this.newquest = { titre: '', type: 'text', options: '', required: false };
+        this.showaddquestion = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        Swal.fire({ icon: 'error', title: 'Erreur', text: err?.error || 'Erreur lors de la création.', confirmButtonColor: '#27ae60' });
+      }
     });
   }
 

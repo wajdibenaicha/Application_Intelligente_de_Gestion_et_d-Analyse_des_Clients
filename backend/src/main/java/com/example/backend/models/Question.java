@@ -19,6 +19,9 @@ public class Question {
     @Column(length = 5000)
     private String options;
 
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean required = false;
+
     public Long getId() {
         return id;
     }
@@ -49,5 +52,13 @@ public class Question {
 
     public void setOptions(String options) {
         this.options = options;
+    }
+
+    public boolean isRequired() {
+        return required;
+    }
+
+    public void setRequired(boolean required) {
+        this.required = required;
     }
 }

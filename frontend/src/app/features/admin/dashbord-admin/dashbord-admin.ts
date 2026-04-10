@@ -90,8 +90,10 @@ export class DashbordAdmin implements OnInit {
         this.wsService.permission$.subscribe(data => { this.permissions = data; this.cdr.detectChanges(); });
         this.wsService.offre$.subscribe(data => { this.offres = data; this.cdr.detectChanges(); });
         this.wsService.adminNotifications$.subscribe(data => {
-            this.notifications = data;
-            this.unreadNotifCount = data.filter(n => !n.vue).length;
+            // admin sees only password reset notifications
+            const adminOnly = data.filter((n: any) => n.type === 'DEMANDE_MOT_DE_PASSE');
+            this.notifications = adminOnly;
+            this.unreadNotifCount = adminOnly.filter((n: any) => !n.vue).length;
             this.cdr.detectChanges();
         });
 
@@ -136,9 +138,10 @@ export class DashbordAdmin implements OnInit {
     }
 
     loadNotifications() {
-        this.api.getNotifications().subscribe(data => {
+        this.api.getAdminNotifications().subscribe(data => {
             this.notifications = data;
-            this.unreadNotifCount = data.filter(n => !n.vue).length;
+            this.unreadNotifCount = data.filter((n: any) => !n.vue).length;
+            this.cdr.detectChanges();
         });
     }
 

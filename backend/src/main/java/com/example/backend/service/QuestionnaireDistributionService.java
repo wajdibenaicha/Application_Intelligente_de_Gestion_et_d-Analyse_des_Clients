@@ -37,17 +37,29 @@ public class QuestionnaireDistributionService {
             Client client = clientRepo.findById(d.getClientId()).orElseThrow();
             String token = tokenService.encrypt(questionnaireId + ":" + d.getClientId());
 
+            // Resolve effective channel: fallback if client is missing the preferred contact
+            boolean hasEmail = client.getMail() != null && !client.getMail().isBlank();
+            boolean hasTel   = client.getTel()  != null && !client.getTel().isBlank();
+            String effectiveChannel;
+            if ("sms".equals(d.getChannel())) {
+                effectiveChannel = hasTel ? "sms" : (hasEmail ? "email" : null);
+            } else {
+                effectiveChannel = hasEmail ? "email" : (hasTel ? "sms" : null);
+            }
+
+            if (effectiveChannel == null) continue; // no contact info at all, skip
+
             EnvoiQuestionnaire envoi = new EnvoiQuestionnaire();
             envoi.setQuestionnaireId(questionnaireId);
             envoi.setClientId(d.getClientId());
             envoi.setToken(token);
-            envoi.setChannel(d.getChannel());
+            envoi.setChannel(effectiveChannel);
             envoi.setDateEnvoi(LocalDateTime.now());
             envoiRepo.save(envoi);
 
             String link = "http://localhost:4200/fill-questionnaire?token=" + token;
 
-            if ("sms".equals(d.getChannel())) {
+            if ("sms".equals(effectiveChannel)) {
                 sendSms(client, q, link);
             } else {
                 sendEmail(client, q, link);

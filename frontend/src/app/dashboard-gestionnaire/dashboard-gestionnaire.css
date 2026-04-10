@@ -2236,3 +2236,18 @@
 .btn-close-modal:active {
   transform: translateY(0);
 }
+
+/* Required question badge & form */
+.q-required-badge {
+  color: #e74c3c; font-weight: 800; font-size: 14px;
+  margin: 0 2px; line-height: 1;
+}
+.required-toggle {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #2c3e50; cursor: pointer;
+  padding: 4px 0;
+}
+.required-toggle input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #27ae60; }
+.options-input-wrapper { display: flex; flex-direction: column; gap: 3px; }
+.options-hint { font-size: 11px; color: #e74c3c; }
+.input-error { border-color: #e74c3c !important; background: #fff8f8; }

@@ -29,6 +29,8 @@ public class EnvoiService {
     private QuestionnaireRepository questionnaireRepository;
     @Autowired
     private ReponseRepository reponseRepository;
+    @Autowired
+    private NotificationService notificationService;
 
     public String genererLienChiffre(Long questionnaireId, Long clientId) {
         String token = UUID.randomUUID().toString();
@@ -51,15 +53,11 @@ public class EnvoiService {
 
     public List<Client> filtrerClients(String typeContrat, Integer anneeMin, String profession) {
         List<Client> all = clientRepository.findAll();
-        return all.stream().filter(c -> {
-            if (typeContrat != null && !typeContrat.isEmpty() && !typeContrat.equals(c.getTypeContrat()))
-                return false;
-            if (anneeMin != null && c.getAnneeInscription() < anneeMin)
-                return false;
-            if (profession != null && !profession.isEmpty() && !profession.equals(c.getProfession()))
-                return false;
-            return true;
-        }).toList();
+        return all.stream().filter(c ->
+            (typeContrat == null || typeContrat.isEmpty() || typeContrat.equals(c.getTypeContrat())) &&
+            (anneeMin == null || c.getAnneeInscription() >= anneeMin) &&
+            (profession == null || profession.isEmpty() || profession.equals(c.getProfession()))
+        ).toList();
     }
 
     @Transactional
@@ -93,6 +91,19 @@ public class EnvoiService {
         }
         envoi.setRepondu(true);
         envoiRepository.save(envoi);
+
+        // Check if all clients who received this questionnaire have now responded
+        long totalSent = envoiRepository.findByQuestionnaireId(questionnaireId).size();
+        boolean allAnswered = totalSent > 0 && !envoiRepository.existsByQuestionnaireIdAndReponduFalse(questionnaireId);
+        if (allAnswered) {
+            notificationService.createNotification(
+                    "TOUS_ONT_REPONDU",
+                    "✅ Tous les clients ont répondu au questionnaire \"" + questionnaire.getTitre() + "\" (" + totalSent + " réponse" + (totalSent > 1 ? "s" : "") + ")",
+                    questionnaireId,
+                    "QUESTIONNAIRE"
+            );
+        }
+
         return true;
     }
 }
