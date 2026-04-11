@@ -2,9 +2,12 @@ package com.example.backend.controller;
 
 import com.example.backend.models.*;
 import com.example.backend.Repository.*;
+import com.example.backend.service.KpiCalculatorService;
+import com.example.backend.service.OffreRecommendationService;
 import com.example.backend.service.TokenEncryptionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +23,9 @@ public class PublicQuestionnaireController {
     @Autowired private QuestionRepository questionRepo;
     @Autowired private ReponseRepository reponseRepo;
     @Autowired private ClientRepository clientRepo;
+    @Autowired private KpiCalculatorService kpiService;
+    @Autowired private OffreRecommendationService recommendationService;
+    @Autowired private SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/questionnaire")
     public ResponseEntity<?> getByToken(@RequestParam String token) {
@@ -78,6 +84,15 @@ public class PublicQuestionnaireController {
 
         envoi.setRepondu(true);
         envoiRepo.save(envoi);
+
+        // Auto-trigger KPI calculation and offer recommendation after submission
+        try {
+            kpiService.calculateKpi(clientId, qId);
+            OffreRecommendation rec = recommendationService.generateRecommendation(clientId, qId);
+            messagingTemplate.convertAndSend("/topic/recommendations", rec);
+        } catch (Exception e) {
+            System.err.println("KPI/Recommendation calculation failed: " + e.getMessage());
+        }
 
         return ResponseEntity.ok(Map.of("message", "Merci pour vos réponses !"));
     }

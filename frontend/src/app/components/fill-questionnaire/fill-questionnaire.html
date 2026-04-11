@@ -63,6 +63,19 @@
               </textarea>
             }
 
+            @if (q.type === 'rating') {
+              <div class="rating-scale">
+                @for (n of ratingRange(q.options); track n) {
+                  <button type="button"
+                    class="rating-btn"
+                    [class.selected]="responses[i].answer === n.toString()"
+                    (click)="responses[i].answer = n.toString()">
+                    {{ n }}
+                  </button>
+                }
+              </div>
+            }
+
             @if (q.type === 'radio') {
               <div class="options-list">
                 @for (opt of parseOptions(q.options); track opt) {
@@ -92,6 +105,15 @@
                   </label>
                 }
               </div>
+            }
+
+            @if (q.type === 'select') {
+              <select [(ngModel)]="responses[i].answer" class="select-input">
+                <option value="">-- Choisissez une option --</option>
+                @for (opt of parseOptions(q.options); track opt) {
+                  <option [value]="opt">{{ opt }}</option>
+                }
+              </select>
             }
 
           </div>

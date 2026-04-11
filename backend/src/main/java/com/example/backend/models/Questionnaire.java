@@ -21,7 +21,7 @@ public class Questionnaire {
 
     @ManyToOne
     @JoinColumn(name = "gestionnaire_id")
-    @JsonIgnoreProperties({ "role", "password" })
+    @JsonIgnoreProperties({ "password" })
     private Gestionnaire gestionnaire;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })

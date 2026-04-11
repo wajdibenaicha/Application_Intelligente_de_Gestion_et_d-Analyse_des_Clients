@@ -61,7 +61,7 @@ export class DashbordAdmin implements OnInit {
 
     showoffreform = false;
     editingoffre: any = null;
-    offreform: any = { title: '', description: '' };
+    offreform: any = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
 
     showdetailsform = false;
     detailsquest: any = null;
@@ -149,7 +149,7 @@ export class DashbordAdmin implements OnInit {
 
     approuverQuestionnaire(id: number) {
         this.api.approuverPublication(id).subscribe(() => {
-            Swal.fire('Approuve', 'Questionnaire publie', 'success');
+            Swal.fire('Approuvé', 'Questionnaire approuvé avec succès', 'success');
             this.loadNotifications();
             this.loadInitialData();
         });
@@ -278,13 +278,18 @@ export class DashbordAdmin implements OnInit {
 
     openaddoffre() {
         this.editingoffre = null;
-        this.offreform = { title: '', description: '' };
+        this.offreform = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
         this.showoffreform = true;
     }
 
     openeditoffre(offre: any) {
         this.editingoffre = offre;
-        this.offreform = { title: offre.title, description: offre.description };
+        this.offreform = {
+            title: offre.title, description: offre.description,
+            categorie: offre.categorie || 'general',
+            scoreMin: offre.scoreMin ?? 0, scoreMax: offre.scoreMax ?? 100,
+            active: offre.active !== false
+        };
         this.showoffreform = true;
     }
 

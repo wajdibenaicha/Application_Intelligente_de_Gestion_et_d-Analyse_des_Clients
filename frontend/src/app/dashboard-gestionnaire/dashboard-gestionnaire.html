@@ -75,7 +75,7 @@
           <div class="stat-icon">✅</div>
           <div class="stat-info">
             <span class="stat-value">{{ publishedCount }}</span>
-            <span class="stat-label">Publiés</span>
+            <span class="stat-label">Approuvés</span>
           </div>
         </div>
         <div class="stat-card">
@@ -145,7 +145,7 @@
                 <button class="btn-icon btn-send" title="Demander publication" (click)="demanderPublication(q)" *ngIf="canRequestPublication(q)">📤</button>
                 <button class="btn-icon btn-warning" title="Retirer la demande" (click)="retirerDemande(q)" *ngIf="canWithdraw(q)">⏪</button>
                 <button class="btn-icon btn-confirm" title="Approuver" (click)="approuverQuestionnaire(q.id)" *ngIf="canApprove(q)">✅</button>
-                <button class="btn-icon btn-reject" title="Rejeter" (click)="rejeterQuestionnaire(q.id)" *ngIf="canApprove(q)">❌</button>
+                <button class="btn-icon btn-reject" title="Rejeter" (click)="rejeterQuestionnaire(q.id)" *ngIf="canReject(q)">❌</button>
                 <button class="btn-icon btn-success" title="Partager" (click)="ouvrirPartage(q)" *ngIf="canShare(q)">📤</button>
                 <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteQuestionnaire(q.id)" *ngIf="canDelete(q)">🗑</button>
               </td>
@@ -235,8 +235,14 @@
             <div class="offre-catalog-body">
               <div class="offre-catalog-title">🎁 {{ o.title }}</div>
               <div class="offre-catalog-desc">{{ o.description }}</div>
+              <div class="offre-catalog-meta">
+                <span class="offre-badge-cat">{{ o.categorie || 'GENERAL' }}</span>
+                <span class="offre-badge-range">{{ o.scoreMin }}–{{ o.scoreMax }}/100</span>
+                <span class="offre-badge-active" [class.inactive]="!o.active">{{ o.active ? 'Active' : 'Inactive' }}</span>
+              </div>
             </div>
             <div class="offre-catalog-actions">
+              <button class="btn-icon btn-edit" title="Modifier" (click)="openEditOffre(o)">✏️</button>
               <button class="btn-icon btn-delete" title="Supprimer" (click)="supprimerOffre(o)">🗑</button>
             </div>
           </div>
@@ -291,6 +297,8 @@
 
     </section>
 
+    <!-- Recommendations section -->
+
     <!-- Directeur: add/edit offer modal -->
     <div class="modal-overlay" *ngIf="showOffreForm" (click)="showOffreForm=false">
       <div class="modal" (click)="$event.stopPropagation()">
@@ -301,7 +309,30 @@
         <label>Titre <span style="color:red">*</span></label>
         <input [(ngModel)]="offreForm.title" placeholder="Titre de l'offre" />
         <label>Description <span style="color:red">*</span></label>
-        <textarea [(ngModel)]="offreForm.description" placeholder="Description de l'offre..." rows="4"></textarea>
+        <textarea [(ngModel)]="offreForm.description" placeholder="Description de l'offre..." rows="3"></textarea>
+        <label>Catégorie</label>
+        <select [(ngModel)]="offreForm.categorie" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+          <option value="GENERAL">Général</option>
+          <option value="SANTE">Santé</option>
+          <option value="AUTO">Auto</option>
+          <option value="HABITATION">Habitation</option>
+          <option value="VIE">Vie</option>
+          <option value="VOYAGE">Voyage</option>
+        </select>
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <div style="flex:1;">
+            <label>Score min (0-100)</label>
+            <input type="number" [(ngModel)]="offreForm.scoreMin" min="0" max="100" />
+          </div>
+          <div style="flex:1;">
+            <label>Score max (0-100)</label>
+            <input type="number" [(ngModel)]="offreForm.scoreMax" min="0" max="100" />
+          </div>
+        </div>
+        <label class="required-toggle" style="margin-top:8px;">
+          <input type="checkbox" [(ngModel)]="offreForm.active" />
+          <span>Offre active (visible pour les recommandations)</span>
+        </label>
         <div class="modal-actions">
           <button class="btn-cancel" (click)="showOffreForm=false">Annuler</button>
           <button class="btn-save" (click)="saveOffre()">{{ editingOffre ? 'Modifier' : 'Ajouter' }}</button>
@@ -340,13 +371,17 @@
     </div>
     <div style="padding: 0 24px 8px; font-weight:700; color:#1a3d2b; font-size:14px;">Questions</div>
     <div style="padding: 0 24px; display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto;">
-      <div *ngFor="let q of selectedQuestionnaire?.questions; let i = index" class="selected-chip" style="justify-content:flex-start;">
-        <span class="q-num">{{ i + 1 }}</span>
-        <span class="q-type-badge">{{ q.type }}</span>
-        <span class="q-required-badge" *ngIf="q.required" title="Question obligatoire">*</span>
-        <span style="flex:1;">{{ q.titre }}</span>
-        <span *ngIf="q.options && q.options !== ''" style="font-size:11px; color:#7f8c8d; font-style:italic;">{{ q.options }}</span>
-        <button class="btn-icon btn-delete" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'" (click)="deleteQuestion(q.id, selectedQuestionnaire)" title="Supprimer">🗑</button>
+      <div *ngFor="let q of selectedQuestionnaire?.questions; let i = index" class="selected-chip-block">
+        <div class="selected-chip-row">
+          <span class="q-num">{{ i + 1 }}</span>
+          <span class="q-type-badge">{{ q.type }}</span>
+          <span class="q-required-badge" *ngIf="q.required" title="Question obligatoire">*</span>
+          <span style="flex:1;">{{ q.titre }}</span>
+          <button class="btn-icon btn-delete" *ngIf="selectedQuestionnaire?.statut === 'BROUILLON'" (click)="deleteQuestion(q.id, selectedQuestionnaire)" title="Supprimer">🗑</button>
+        </div>
+        <div *ngIf="q.type !== 'text' && q.options && q.options !== ''" class="q-options-chips">
+          <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+        </div>
       </div>
       <div *ngIf="!selectedQuestionnaire?.questions?.length" class="empty-drop">Aucune question</div>
     </div>
@@ -355,7 +390,7 @@
       <button class="btn-outline" *ngIf="canEdit(selectedQuestionnaire)" (click)="editQuestionnaire(selectedQuestionnaire); showQuestionsView = false">✏️ Modifier</button>
       <button class="btn-save" *ngIf="canRequestPublication(selectedQuestionnaire)" (click)="demanderPublication(selectedQuestionnaire); showQuestionsView = false">📤 Envoyer à l'administrateur</button>
       <button class="btn-save" *ngIf="canApprove(selectedQuestionnaire)" (click)="approuverQuestionnaire(selectedQuestionnaire.id); showQuestionsView = false">✅ Approuver</button>
-      <button class="btn-danger-sm" *ngIf="canApprove(selectedQuestionnaire)" (click)="rejeterQuestionnaire(selectedQuestionnaire.id); showQuestionsView = false">❌ Rejeter</button>
+      <button class="btn-danger-sm" *ngIf="canReject(selectedQuestionnaire)" (click)="rejeterQuestionnaire(selectedQuestionnaire.id); showQuestionsView = false">❌ Rejeter</button>
     </div>
   </div>
 </div>
@@ -411,17 +446,31 @@
         <div class="search-hint">Glissez pour réorganiser</div>
         <div class="drop-zone">
           <div *ngFor="let q of selectedquestion; let i=index"
-               class="selected-chip"
+               class="selected-chip-block"
                draggable="true"
                [class.drag-over]="dragoverIndex===i"
                (dragstart)="dragStart(i,$event)"
                (dragover)="dragover(i,$event)"
                (drop)="drop(i,$event)">
-            <span class="drag-handle">⠿</span>
-            <span class="q-num">{{ i+1 }}</span>
-            <span class="q-type-badge">{{ q.type }}</span>
-            {{ q.titre || q.title }}
-            <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
+            <div class="selected-chip-row">
+              <span class="drag-handle">⠿</span>
+              <span class="q-num">{{ i+1 }}</span>
+              <span class="q-type-badge">{{ q.type }}</span>
+              <span style="flex:1;">{{ q.titre || q.title }}</span>
+              <button *ngIf="q.type !== 'text'" class="btn-edit-opts" (click)="$event.stopPropagation(); toggleOptionsEdit(q.id)" title="Modifier les choix">✏️</button>
+              <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
+            </div>
+            <div *ngIf="q.type !== 'text' && editingOptionsId !== q.id" class="q-options-chips">
+              <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+              <span *ngIf="!q.options || q.options.trim() === ''" class="q-options-empty">Aucun choix défini</span>
+            </div>
+            <div *ngIf="q.type !== 'text' && editingOptionsId === q.id" class="q-options-edit">
+              <input [(ngModel)]="q.options" placeholder="Choix séparés par virgule (ex: Oui, Non, Peut-être)" class="options-edit-input" />
+              <div class="q-options-chips" *ngIf="q.options?.trim()">
+                <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+              </div>
+              <button class="btn-save-opts" (click)="toggleOptionsEdit(q.id)">✓ Valider</button>
+            </div>
           </div>
           <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
         </div>
@@ -454,6 +503,12 @@
         <option value="">Toutes les professions</option>
         <option *ngFor="let p of professions" [value]="p">{{ p }}</option>
       </select>
+      <select [(ngModel)]="filtre.primeRange" (ngModelChange)="appliquerFiltre()">
+        <option value="">Toutes les primes</option>
+        <option value="lt1000">&lt; 1 000 DT/an</option>
+        <option value="1000-1500">1 000 – 1 500 DT/an</option>
+        <option value="gt1500">&gt; 1 500 DT/an</option>
+      </select>
     </div>
     <div class="partage-count">
       <strong>{{ clientsFiltres.length }}</strong> client{{ clientsFiltres.length !== 1 ? 's' : '' }} trouvé{{ clientsFiltres.length !== 1 ? 's' : '' }}
@@ -463,7 +518,7 @@
         <div class="partage-avatar">{{ (c.fullName || '?').charAt(0) }}</div>
         <div class="partage-client-info">
           <span class="partage-client-name">{{ c.fullName }}</span>
-          <span class="partage-client-meta">{{ c.mail }} · {{ c.typeContrat }}</span>
+          <span class="partage-client-meta">{{ c.mail }} · {{ c.typeContrat }}<span *ngIf="c.primeAnnuelle"> · {{ c.primeAnnuelle | number:'1.0-0' }} DT/an</span></span>
         </div>
         <select [(ngModel)]="clientChannels[c.id]" class="channel-select">
           <option value="email">📧 Email</option>

@@ -35,6 +35,10 @@ public class OffreController {
         Offre offre = new Offre();
         offre.setTitle(body.get("title").toString());
         offre.setDescription(body.get("description").toString());
+        offre.setCategorie(body.get("categorie") != null ? body.get("categorie").toString() : "GENERAL");
+        offre.setScoreMin(body.get("scoreMin") != null ? Integer.valueOf(body.get("scoreMin").toString()) : 0);
+        offre.setScoreMax(body.get("scoreMax") != null ? Integer.valueOf(body.get("scoreMax").toString()) : 100);
+        offre.setActive(body.get("active") == null || Boolean.parseBoolean(body.get("active").toString()));
         return ResponseEntity.ok(offreService.addOffre(offre));
     }
 
@@ -44,6 +48,10 @@ public class OffreController {
         if (existing == null) return ResponseEntity.notFound().build();
         if (body.get("title") != null) existing.setTitle(body.get("title").toString());
         if (body.get("description") != null) existing.setDescription(body.get("description").toString());
+        if (body.get("categorie") != null) existing.setCategorie(body.get("categorie").toString());
+        if (body.get("scoreMin") != null) existing.setScoreMin(Integer.valueOf(body.get("scoreMin").toString()));
+        if (body.get("scoreMax") != null) existing.setScoreMax(Integer.valueOf(body.get("scoreMax").toString()));
+        if (body.get("active") != null) existing.setActive(Boolean.parseBoolean(body.get("active").toString()));
         return ResponseEntity.ok(offreService.updateOffre(id, existing));
     }
 

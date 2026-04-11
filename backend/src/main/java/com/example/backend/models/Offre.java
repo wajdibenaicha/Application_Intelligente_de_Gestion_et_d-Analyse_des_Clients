@@ -19,6 +19,19 @@ public class Offre {
     private String title;
     @Column(name = "description")
     private String description;
+    @Column(nullable = false, columnDefinition = "varchar(255) NOT NULL DEFAULT 'general'")
+    private String categorie = "general";
+
+    @Column(nullable = false)
+    private Integer scoreMin = 0;
+
+    @Column(nullable = false)
+    private Integer scoreMax = 100;
+
+
+    @Column(nullable = false)
+    private Boolean active = true;
+
 
     public Long getId() {
         return id;
@@ -43,5 +56,30 @@ public class Offre {
     public void setDescription(String description) {
         this.description = description;
     }
+    public String getCategorie() {
+        return categorie;
+    }
+    public void setCategorie(String categorie) {
+        this.categorie = categorie;
+    }
+    public Integer getScoreMin() {
+        return scoreMin;
+    }
+    public void setScoreMin(Integer scoreMin) {
+        this.scoreMin = scoreMin;
+    }
+    public Integer getScoreMax() {
+        return scoreMax;
+    }
+    public void setScoreMax(Integer scoreMax) {
+        this.scoreMax = scoreMax;
+    }
+    public Boolean getActive() {
+        return active;
+    }
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
 
 }

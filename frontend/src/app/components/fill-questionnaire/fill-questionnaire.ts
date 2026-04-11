@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
@@ -7,7 +8,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-fill-questionnaire',
   standalone: true,
-  imports: [FormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './fill-questionnaire.html',
   styleUrl: './fill-questionnaire.css'
 })
@@ -40,6 +41,7 @@ export class FillQuestionnaireComponent implements OnInit {
       .subscribe({
         next: (data) => {
           this.questionnaire = data;
+          data.questions.forEach((q: any) => { q.type = this.normalizeType(q.type); });
           this.responses = data.questions.map((q: any) => ({ questionId: q.id, answer: '' }));
           this.loading = false;
           this.cdr.detectChanges();
@@ -52,8 +54,28 @@ export class FillQuestionnaireComponent implements OnInit {
       });
   }
 
+  normalizeType(type: string): string {
+    const t = (type || '').toLowerCase().trim();
+    if (t === 'rating')                                     return 'rating';
+    if (t === 'multiple_choice' || t === 'choix multiple' || t === 'checkbox') return 'checkbox';
+    if (t === 'choix unique'    || t === 'radio' || t === 'yes_no')            return 'radio';
+    if (t === 'liste déroulante'|| t === 'select')                             return 'select';
+    if (t === 'texte libre'     || t === 'text')                               return 'text';
+    return 'text';
+  }
+
   parseOptions(opts: string): string[] {
     return opts ? opts.split(',').map(o => o.trim()).filter(o => o) : [];
+  }
+
+  ratingRange(opts: string): number[] {
+    const nums = this.parseOptions(opts).map(Number).filter(n => !isNaN(n) && n > 0);
+    if (nums.length >= 2) {
+      const min = Math.min(...nums), max = Math.max(...nums);
+      return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+    }
+    if (nums.length === 1) return Array.from({ length: nums[0] }, (_, i) => i + 1);
+    return [1, 2, 3, 4, 5];
   }
 
   isChecked(i: number, opt: string): boolean {

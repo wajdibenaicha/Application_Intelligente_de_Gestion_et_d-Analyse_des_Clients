@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+
 import { WebSocketService } from '../services/websocket.service';
 import { Api } from '../services/api';
 import Swal from 'sweetalert2';
@@ -56,7 +57,7 @@ export class DashboardGestionnaire implements OnInit {
 
   showPartageModal = false;
   clientsFiltres: any[] = [];
-  filtre = { typeContrat: '', anneeMin: null, profession: '' };
+  filtre = { typeContrat: '', anneeMin: null, profession: '', primeRange: '' };
   clientChannels: { [id: number]: string } = {};
 
   notifications: any[] = [];
@@ -96,6 +97,10 @@ export class DashboardGestionnaire implements OnInit {
     this.wsService.question$.subscribe(data => { this.questions = data; this.cdr.detectChanges(); });
 
     if (this.canManageAll()) {
+      this.wsService.recommendations$.subscribe(() => {
+        this.loadRecommendations();
+        this.cdr.detectChanges();
+      });
       this.wsService.adminNotifications$.subscribe(data => {
         const allowed = ['DEMANDE_PUBLICATION', 'TOUS_ONT_REPONDU'];
         const filtered = data.filter((n: any) => allowed.includes(n.type));
@@ -124,6 +129,9 @@ export class DashboardGestionnaire implements OnInit {
     if (section === 'reponses') {
       this.reponses = [];
       this.selectedQuestionnaireId = '';
+    }
+    if (section === 'reponses') {
+      this.loadRecommendations();
     }
   }
 
@@ -217,7 +225,7 @@ export class DashboardGestionnaire implements OnInit {
         this.loadQuestionnaires();
         this.loadNotifications();
         this.showNotifPanel = false;
-        this.showToastMessage('Questionnaire approuvé et publié');
+        this.showToastMessage('Questionnaire approuvé');
       },
       error: () => this.showToastMessage('Erreur lors de l\'approbation', 'error')
     });
@@ -275,13 +283,16 @@ export class DashboardGestionnaire implements OnInit {
   savequestionnaire() {
     this.questform.questions = this.selectedquestion;
     if (this.editingquest) {
+      const isDirecteur = this.canManageAll();
       const wasNotBrouillon = this.editingquest.statut !== 'BROUILLON';
       const payload: any = {
         titre: this.questform.titre,
         description: this.questform.description,
         questions: this.selectedquestion
       };
-      if (wasNotBrouillon) payload.statut = 'BROUILLON';
+      // Regular gestionnaire editing a non-brouillon resets to brouillon (re-approval needed)
+      // Directeur edits keep the questionnaire published
+      if (wasNotBrouillon && !isDirecteur) payload.statut = 'BROUILLON';
       this.http.put<any>(this.apiUrl + '/questionnaires/' + this.editingquest.id, payload).subscribe({
         next: () => {
           this.showquestform = false;
@@ -392,7 +403,7 @@ export class DashboardGestionnaire implements OnInit {
   getStatutLabel(statut: string) {
     if (statut === 'BROUILLON') return 'Brouillon';
     if (statut === 'EN_ATTENTE') return 'En attente';
-    if (statut === 'PUBLIE') return 'Publié';
+    if (statut === 'PUBLIE') return 'Approuvé';
     if (statut === 'REJETE') return 'Rejeté';
     return statut;
   }
@@ -420,6 +431,12 @@ export class DashboardGestionnaire implements OnInit {
 
   canApprove(q: any): boolean {
     return this.canManageAll() && q.statut === 'EN_ATTENTE';
+  }
+
+  canReject(q: any): boolean {
+    const isDirecteurQuestionnaire = q?.gestionnaire?.role?.name?.toUpperCase() === 'DIRECTEUR';
+    return this.canManageAll() && !isDirecteurQuestionnaire &&
+      (q.statut === 'EN_ATTENTE' || q.statut === 'PUBLIE');
   }
 
   canShare(q: any): boolean {
@@ -532,10 +549,10 @@ export class DashboardGestionnaire implements OnInit {
     this.showToastMessage('Export CSV téléchargé');
   }
 
-  private buildOffreSelectHtml(): string {
+  private buildOffreSelectHtml(preselectedId?: number): string {
     if (!this.offres.length) return '<p style="color:#e74c3c">Aucune offre disponible.</p>';
     let opts = this.offres.map(o =>
-      `<option value="${o.id}">${o.title}</option>`
+      `<option value="${o.id}" ${preselectedId === o.id ? 'selected' : ''}>${o.title}</option>`
     ).join('');
     return `<select id="swal-offre-select" class="swal2-input" style="margin-top:8px">
               <option value="">-- Choisir une offre --</option>${opts}
@@ -547,9 +564,35 @@ export class DashboardGestionnaire implements OnInit {
       Swal.fire({ icon: 'warning', title: 'Aucune offre', text: 'Créez d\'abord des offres dans l\'espace admin.', confirmButtonColor: '#27ae60' });
       return;
     }
+
+    // Find AI recommendation for this client
+    const rec = this.recommendations.find((r: any) =>
+      r.clientKpi?.client?.id === client.id
+    );
+
+    const sentimentEmoji = rec ? this.getSentimentEmoji(rec.clientKpi?.sentiment) : '';
+    const aiOffre = rec ? (rec.finalOffre || rec.aiRecommendedOffre) : null;
+    const score = rec?.clientKpi?.score ?? null;
+
+    const recHtml = rec ? `
+      <div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:left;">
+        <div style="font-weight:700;color:#1a3d2b;margin-bottom:6px;">🤖 Suggestion IA</div>
+        <div style="font-size:13px;color:#555;margin-bottom:4px;">
+          Score : <b style="color:#27ae60">${score}/100</b> &nbsp; ${sentimentEmoji} <b>${rec.clientKpi?.sentiment || ''}</b>
+        </div>
+        <div style="font-size:13px;color:#555;">
+          Offre recommandée : <b style="color:#2980b9">${aiOffre?.title || '—'}</b>
+        </div>
+        ${aiOffre ? `<button type="button" id="swal-use-ai-btn"
+          onclick="document.getElementById('swal-offre-select').value='${aiOffre.id}';this.style.background='#27ae60';this.textContent='✓ Sélectionnée'"
+          style="margin-top:10px;background:#2ecc71;color:white;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">
+          ✓ Utiliser cette offre
+        </button>` : ''}
+      </div>` : '';
+
     Swal.fire({
       title: `📤 Envoyer une offre à ${client.fullName || 'ce client'}`,
-      html: this.buildOffreSelectHtml(),
+      html: recHtml + this.buildOffreSelectHtml(aiOffre?.id),
       showCancelButton: true,
       confirmButtonText: '📧 Envoyer par email',
       cancelButtonText: 'Annuler',
@@ -564,10 +607,22 @@ export class DashboardGestionnaire implements OnInit {
     }).then(result => {
       if (!result.isConfirmed || !result.value) return;
       const offreId = Number(result.value);
-      this.api.envoyerOffre(offreId, [client.id]).subscribe({
+
+      // If rec exists and selected offre matches AI offre → accept the recommendation
+      const sendOffer = () => this.api.envoyerOffre(offreId, [client.id]).subscribe({
         next: () => Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '📧 Offre envoyée !', showConfirmButton: false, timer: 2500, timerProgressBar: true }),
         error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer l\'offre.', confirmButtonColor: '#27ae60' })
       });
+
+      if (rec) {
+        if (aiOffre && offreId === aiOffre.id) {
+          this.http.put(this.apiUrl + '/recommendations/' + rec.id + '/accept', {}).subscribe({ next: () => sendOffer(), error: () => sendOffer() });
+        } else {
+          this.http.put(this.apiUrl + '/recommendations/' + rec.id + '/override/' + offreId, {}).subscribe({ next: () => sendOffer(), error: () => sendOffer() });
+        }
+      } else {
+        sendOffer();
+      }
     });
   }
 
@@ -579,15 +634,73 @@ export class DashboardGestionnaire implements OnInit {
     const count = this.clientsReponses.length;
     const clientIds = this.clientsReponses.map(e => e.client?.id).filter(Boolean);
     const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'ce questionnaire';
+
+    // Count how many clients each AI-recommended offer covers
+    const offreCountMap = new Map<number, { offre: any; clients: number }>();
+    let noRecCount = 0;
+    for (const e of this.clientsReponses) {
+      const rec = this.recommendations.find((r: any) =>
+        r.clientKpi?.client?.id === e.client?.id
+      );
+      const aiOffre = rec ? (rec.finalOffre || rec.aiRecommendedOffre) : null;
+      if (aiOffre) {
+        const entry = offreCountMap.get(aiOffre.id);
+        if (entry) entry.clients++;
+        else offreCountMap.set(aiOffre.id, { offre: aiOffre, clients: 1 });
+      } else {
+        noRecCount++;
+      }
+    }
+
+    // Sort by most recommended, pick the top one
+    const offreCounts = Array.from(offreCountMap.values())
+      .sort((a, b) => b.clients - a.clients);
+    const topOffre = offreCounts[0]?.offre ?? null;
+
+    // Build percentage bars
+    const barsHtml = offreCounts.map(({ offre, clients }) => {
+      const pct = Math.round((clients / count) * 100);
+      const isTop = offre.id === topOffre?.id;
+      return `<div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+          <span style="font-size:13px;font-weight:${isTop ? '700' : '500'};color:${isTop ? '#1a7a3c' : '#444'};">
+            ${isTop ? '🥇 ' : ''}${offre.title}
+          </span>
+          <span style="font-size:12px;color:#666;">${clients} client${clients > 1 ? 's' : ''} (${pct}%)</span>
+        </div>
+        <div style="background:#e0e0e0;border-radius:4px;height:8px;">
+          <div style="background:${isTop ? '#27ae60' : '#74b9ff'};width:${pct}%;height:8px;border-radius:4px;transition:width 0.3s;"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const noRecHtml = noRecCount > 0
+      ? `<p style="font-size:12px;color:#999;margin-top:4px;">⚠️ ${noRecCount} client(s) sans recommandation IA recevront aussi l'offre sélectionnée.</p>`
+      : '';
+
+    const aiSummary = offreCounts.length > 0
+      ? `<div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:12px 14px;margin-bottom:14px;text-align:left;">
+           <div style="font-weight:700;color:#1a3d2b;margin-bottom:10px;">🤖 Analyse IA — ${count} client${count > 1 ? 's' : ''}</div>
+           ${barsHtml}
+           ${noRecHtml}
+         </div>`
+      : `<div style="background:#fff8e1;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;color:#795548;">
+           ⚠️ Aucune recommandation IA disponible. Sélectionnez une offre manuellement.
+         </div>`;
+
     Swal.fire({
       title: `📢 Envoyer une offre à tous`,
-      html: `<p style="margin-bottom:10px;color:#555">Questionnaire : <b>${titre}</b><br>${count} client${count > 1 ? 's' : ''} concerné${count > 1 ? 's' : ''}</p>` + this.buildOffreSelectHtml(),
+      html: `
+        <p style="margin-bottom:12px;color:#555;font-size:13px;">Questionnaire : <b>${titre}</b></p>
+        ${aiSummary}
+        ${this.buildOffreSelectHtml(topOffre?.id)}`,
       showCancelButton: true,
       confirmButtonText: `📧 Envoyer à ${count} client${count > 1 ? 's' : ''}`,
       cancelButtonText: 'Annuler',
       confirmButtonColor: '#27ae60',
       cancelButtonColor: '#95a5a6',
       reverseButtons: true,
+      width: 560,
       preConfirm: () => {
         const sel = document.getElementById('swal-offre-select') as HTMLSelectElement;
         if (!sel || !sel.value) { Swal.showValidationMessage('Veuillez sélectionner une offre.'); return false; }
@@ -598,7 +711,7 @@ export class DashboardGestionnaire implements OnInit {
       const offreId = Number(result.value);
       Swal.fire({ title: 'Envoi en cours...', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
       this.api.envoyerOffre(offreId, clientIds).subscribe({
-        next: (res: any) => Swal.fire({ icon: 'success', title: 'Envoyé !', html: `L'offre a été envoyée à <b>${res.sent} client${res.sent > 1 ? 's' : ''}</b> par email.`, confirmButtonColor: '#27ae60' }),
+        next: (res: any) => Swal.fire({ icon: 'success', title: 'Envoyé !', html: `L'offre a été envoyée à <b>${res.sent ?? count} client${count > 1 ? 's' : ''}</b> par email.`, confirmButtonColor: '#27ae60' }),
         error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer les offres.', confirmButtonColor: '#27ae60' })
       });
     });
@@ -619,14 +732,92 @@ export class DashboardGestionnaire implements OnInit {
     });
   }
 
+  // ── Recommendations ──────────────────────────────
+  recommendations: any[] = [];
+  offresAll: any[] = [];
+  showOverrideModal = false;
+  overrideRecId: number | null = null;
+  overrideOffreId: number | null = null;
+
+  loadRecommendations() {
+    this.http.get<any[]>(this.apiUrl + '/recommendations').subscribe({
+      next: (data) => { this.recommendations = data; this.cdr.detectChanges(); },
+      error: () => {}
+    });
+  }
+
+  getSentimentEmoji(s: string): string {
+    const map: any = { VERY_POSITIVE: '😄', POSITIVE: '😊', NEUTRAL: '😐', NEGATIVE: '😟', VERY_NEGATIVE: '😢' };
+    return map[s] || '❓';
+  }
+
+  getStatusLabel(s: string): string {
+    const map: any = { PENDING: 'En attente', ACCEPTED: 'Acceptée', OVERRIDDEN: 'Modifiée', SENT: 'Envoyée' };
+    return map[s] || s;
+  }
+
+  getStatusClass(s: string): string {
+    const map: any = { PENDING: 'badge-warning', ACCEPTED: 'badge-success', OVERRIDDEN: 'badge-info', SENT: 'badge-sent' };
+    return map[s] || '';
+  }
+
+  acceptRec(rec: any) {
+    this.http.put(this.apiUrl + '/recommendations/' + rec.id + '/accept', {}).subscribe({
+      next: () => { this.loadRecommendations(); this.showToastMessage('Recommandation acceptée'); },
+      error: () => this.showToastMessage('Erreur', 'error')
+    });
+  }
+
+  openOverride(rec: any) {
+    this.overrideRecId = rec.id;
+    this.overrideOffreId = null;
+    this.offresAll = this.offres;
+    this.showOverrideModal = true;
+  }
+
+  confirmOverride() {
+    if (!this.overrideRecId || !this.overrideOffreId) return;
+    this.http.put(this.apiUrl + '/recommendations/' + this.overrideRecId + '/override/' + this.overrideOffreId, {}).subscribe({
+      next: () => { this.showOverrideModal = false; this.loadRecommendations(); this.showToastMessage('Offre modifiée'); },
+      error: () => this.showToastMessage('Erreur', 'error')
+    });
+  }
+
+  sendRec(rec: any) {
+    Swal.fire({
+      title: 'Envoyer l\'offre par email ?',
+      html: `Envoyer <b>${rec.finalOffre?.title || rec.aiRecommendedOffre?.title || 'l\'offre'}</b> à <b>${rec.clientKpi?.client?.fullName}</b> ?`,
+      icon: 'question', showCancelButton: true,
+      confirmButtonColor: '#27ae60', cancelButtonColor: '#95a5a6',
+      confirmButtonText: 'Envoyer', cancelButtonText: 'Annuler'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.http.post(this.apiUrl + '/recommendations/' + rec.id + '/send', {}).subscribe({
+        next: () => { this.loadRecommendations(); Swal.fire({ icon: 'success', title: 'Email envoyé !', timer: 2000, showConfirmButton: false }); },
+        error: (err) => Swal.fire({ icon: 'error', title: 'Erreur', text: err?.error?.message || 'Envoi échoué' })
+      });
+    });
+  }
+
   // ── Directeur offer catalog management ──────────
   showOffreForm = false;
-  offreForm: any = { title: '', description: '' };
+  offreForm: any = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
   editingOffre: any = null;
 
   openAddOffre() {
     this.editingOffre = null;
-    this.offreForm = { title: '', description: '' };
+    this.offreForm = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
+    this.showOffreForm = true;
+  }
+
+  openEditOffre(offre: any) {
+    this.editingOffre = offre;
+    this.offreForm = {
+      title: offre.title, description: offre.description,
+      categorie: offre.categorie || 'general',
+      scoreMin: offre.scoreMin ?? 0, scoreMax: offre.scoreMax ?? 100,
+      active: offre.active !== false
+    };
     this.showOffreForm = true;
   }
 
@@ -702,6 +893,17 @@ export class DashboardGestionnaire implements OnInit {
     this.selectedquestion = this.selectedquestion.filter(q => q.id !== id);
   }
 
+  editingOptionsId: number | null = null;
+
+  toggleOptionsEdit(id: number) {
+    this.editingOptionsId = this.editingOptionsId === id ? null : id;
+  }
+
+  getOptionsArray(options: string): string[] {
+    if (!options || !options.trim()) return [];
+    return options.split(',').map(o => o.trim()).filter(o => o !== '');
+  }
+
   createaddquestion() {
     if (!this.newquest.titre) return;
     if (this.newquest.type !== 'text' && !this.newquest.options?.trim()) {
@@ -743,7 +945,7 @@ export class DashboardGestionnaire implements OnInit {
     this.selectedQuestionnaire = q;
     this.clientsFiltres = [];
     this.clientChannels = {};
-    this.filtre = { typeContrat: '', anneeMin: null, profession: '' };
+    this.filtre = { typeContrat: '', anneeMin: null, profession: '', primeRange: '' };
     this.showPartageModal = true;
     this.api.getClientsFiltres({}).subscribe(data => {
       this.allClients = data;
@@ -761,6 +963,12 @@ export class DashboardGestionnaire implements OnInit {
       if (this.filtre.typeContrat && c.typeContrat !== this.filtre.typeContrat) return false;
       if (this.filtre.anneeMin   && c.anneeInscription < this.filtre.anneeMin)  return false;
       if (this.filtre.profession && c.profession !== this.filtre.profession)     return false;
+      if (this.filtre.primeRange) {
+        const p = c.primeAnnuelle ?? 0;
+        if (this.filtre.primeRange === 'lt1000'  && p >= 1000)  return false;
+        if (this.filtre.primeRange === '1000-1500' && (p < 1000 || p > 1500)) return false;
+        if (this.filtre.primeRange === 'gt1500'  && p <= 1500)  return false;
+      }
       return true;
     });
     this.clientChannels = {};

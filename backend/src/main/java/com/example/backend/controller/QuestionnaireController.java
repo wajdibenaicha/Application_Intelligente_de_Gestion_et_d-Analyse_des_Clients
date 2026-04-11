@@ -59,16 +59,24 @@ public class QuestionnaireController {
             questionnaire.setDescription(description);
             questionnaire.setConfirmed(false);
 
+            Gestionnaire gestionnaire = null;
             if (body.get("gestionnaire") != null) {
                 Object gestObj = body.get("gestionnaire");
                 if (gestObj instanceof Map) {
                     Object idObj = ((Map<?, ?>) gestObj).get("id");
                     if (idObj != null) {
                         Long gId = Long.valueOf(idObj.toString());
-                        Gestionnaire g = gestionnaireRepository.findById(gId).orElse(null);
-                        questionnaire.setGestionnaire(g);
+                        gestionnaire = gestionnaireRepository.findById(gId).orElse(null);
+                        questionnaire.setGestionnaire(gestionnaire);
                     }
                 }
+            }
+
+            // Directeur's questionnaires are auto-approved (published immediately)
+            if (gestionnaire != null && gestionnaire.getRole() != null
+                    && "DIRECTEUR".equalsIgnoreCase(gestionnaire.getRole().getName())) {
+                questionnaire.setStatut("PUBLIE");
+                questionnaire.setConfirmed(true);
             }
 
             if (body.get("questions") != null && body.get("questions") instanceof List) {

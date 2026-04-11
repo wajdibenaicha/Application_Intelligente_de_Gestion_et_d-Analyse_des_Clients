@@ -94,7 +94,11 @@ public class QuestionnaireService {
 
     public Questionnaire rejeterQuestionnaire(Long id, String raison) {
         Questionnaire q = getQuestionnaireById(id);
-        if (q != null && "EN_ATTENTE".equals(q.getStatut())) {
+        // Directeur's questionnaires cannot be rejected
+        boolean isDirecteur = q != null && q.getGestionnaire() != null
+                && q.getGestionnaire().getRole() != null
+                && "DIRECTEUR".equalsIgnoreCase(q.getGestionnaire().getRole().getName());
+        if (q != null && !isDirecteur && ("EN_ATTENTE".equals(q.getStatut()) || "PUBLIE".equals(q.getStatut()))) {
             q.setStatut("REJETE");
             q.setConfirmed(false);
             q.setRaisonRejet(raison);

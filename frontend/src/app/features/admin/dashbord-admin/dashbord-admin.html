@@ -153,7 +153,7 @@
                 <td>
                   <span class="badge" 
                         [ngClass]="q.statut === 'REJETE' ? 'badge-danger' : (q.confirmed ? 'badge-confirmed' : (q.statut === 'EN_ATTENTE' ? 'badge-pending' : 'badge-brouillon'))">
-                    {{ q.statut === 'REJETE' ? 'Rejeté' : (q.confirmed ? 'Publié' : (q.statut === 'EN_ATTENTE' ? 'En attente' : 'Brouillon')) }}
+                    {{ q.statut === 'REJETE' ? 'Rejeté' : (q.confirmed ? 'Approuvé' : (q.statut === 'EN_ATTENTE' ? 'En attente' : 'Brouillon')) }}
                   </span>
                   <span *ngIf="q.statut === 'REJETE' && q.raisonRejet" class="rejet-reason" title="{{ q.raisonRejet }}">
                     ⚠️ {{ q.raisonRejet.length > 20 ? (q.raisonRejet | slice:0:20) + '...' : q.raisonRejet }}
@@ -335,10 +335,33 @@
       <h2>{{ editingoffre ? '✏️ Modifier Offre' : '🎁 Ajouter Offre' }}</h2>
       <button class="btn-close" (click)="showoffreform=false">✕</button>
     </div>
-    <label>Titre</label>
+    <label>Titre <span style="color:red">*</span></label>
     <input [(ngModel)]="offreform.title" placeholder="Titre de l'offre" />
-    <label>Description</label>
-    <textarea [(ngModel)]="offreform.description" placeholder="Description de l'offre..." rows="4"></textarea>
+    <label>Description <span style="color:red">*</span></label>
+    <textarea [(ngModel)]="offreform.description" placeholder="Description de l'offre..." rows="3"></textarea>
+    <label>Catégorie</label>
+    <select [(ngModel)]="offreform.categorie" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;margin-bottom:8px;">
+      <option value="GENERAL">Général</option>
+      <option value="SANTE">Santé</option>
+      <option value="AUTO">Auto</option>
+      <option value="HABITATION">Habitation</option>
+      <option value="VIE">Vie</option>
+      <option value="VOYAGE">Voyage</option>
+    </select>
+    <div style="display:flex;gap:12px;">
+      <div style="flex:1;">
+        <label>Score min (0-100)</label>
+        <input type="number" [(ngModel)]="offreform.scoreMin" min="0" max="100" />
+      </div>
+      <div style="flex:1;">
+        <label>Score max (0-100)</label>
+        <input type="number" [(ngModel)]="offreform.scoreMax" min="0" max="100" />
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;">
+      <input type="checkbox" [(ngModel)]="offreform.active" style="width:15px;height:15px;accent-color:#27ae60;" />
+      <span style="font-size:13px;">Offre active (utilisée pour les recommandations IA)</span>
+    </label>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showoffreform=false">Annuler</button>
       <button class="btn-save" (click)="saveoffre()">{{ editingoffre ? 'Modifier' : 'Ajouter' }}</button>
@@ -388,10 +411,16 @@
       <button class="btn-close" (click)="showdetailsform=false">✕</button>
     </div>
     <div style="margin-bottom:12px">
-      <span class="badge badge-confirmed">✓ Publié</span>
+      <span class="badge"
+        [ngClass]="detailsquest?.statut === 'REJETE' ? 'badge-danger' : (detailsquest?.confirmed ? 'badge-confirmed' : (detailsquest?.statut === 'EN_ATTENTE' ? 'badge-pending' : 'badge-brouillon'))">
+        {{ detailsquest?.statut === 'REJETE' ? 'Rejeté' : (detailsquest?.confirmed ? 'Approuvé' : (detailsquest?.statut === 'EN_ATTENTE' ? 'En attente' : 'Brouillon')) }}
+      </span>
       <span style="margin-left:12px; color:#666">
         Gestionnaire: {{ detailsquest?.gestionnaire?.fullName || 'Admin' }}
       </span>
+    </div>
+    <div *ngIf="detailsquest?.statut === 'REJETE' && detailsquest?.raisonRejet" style="margin-bottom:12px; color:#e74c3c; font-size:13px">
+      ⚠️ Raison du rejet : {{ detailsquest.raisonRejet }}
     </div>
     <div *ngIf="detailsquest?.description" style="margin-bottom:12px; color:#555">{{ detailsquest.description }}</div>
     <div class="section-title">Questions</div>

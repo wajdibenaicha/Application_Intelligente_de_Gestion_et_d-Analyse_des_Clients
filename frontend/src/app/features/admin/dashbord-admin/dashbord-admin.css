@@ -489,6 +489,26 @@
   background: #e8f5ee;
 }
 
+.btn-reject {
+  background: #fdf0ef;
+}
+
+.btn-danger-sm {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.btn-danger-sm:hover {
+  background: #c0392b;
+}
+
 .btn-delete {
   background: #fdf0ef;
 }
