@@ -71,12 +71,13 @@
 .sidebar {
   width: 260px;
   background: linear-gradient(160deg, #1a5c38 0%, #27ae60 100%);
+  border-right: 1px solid rgba(255,255,255,0.1);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
   position: relative;
   z-index: 10;
-  box-shadow: 4px 0 20px rgba(39, 174, 96, 0.2);
+  box-shadow: 4px 0 24px rgba(26,92,56,0.28);
   animation: slideInLeft 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -181,13 +182,47 @@
   font-size: 11px;
 }
 
+/* ── Sidebar floating bubbles ── */
+.sb-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+  z-index: 0;
+}
+.sb-b1 { width: 130px; height: 130px; top: -40px;  left: -45px;  animation: sbFloat1 10s ease-in-out infinite; }
+.sb-b2 { width:  70px; height:  70px; top:  80px;  right: -25px; animation: sbFloat2  8s ease-in-out infinite; animation-delay: -3s; }
+.sb-b3 { width: 100px; height: 100px; top: 45%;    left: -35px;  animation: sbFloat1 12s ease-in-out infinite; animation-delay: -5s; }
+.sb-b4 { width:  50px; height:  50px; bottom: 130px; right: -10px; animation: sbFloat2  9s ease-in-out infinite; animation-delay: -1.5s; }
+.sb-b5 { width:  80px; height:  80px; bottom: -25px; left: 10px;  animation: sbFloat3  7s ease-in-out infinite; animation-delay: -4s; }
+
+@keyframes sbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(10px, -18px) scale(1.06); }
+  66%       { transform: translate(-8px, -8px)  scale(0.96); }
+}
+@keyframes sbFloat2 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  40%       { transform: translate(-12px, -14px) rotate(15deg); }
+  70%       { transform: translate(8px, 10px) rotate(-10deg); }
+}
+@keyframes sbFloat3 {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50%       { transform: scale(1.15) translateY(-12px); }
+}
+
 .sidebar-nav {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 12px;
   gap: 4px;
+  overflow-y: auto;
 }
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.45); }
 
 .nav-item {
   display: flex;
@@ -336,10 +371,10 @@
   color: #1a5c38;
 }
 
-.stat-icon-blue  { background: #e8f0fe; color: #1a56db; }
-.stat-icon-orange { background: #fff3e0; color: #e67e22; }
-.stat-icon-green  { background: #e8f5e9; color: #27ae60; }
-.stat-icon-purple { background: #f3e8fd; color: #8e44ad; }
+.stat-icon-blue   { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 6px 16px rgba(102,126,234,0.42); }
+.stat-icon-orange { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); color: white; box-shadow: 0 6px 16px rgba(247,151,30,0.40); }
+.stat-icon-green  { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; box-shadow: 0 6px 16px rgba(17,153,142,0.40); }
+.stat-icon-purple { background: linear-gradient(135deg, #c471ed 0%, #12c2e9 100%); color: white; box-shadow: 0 6px 16px rgba(196,113,237,0.42); }
 
 .stat-value {
   display: block;
@@ -397,7 +432,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
   transition: box-shadow 0.25s, transform 0.25s;
+}
+.chart-card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #27ae60 0%, #2ecc71 50%, #1abc9c 100%);
 }
 
 .chart-card:hover {
@@ -518,12 +561,18 @@
 .action-card:hover {
   border-color: #2ecc71;
   background: #e8f5ee;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(39,174,96,0.18);
 }
 
 .action-icon {
   font-size: 24px;
   color: #1a5c38;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-block;
+}
+.action-card:hover .action-icon {
+  transform: scale(1.28) rotate(-10deg);
 }
 
 .section-toolbar {
@@ -567,8 +616,15 @@
   border-bottom: none;
 }
 
+.data-table tbody tr td:first-child {
+  border-left: 3px solid transparent;
+  transition: border-color 0.2s ease;
+}
+.data-table tbody tr:hover td:first-child {
+  border-left-color: #27ae60;
+}
 .data-table tbody tr:hover {
-  background: #f8fdfb;
+  background: #f0faf4;
 }
 
 .td-desc {

@@ -1,6 +1,11 @@
 <div class="dashboard">
 
   <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
+    <div class="sb-bubble sb-b1"></div>
+    <div class="sb-bubble sb-b2"></div>
+    <div class="sb-bubble sb-b3"></div>
+    <div class="sb-bubble sb-b4"></div>
+    <div class="sb-bubble sb-b5"></div>
     <div class="sidebar-header">
       <div class="logo-wrapper">
         <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="sidebar-logo" *ngIf="!sidebarCollapsed">
@@ -355,45 +360,22 @@
         </div>
       </div>
 
-      <!-- Regular gestionnaire: AI recommendations -->
+      <!-- Regular gestionnaire: read-only catalog view -->
       <div *ngIf="!canManageAll()">
-        <div class="offres-grid">
-          <div class="offre-card" *ngFor="let offre of offresIA">
-            <div class="offre-header">
-              <div class="offre-client">
-                <span class="client-avatar">{{ offre.client?.mail?.[0]?.toUpperCase() || 'C' }}</span>
-                <div>
-                  <p class="client-name">{{ offre.client?.mail }}</p>
-                  <p class="client-date">{{ offre.dateCreation | date:'dd/MM/yyyy' }}</p>
-                </div>
+        <div class="offres-catalog-grid">
+          <div class="offre-catalog-card" *ngFor="let o of offres">
+            <div class="offre-catalog-body">
+              <div class="offre-catalog-title"><i class="bi bi-gift"></i> {{ o.title }}</div>
+              <div class="offre-catalog-desc">{{ o.description }}</div>
+              <div class="offre-catalog-meta">
+                <span class="offre-badge-cat">{{ o.categorie || 'GENERAL' }}</span>
+                <span class="offre-badge-range">{{ o.scoreMin }}–{{ o.scoreMax }}/100</span>
+                <span class="offre-badge-active" [class.inactive]="!o.active">{{ o.active ? 'Active' : 'Inactive' }}</span>
               </div>
-              <span class="badge badge-published" *ngIf="offre.statut === 'ACCEPTE'">Accepté</span>
-              <span class="badge badge-danger" *ngIf="offre.statut === 'REJETE'">Rejeté</span>
-              <span class="badge badge-pending" *ngIf="offre.statut === 'EN_ATTENTE'">En attente</span>
-            </div>
-            <div class="offre-body">
-              <p class="offre-label"><i class="bi bi-cpu"></i> Recommandation IA :</p>
-              <p class="offre-text">{{ offre.recommandationIA || offre.description }}</p>
-            </div>
-            <div class="offre-actions" *ngIf="offre.statut === 'EN_ATTENTE'">
-              <button class="btn-success" (click)="accepterOffre(offre)"><i class="bi bi-check2-circle"></i> Accepter</button>
-              <button class="btn-danger" (click)="rejeterOffre(offre)"><i class="bi bi-x-circle"></i> Rejeter et faire ma propre offre</button>
-            </div>
-            <div class="offre-manuelle" *ngIf="offre.showManualForm">
-              <p class="offre-label"><i class="bi bi-pencil-square"></i> Votre offre personnalisée :</p>
-              <textarea [(ngModel)]="offre.offreManuelle" placeholder="Décrivez votre offre..." rows="4"></textarea>
-              <div class="form-actions">
-                <button class="btn-outline" (click)="offre.showManualForm = false">Annuler</button>
-                <button class="btn-primary" (click)="soumettreOffreManuelle(offre)">Soumettre</button>
-              </div>
-            </div>
-            <div class="offre-manuelle-result" *ngIf="offre.statut === 'REJETE' && offre.offreManuelle && !offre.showManualForm">
-              <p class="offre-label"><i class="bi bi-pencil-square"></i> Votre offre :</p>
-              <p class="offre-text">{{ offre.offreManuelle }}</p>
             </div>
           </div>
-          <div class="empty-state" *ngIf="offresIA.length === 0">
-            <i class="bi bi-cpu"></i><p>Aucune recommandation IA disponible</p>
+          <div class="empty-state" *ngIf="offres.length === 0">
+            <i class="bi bi-gift"></i><p>Aucune offre disponible</p>
           </div>
         </div>
       </div>

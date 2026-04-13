@@ -80,10 +80,33 @@ tbody tr:nth-child(10) { animation-delay: 0.40s; }
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Buttons */
+/* ─── Buttons + ripple effect ────────────────────────────── */
+@keyframes rippleBtn {
+  from { transform: scale(0); opacity: 1; }
+  to   { transform: scale(5); opacity: 0; }
+}
 button {
+  position: relative;
+  overflow: hidden;
   transition: transform 0.12s ease, background-color 0.2s ease,
               box-shadow 0.2s ease, opacity 0.2s ease !important;
+}
+button::after {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.22);
+  transform: scale(0);
+  left: 50%; top: 50%;
+  margin-left: -60px;
+  margin-top: -60px;
+  pointer-events: none;
+  z-index: 10;
+}
+button:active:not(:disabled)::after {
+  animation: rippleBtn 0.55s ease-out forwards;
 }
 button:active:not(:disabled) {
   transform: scale(0.96) !important;
