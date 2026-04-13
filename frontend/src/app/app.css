@@ -1,0 +1,126 @@
+/* ─── Keyframes ─────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.88) translateY(14px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-14px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+
+/* ─── Page sections — fade in when *ngIf shows them ─────── */
+.content-section {
+  animation: fadeInUp 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ─── Modals ─────────────────────────────────────────────── */
+.modal-overlay {
+  animation: fadeIn 0.22s ease both;
+}
+.modal {
+  animation: modalPop 0.32s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* ─── Login / forgot-password card ───────────────────────── */
+.login-card,
+.forgot-password .card {
+  animation: fadeInUp 0.48s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ─── Notification panel ─────────────────────────────────── */
+.notif-panel {
+  animation: slideDown 0.28s ease both;
+}
+
+/* ─── Stat / chart cards stagger ────────────────────────── */
+.stats-grid .stat-card,
+.charts-grid .chart-card,
+.quick-actions .action-card,
+.quick-actions .admin-action-card {
+  animation: fadeInUp 0.38s ease both;
+}
+.stats-grid .stat-card:nth-child(1),
+.charts-grid .chart-card:nth-child(1),
+.quick-actions .action-card:nth-child(1)  { animation-delay: 0.05s; }
+.stats-grid .stat-card:nth-child(2),
+.charts-grid .chart-card:nth-child(2),
+.quick-actions .action-card:nth-child(2)  { animation-delay: 0.12s; }
+.stats-grid .stat-card:nth-child(3),
+.charts-grid .chart-card:nth-child(3),
+.quick-actions .action-card:nth-child(3)  { animation-delay: 0.19s; }
+.stats-grid .stat-card:nth-child(4),
+.charts-grid .chart-card:nth-child(4),
+.quick-actions .action-card:nth-child(4)  { animation-delay: 0.26s; }
+
+/* ─── Table row stagger ──────────────────────────────────── */
+tbody tr {
+  animation: fadeInUp 0.28s ease both;
+}
+tbody tr:nth-child(1)  { animation-delay: 0.04s; }
+tbody tr:nth-child(2)  { animation-delay: 0.08s; }
+tbody tr:nth-child(3)  { animation-delay: 0.12s; }
+tbody tr:nth-child(4)  { animation-delay: 0.16s; }
+tbody tr:nth-child(5)  { animation-delay: 0.20s; }
+tbody tr:nth-child(6)  { animation-delay: 0.24s; }
+tbody tr:nth-child(7)  { animation-delay: 0.28s; }
+tbody tr:nth-child(8)  { animation-delay: 0.32s; }
+tbody tr:nth-child(9)  { animation-delay: 0.36s; }
+tbody tr:nth-child(10) { animation-delay: 0.40s; }
+
+/* ─── Global smooth transitions ─────────────────────────── */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Buttons */
+button {
+  transition: transform 0.12s ease, background-color 0.2s ease,
+              box-shadow 0.2s ease, opacity 0.2s ease !important;
+}
+button:active:not(:disabled) {
+  transform: scale(0.96) !important;
+}
+
+/* Table rows highlight */
+tr {
+  transition: background-color 0.18s ease !important;
+}
+
+/* Cards lift on hover */
+.stat-card, .chart-card, .action-card, .admin-action-card, .offre-catalog-card {
+  transition: transform 0.22s ease, box-shadow 0.22s ease !important;
+}
+.stat-card:hover, .chart-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 10px 32px rgba(39,174,96,0.18) !important;
+}
+.action-card:hover, .admin-action-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 10px 28px rgba(39,174,96,0.16) !important;
+}
+
+/* Nav items */
+.nav-item {
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease !important;
+}
+.nav-item:hover {
+  transform: translateX(4px) !important;
+}
+
+/* Inputs */
+input, select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+/* Badge */
+.badge {
+  transition: transform 0.15s ease !important;
+}

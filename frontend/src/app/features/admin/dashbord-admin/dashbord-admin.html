@@ -3,13 +3,13 @@
     <div class="sidebar-header">
       <div class="logo-wrapper">
         <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="sidebar-logo" *ngIf="!sidebarCollapsed">
-        <span class="logo-icon" *ngIf="sidebarCollapsed">⭐</span>
+        <span class="logo-icon" *ngIf="sidebarCollapsed">A</span>
       </div>
-      <button class="collapse-btn" (click)="toggleSidebar()">☰</button>
+      <button class="collapse-btn" (click)="toggleSidebar()"><i class="bi bi-list"></i></button>
     </div>
 
     <div class="user-info">
-      <div class="avatar">👨‍💼</div>
+      <div class="avatar">AD</div>
       <div class="user-details">
         <span class="user-name">Administrateur</span>
         <span class="user-role">Admin</span>
@@ -17,34 +17,38 @@
     </div>
 
     <nav class="sidebar-nav">
-      <button class="nav-item" [class.active]="activeTab === 'gestionnaires'" (click)="activeTab = 'gestionnaires'">
-        <span class="nav-icon">👤</span>
+      <button class="nav-item" [class.active]="activeTab === 'home'" (click)="setTab('home')">
+        <span class="nav-icon"><i class="bi bi-house-door-fill"></i></span>
+        <span class="nav-label">Accueil</span>
+      </button>
+      <button class="nav-item" [class.active]="activeTab === 'gestionnaires'" (click)="setTab('gestionnaires')">
+        <span class="nav-icon"><i class="bi bi-people"></i></span>
         <span class="nav-label">Gestionnaires</span>
       </button>
-      <button class="nav-item" [class.active]="activeTab === 'questionnaires'" (click)="activeTab = 'questionnaires'">
-        <span class="nav-icon">📋</span>
+      <button class="nav-item" [class.active]="activeTab === 'questionnaires'" (click)="setTab('questionnaires')">
+        <span class="nav-icon"><i class="bi bi-clipboard-check"></i></span>
         <span class="nav-label">Questionnaires</span>
       </button>
-      <button class="nav-item" [class.active]="activeTab === 'reponses'" (click)="activeTab = 'reponses'">
-        <span class="nav-icon">💬</span>
+      <button class="nav-item" [class.active]="activeTab === 'reponses'" (click)="setTab('reponses')">
+        <span class="nav-icon"><i class="bi bi-chat-left-dots"></i></span>
         <span class="nav-label">Réponses</span>
       </button>
-      <button class="nav-item" [class.active]="activeTab === 'offres'" (click)="activeTab = 'offres'">
-        <span class="nav-icon">🎁</span>
+      <button class="nav-item" [class.active]="activeTab === 'offres'" (click)="setTab('offres')">
+        <span class="nav-icon"><i class="bi bi-gift"></i></span>
         <span class="nav-label">Offres</span>
       </button>
-      <button class="nav-item" [class.active]="activeTab === 'roles'" (click)="activeTab = 'roles'">
-        <span class="nav-icon">🔑</span>
+      <button class="nav-item" [class.active]="activeTab === 'roles'" (click)="setTab('roles')">
+        <span class="nav-icon"><i class="bi bi-key"></i></span>
         <span class="nav-label">Rôles</span>
       </button>
-      <button class="nav-item" [class.active]="activeTab === 'permissions'" (click)="activeTab = 'permissions'">
-        <span class="nav-icon">🛡️</span>
+      <button class="nav-item" [class.active]="activeTab === 'permissions'" (click)="setTab('permissions')">
+        <span class="nav-icon"><i class="bi bi-shield-check"></i></span>
         <span class="nav-label">Permissions</span>
       </button>
     </nav>
 
     <button class="logout-btn" (click)="logout()">
-      <span class="nav-icon">🚪</span>
+      <span class="nav-icon"><i class="bi bi-box-arrow-right"></i></span>
       <span class="nav-label">Déconnexion</span>
     </button>
   </aside>
@@ -53,6 +57,7 @@
     <header class="topbar">
       <div class="topbar-left">
         <h2 class="section-title">
+          <span *ngIf="activeTab === 'home'">Tableau de bord</span>
           <span *ngIf="activeTab === 'gestionnaires'">Gestionnaires</span>
           <span *ngIf="activeTab === 'questionnaires'">Questionnaires</span>
           <span *ngIf="activeTab === 'reponses'">Réponses Clients</span>
@@ -63,7 +68,7 @@
       </div>
       <div class="topbar-right">
         <div class="notif-icon" (click)="toggleNotifPanel()">
-          <span class="bell">🔔</span>
+          <i class="bi bi-bell-fill"></i>
           <span class="notif-badge" *ngIf="unreadNotifCount > 0">{{ unreadNotifCount }}</span>
         </div>
         <span class="date-badge">{{ today | date:'dd MMM yyyy' }}</span>
@@ -71,53 +76,195 @@
     </header>
 
     <div class="content-section">
-      <div *ngIf="isLoading" class="loading-container">
-        <div class="spinner"></div>
-        <p>Chargement des données...</p>
+      <!-- Skeleton loading -->
+      <div *ngIf="isLoading" class="skeleton-wrapper" style="padding: 28px;">
+        <div class="skeleton-stats-row">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+        <div class="skeleton-title-bar"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
       </div>
 
-      <div *ngIf="!isLoading">
+      <!-- ── HOME ── -->
+      <div *ngIf="!isLoading && activeTab === 'home'" class="content-section">
+
+        <!-- Stats -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon">👤</div>
+            <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
+            <div>
+              <div class="stat-value">{{ displayGestCount }}</div>
+              <div class="stat-label">Gestionnaires</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
+            <div>
+              <div class="stat-value">{{ displayQuestCount }}</div>
+              <div class="stat-label">Questionnaires</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+            <div>
+              <div class="stat-value">{{ displayRepCount }}</div>
+              <div class="stat-label">Réponses</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
+            <div>
+              <div class="stat-value">{{ displayOffresCount }}</div>
+              <div class="stat-label">Offres</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="admin-quick-actions">
+          <h3 class="admin-quick-title">Actions rapides</h3>
+          <div class="admin-actions-grid">
+            <button class="admin-action-card" (click)="setTab('gestionnaires'); openaddgestionnaire()">
+              <div class="admin-action-icon"><i class="bi bi-person-plus"></i></div>
+              <span>Ajouter un gestionnaire</span>
+            </button>
+            <button class="admin-action-card" (click)="setTab('questionnaires')">
+              <div class="admin-action-icon"><i class="bi bi-clipboard-check"></i></div>
+              <span>Voir questionnaires</span>
+            </button>
+            <button class="admin-action-card" (click)="setTab('offres'); openaddoffre()">
+              <div class="admin-action-icon"><i class="bi bi-gift"></i></div>
+              <span>Ajouter une offre</span>
+            </button>
+            <button class="admin-action-card" (click)="setTab('roles')">
+              <div class="admin-action-icon"><i class="bi bi-key"></i></div>
+              <span>Gérer les rôles</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-section">
+          <div class="charts-section-header">
+            <h3 class="charts-section-title"><i class="bi bi-bar-chart-line"></i> Analyse globale</h3>
+          </div>
+          <div class="charts-grid">
+
+            <!-- Statut questionnaires -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-card-icon"><i class="bi bi-pie-chart"></i></div>
+                <div class="chart-card-meta">
+                  <h4 class="chart-card-title">Statut des questionnaires</h4>
+                  <span class="chart-card-sub">Répartition par statut</span>
+                </div>
+              </div>
+              <div class="chart-card-body">
+                <canvas id="adminStatutChart"></canvas>
+              </div>
+              <div class="chart-card-empty" *ngIf="questionnaires.length === 0">
+                <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+              </div>
+            </div>
+
+            <!-- Réponses par questionnaire -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-card-icon"><i class="bi bi-chat-left-dots"></i></div>
+                <div class="chart-card-meta">
+                  <h4 class="chart-card-title">Réponses par questionnaire</h4>
+                  <span class="chart-card-sub">Nombre de clients ayant répondu</span>
+                </div>
+              </div>
+              <div class="chart-card-body">
+                <canvas id="adminReponsesChart"></canvas>
+              </div>
+              <div class="chart-card-empty" *ngIf="responses.length === 0">
+                <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+              </div>
+            </div>
+
+            <!-- Gestionnaires par rôle -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-card-icon"><i class="bi bi-people"></i></div>
+                <div class="chart-card-meta">
+                  <h4 class="chart-card-title">Gestionnaires par rôle</h4>
+                  <span class="chart-card-sub">Répartition des équipes</span>
+                </div>
+              </div>
+              <div class="chart-card-body">
+                <canvas id="adminRolesChart"></canvas>
+              </div>
+              <div class="chart-card-empty" *ngIf="gestionnaire.length === 0">
+                <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+              </div>
+            </div>
+
+            <!-- Offres par catégorie -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-card-icon"><i class="bi bi-gift"></i></div>
+                <div class="chart-card-meta">
+                  <h4 class="chart-card-title">Offres par catégorie</h4>
+                  <span class="chart-card-sub">Catalogue des offres</span>
+                </div>
+              </div>
+              <div class="chart-card-body">
+                <canvas id="adminOffresChart"></canvas>
+              </div>
+              <div class="chart-card-empty" *ngIf="offres.length === 0">
+                <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ── OTHER TABS ── -->
+      <div *ngIf="!isLoading && activeTab !== 'home'" class="content-section">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
             <div>
               <div class="stat-value">{{ gestionnaire.length }}</div>
               <div class="stat-label">Gestionnaires</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">📋</div>
+            <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
             <div>
               <div class="stat-value">{{ questionnaires.length }}</div>
               <div class="stat-label">Questionnaires</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">💬</div>
+            <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
             <div>
               <div class="stat-value">{{ totalReponsesCount }}</div>
               <div class="stat-label">Réponses</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">🎁</div>
+            <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
             <div>
               <div class="stat-value">{{ offres.length }}</div>
               <div class="stat-label">Offres</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">⏳</div>
-            <div>
-              <div class="stat-value">{{ unconfirmedCount }}</div>
-              <div class="stat-label">En attente</div>
             </div>
           </div>
         </div>
 
         <div *ngIf="activeTab === 'gestionnaires'" class="table-wrapper">
           <div class="section-toolbar" style="margin-bottom: 16px;">
-            <button class="btn-primary" (click)="openaddgestionnaire()">+ Ajouter</button>
+            <button class="btn-primary" (click)="openaddgestionnaire()"><i class="bi bi-plus-lg"></i> Ajouter</button>
           </div>
           <table class="data-table">
             <thead>
@@ -129,8 +276,8 @@
                 <td>{{ g.email }}</td>
                 <td><span class="role-chip">{{ g.role?.name || '—' }}</span></td>
                 <td class="actions-cell">
-                  <button class="btn-icon btn-edit" (click)="openeditgestionnaire(g)">✏️</button>
-                  <button class="btn-icon btn-delete" (click)="deletegestionnaire(g.id)">🗑️</button>
+                  <button class="btn-icon btn-edit" (click)="openeditgestionnaire(g)"><i class="bi bi-pencil"></i></button>
+                  <button class="btn-icon btn-delete" (click)="deletegestionnaire(g.id)"><i class="bi bi-trash"></i></button>
                 </td>
               </tr>
               <tr *ngIf="gestionnaire.length === 0">
@@ -151,16 +298,13 @@
                 <td>{{ q.gestionnaire?.fullName || 'Admin' }}</td>
                 <td>{{ q.questions?.length || 0 }}</td>
                 <td>
-                  <span class="badge" 
-                        [ngClass]="q.statut === 'REJETE' ? 'badge-danger' : (q.confirmed ? 'badge-confirmed' : (q.statut === 'EN_ATTENTE' ? 'badge-pending' : 'badge-brouillon'))">
-                    {{ q.statut === 'REJETE' ? 'Rejeté' : (q.confirmed ? 'Approuvé' : (q.statut === 'EN_ATTENTE' ? 'En attente' : 'Brouillon')) }}
-                  </span>
-                  <span *ngIf="q.statut === 'REJETE' && q.raisonRejet" class="rejet-reason" title="{{ q.raisonRejet }}">
-                    ⚠️ {{ q.raisonRejet.length > 20 ? (q.raisonRejet | slice:0:20) + '...' : q.raisonRejet }}
+                  <span class="badge" [ngClass]="getBadgeClass(q)">{{ getStatutLabel(q) }}</span>
+                  <span *ngIf="(q.statut || '').toUpperCase() === 'REJETE' && q.raisonRejet" class="rejet-reason" title="{{ q.raisonRejet }}">
+                    <i class="bi bi-exclamation-triangle"></i> {{ q.raisonRejet.length > 20 ? (q.raisonRejet | slice:0:20) + '...' : q.raisonRejet }}
                   </span>
                 </td>
                 <td class="actions-cell">
-                  <button class="btn-icon btn-view" (click)="opendetailsquestionnaire(q)" title="Voir">👁️</button>
+                  <button class="btn-icon btn-view" (click)="opendetailsquestionnaire(q)" title="Voir"><i class="bi bi-eye"></i></button>
                 </td>
               </tr>
               <tr *ngIf="questionnaires.length === 0">
@@ -179,14 +323,25 @@
               <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
             </select>
             <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="adminReponses.length > 0">
-              ⬇️ Exporter CSV
+              <i class="bi bi-download"></i> Exporter CSV
             </button>
           </div>
 
           <!-- Summary bar -->
           <div class="reponses-summary" *ngIf="adminReponses.length > 0">
-            <span class="summary-chip">👥 <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
-            <span class="summary-chip">💬 <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
+            <span class="summary-chip"><i class="bi bi-people"></i> <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
+            <span class="summary-chip"><i class="bi bi-chat-dots"></i> <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
+          </div>
+
+          <!-- Participation chart -->
+          <div class="reponses-chart-card" *ngIf="adminReponses.length > 0">
+            <div class="reponses-chart-header">
+              <i class="bi bi-bar-chart-line"></i>
+              <span>Participation au questionnaire</span>
+            </div>
+            <div class="reponses-chart-body">
+              <canvas id="adminParticipationChart"></canvas>
+            </div>
           </div>
 
           <!-- Clients table -->
@@ -213,7 +368,7 @@
                   <td>{{ entry.client?.tel || '—' }}</td>
                   <td><span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span></td>
                   <td>
-                    <button class="btn-voir" (click)="voirReponsesClient(entry)">👁 Voir</button>
+                    <button class="btn-voir" (click)="voirReponsesClient(entry)"><i class="bi bi-eye"></i> Voir</button>
                   </td>
                 </tr>
               </tbody>
@@ -221,37 +376,37 @@
           </div>
 
           <div class="empty-state" *ngIf="adminReponses.length === 0 && selectedQuestionnaireId !== ''">
-            <span>💬</span><p>Aucune réponse reçue pour ce questionnaire</p>
+            <i class="bi bi-chat-left-dots"></i><p>Aucune réponse reçue pour ce questionnaire</p>
           </div>
           <div class="empty-state" *ngIf="selectedQuestionnaireId === ''">
-            <span>📋</span><p>Sélectionnez un questionnaire pour voir les réponses</p>
+            <i class="bi bi-clipboard"></i><p>Sélectionnez un questionnaire pour voir les réponses</p>
           </div>
         </div>
 
         <div *ngIf="activeTab === 'offres'">
           <div class="section-toolbar" style="margin-bottom: 18px;">
-            <button class="btn-primary" (click)="openaddoffre()">+ Ajouter une offre</button>
+            <button class="btn-primary" (click)="openaddoffre()"><i class="bi bi-plus-lg"></i> Ajouter une offre</button>
           </div>
           <div class="offres-catalog-grid">
             <div class="offre-catalog-card" *ngFor="let o of offres">
               <div class="offre-catalog-body">
-                <div class="offre-catalog-title">🎁 {{ o.title }}</div>
+                <div class="offre-catalog-title"><i class="bi bi-gift"></i> {{ o.title }}</div>
                 <div class="offre-catalog-desc">{{ o.description }}</div>
               </div>
               <div class="offre-catalog-actions">
-                <button class="btn-icon btn-edit" title="Modifier" (click)="openeditoffre(o)">✏️</button>
-                <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteoffre(o.id)">🗑️</button>
+                <button class="btn-icon btn-edit" title="Modifier" (click)="openeditoffre(o)"><i class="bi bi-pencil"></i></button>
+                <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteoffre(o.id)"><i class="bi bi-trash"></i></button>
               </div>
             </div>
             <div class="empty-state" *ngIf="offres.length === 0">
-              <span>🎁</span><p>Aucune offre disponible</p>
+              <i class="bi bi-gift"></i><p>Aucune offre disponible</p>
             </div>
           </div>
         </div>
 
         <div *ngIf="activeTab === 'roles'" class="table-wrapper">
           <div class="section-toolbar" style="margin-bottom: 16px;">
-            <button class="btn-primary" (click)="openaddrole()">+ Ajouter rôle</button>
+            <button class="btn-primary" (click)="openaddrole()"><i class="bi bi-plus-lg"></i> Ajouter rôle</button>
           </div>
           <table class="data-table">
             <thead>
@@ -262,8 +417,8 @@
                 <td>{{ r.name }}</td>
                 <td>{{ r.permission?.description || r.permissions?.description || '—' }}</td>
                 <td class="actions-cell">
-                  <button class="btn-icon btn-edit" (click)="openeditrole(r)">✏️</button>
-                  <button class="btn-icon btn-delete" (click)="deleterole(r.id)">🗑️</button>
+                  <button class="btn-icon btn-edit" (click)="openeditrole(r)"><i class="bi bi-pencil"></i></button>
+                  <button class="btn-icon btn-delete" (click)="deleterole(r.id)"><i class="bi bi-trash"></i></button>
                 </td>
               </tr>
               <tr *ngIf="roles.length === 0">
@@ -275,7 +430,7 @@
 
         <div *ngIf="activeTab === 'permissions'" class="table-wrapper">
           <div class="section-toolbar" style="margin-bottom: 16px;">
-            <button class="btn-primary" (click)="openaddpermission()">+ Ajouter permission</button>
+            <button class="btn-primary" (click)="openaddpermission()"><i class="bi bi-plus-lg"></i> Ajouter permission</button>
           </div>
           <table class="data-table">
             <thead>
@@ -285,8 +440,8 @@
                 <td>{{ p.id }}</td>
                 <td>{{ p.description }}</td>
                 <td class="actions-cell">
-                  <button class="btn-icon btn-edit" (click)="openeditpermission(p)">✏️</button>
-                  <button class="btn-icon btn-delete" (click)="deletepermission(p.id)">🗑️</button>
+                  <button class="btn-icon btn-edit" (click)="openeditpermission(p)"><i class="bi bi-pencil"></i></button>
+                  <button class="btn-icon btn-delete" (click)="deletepermission(p.id)"><i class="bi bi-trash"></i></button>
                 </td>
               </tr>
               <tr *ngIf="permissions.length === 0">
@@ -295,7 +450,8 @@
             </tbody>
           </table>
         </div>
-      </div>
+      </div><!-- end activeTab !== home -->
+
     </div>
   </main>
 </div>
@@ -303,7 +459,7 @@
 <div class="modal-overlay" *ngIf="showgestform" (click)="showgestform=false">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ editinggest ? '✏️ Modifier Gestionnaire' : '👤 Ajouter Gestionnaire' }}</h2>
+      <h2>{{ editinggest ? 'Modifier Gestionnaire' : 'Ajouter Gestionnaire' }}</h2>
       <button class="btn-close" (click)="showgestform=false">✕</button>
     </div>
     <label>Nom Complet <span style="color:red">*</span></label>
@@ -332,7 +488,7 @@
 <div class="modal-overlay" *ngIf="showoffreform" (click)="showoffreform=false">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ editingoffre ? '✏️ Modifier Offre' : '🎁 Ajouter Offre' }}</h2>
+      <h2>{{ editingoffre ? 'Modifier Offre' : 'Ajouter Offre' }}</h2>
       <button class="btn-close" (click)="showoffreform=false">✕</button>
     </div>
     <label>Titre <span style="color:red">*</span></label>
@@ -372,7 +528,7 @@
 <div class="modal-overlay" *ngIf="showroleform" (click)="showroleform=false">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ editingrole ? '✏️ Modifier Rôle' : '🔑 Ajouter Rôle' }}</h2>
+      <h2>{{ editingrole ? 'Modifier Rôle' : 'Ajouter Rôle' }}</h2>
       <button class="btn-close" (click)="showroleform=false">✕</button>
     </div>
     <label>Nom du rôle</label>
@@ -392,7 +548,7 @@
 <div class="modal-overlay" *ngIf="showpermissionform" (click)="showpermissionform=false">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ editingpermission ? '✏️ Modifier Permission' : '🛡️ Ajouter Permission' }}</h2>
+      <h2>{{ editingpermission ? 'Modifier Permission' : 'Ajouter Permission' }}</h2>
       <button class="btn-close" (click)="showpermissionform=false">✕</button>
     </div>
     <label>Nom de la permission</label>
@@ -407,7 +563,7 @@
 <div class="modal-overlay" *ngIf="showdetailsform" (click)="showdetailsform=false">
   <div class="modal modal-large" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>👁️ {{ detailsquest?.titre }}</h2>
+      <h2><i class="bi bi-eye"></i> {{ detailsquest?.titre }}</h2>
       <button class="btn-close" (click)="showdetailsform=false">✕</button>
     </div>
     <div style="margin-bottom:12px">
@@ -420,7 +576,7 @@
       </span>
     </div>
     <div *ngIf="detailsquest?.statut === 'REJETE' && detailsquest?.raisonRejet" style="margin-bottom:12px; color:#e74c3c; font-size:13px">
-      ⚠️ Raison du rejet : {{ detailsquest.raisonRejet }}
+      <i class="bi bi-exclamation-triangle"></i> Raison du rejet : {{ detailsquest.raisonRejet }}
     </div>
     <div *ngIf="detailsquest?.description" style="margin-bottom:12px; color:#555">{{ detailsquest.description }}</div>
     <div class="section-title">Questions</div>
@@ -439,7 +595,7 @@
 <div class="modal-overlay" *ngIf="showsendoffreform" (click)="showsendoffreform=false">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>🎁 Envoyer une Offre</h2>
+      <h2>Envoyer une Offre</h2>
       <button class="btn-close" (click)="showsendoffreform=false">✕</button>
     </div>
     <div class="reponse-info">
@@ -457,7 +613,7 @@
     </button>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showsendoffreform=false">Annuler</button>
-      <button class="btn-save" [disabled]="!selectedoffreid" (click)="sendoffre()">📤 Envoyer</button>
+      <button class="btn-save" [disabled]="!selectedoffreid" (click)="sendoffre()"><i class="bi bi-send"></i> Envoyer</button>
     </div>
   </div>
 </div>
@@ -465,7 +621,7 @@
 <div class="notif-overlay" *ngIf="showNotifPanel" (click)="showNotifPanel=false"></div>
 <div class="notif-panel" *ngIf="showNotifPanel">
   <div class="notif-panel-header">
-    <span>🔔 Notifications</span>
+    <span><i class="bi bi-bell-fill"></i> Notifications</span>
     <button class="notif-close-btn" (click)="showNotifPanel=false">✕</button>
   </div>
   <div class="notif-list">
@@ -488,8 +644,8 @@
         <div>
           <h2>{{ selectedClientData?.fullName || 'Client' }}</h2>
           <div class="client-modal-meta">
-            <span *ngIf="selectedClientData?.mail">📧 {{ selectedClientData.mail }}</span>
-            <span *ngIf="selectedClientData?.tel">📞 {{ selectedClientData.tel }}</span>
+            <span *ngIf="selectedClientData?.mail"><i class="bi bi-envelope"></i> {{ selectedClientData.mail }}</span>
+            <span *ngIf="selectedClientData?.tel"><i class="bi bi-telephone"></i> {{ selectedClientData.tel }}</span>
           </div>
         </div>
       </div>
@@ -506,13 +662,12 @@
           <div class="reponse-qa-answer">{{ r.reponse || '—' }}</div>
         </div>
         <div class="qa-actions">
-          <button class="btn-icon btn-confirm" title="Envoyer une offre" (click)="opensendoffres(r)">🎁</button>
-          <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteReponseFromModal(r.id)">🗑️</button>
+          <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteReponseFromModal(r.id)"><i class="bi bi-trash"></i></button>
         </div>
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn-close-modal" (click)="showClientReponsesModal=false">✕ Fermer</button>
+      <button class="btn-close-modal" (click)="showClientReponsesModal=false">Fermer</button>
     </div>
   </div>
 </div>

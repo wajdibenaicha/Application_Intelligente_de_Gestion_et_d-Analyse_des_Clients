@@ -9,7 +9,7 @@ import { Router, RouterLink } from '@angular/router';
   standalone: true,
   imports: [FormsModule, CommonModule, RouterLink],
   templateUrl: './login.html',
-  styleUrl: './login.css'
+  styleUrl: './login.css',
 })
 export class Login {
   full_name: string = '';

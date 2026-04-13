@@ -273,6 +273,9 @@ textarea:focus {
   margin-bottom: 16px;
 }
 
+.state-icon-success { color: #16a34a; }
+.state-icon-error   { color: #dc2626; }
+
 .state-card h2 {
   font-size: 1.4rem;
   font-weight: 700;

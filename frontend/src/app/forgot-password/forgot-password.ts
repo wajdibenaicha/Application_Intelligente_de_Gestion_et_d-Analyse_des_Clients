@@ -9,7 +9,7 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [FormsModule, CommonModule, RouterLink],
   templateUrl: './forgot-password.html',
-  styleUrl: './forgot-password.css'
+  styleUrl: './forgot-password.css',
 })
 export class ForgotPassword {
 

@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { WebSocketService } from './services/websocket.service';
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
@@ -13,5 +14,5 @@ export class App {
 
   ngOnInit() {
     this.wsService.connect();
-}
+  }
 }

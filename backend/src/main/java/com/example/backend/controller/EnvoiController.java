@@ -3,6 +3,9 @@ package com.example.backend.controller;
 import java.util.List;
 import java.util.Map;
 
+import com.example.backend.Repository.EnvoiQuestionnaireRepository;
+import com.example.backend.models.EnvoiQuestionnaire;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -28,6 +31,7 @@ public class EnvoiController {
     @Autowired private EnvoiService envoiService;
     @Autowired private QuestionnaireDistributionService distributionService;
     @Autowired private QuestionnaireService questionnaireService;
+    @Autowired private EnvoiQuestionnaireRepository envoiRepo;
 
     // Flow A: filter clients for the sharing modal
     @GetMapping("/clients")
@@ -56,6 +60,15 @@ public class EnvoiController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(q);
+    }
+
+    // Stats: how many clients were sent this questionnaire vs how many responded
+    @GetMapping("/stats")
+    public Map<String, Long> stats(@RequestParam Long questionnaireId) {
+        List<EnvoiQuestionnaire> envois = envoiRepo.findByQuestionnaireId(questionnaireId);
+        long sent = envois.size();
+        long repondu = envois.stream().filter(EnvoiQuestionnaire::isRepondu).count();
+        return Map.of("sent", sent, "repondu", repondu);
     }
 
     // Flow B: send email/SMS directly → client receives /fill-questionnaire?token=

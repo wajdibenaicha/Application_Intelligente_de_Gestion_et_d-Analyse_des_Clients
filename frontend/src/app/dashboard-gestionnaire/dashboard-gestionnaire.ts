@@ -3,6 +3,9 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import Chart from 'chart.js/auto';
+import { ViewChild, ElementRef } from '@angular/core';
+
 
 import { WebSocketService } from '../services/websocket.service';
 import { Api } from '../services/api';
@@ -20,7 +23,7 @@ export class DashboardGestionnaire implements OnInit {
 
   activeSection = 'home';
   sidebarCollapsed = false;
-  isLoading = false;
+  isLoading = true;
   showToast = false;
   toastMessage = '';
   toastType = 'success';
@@ -89,18 +92,23 @@ export class DashboardGestionnaire implements OnInit {
     this.permission = this.gestionnaire?.role?.permission?.description || '';
 
     this.wsService.connect();
+
+    // Questionnaires changed → refresh stats + all charts (updateStats triggers renderAllCharts)
     this.wsService.questionnaires$.subscribe(data => {
       this.questionnaires = data.map(q => this.mapStatut(q));
       this.updateStats();
       this.cdr.detectChanges();
     });
+
     this.wsService.question$.subscribe(data => { this.questions = data; this.cdr.detectChanges(); });
 
+    // Recommendations changed → reload data + refresh charts (all users)
+    this.wsService.recommendations$.subscribe(() => {
+      this.loadRecommendations();
+      this.cdr.detectChanges();
+    });
+
     if (this.canManageAll()) {
-      this.wsService.recommendations$.subscribe(() => {
-        this.loadRecommendations();
-        this.cdr.detectChanges();
-      });
       this.wsService.adminNotifications$.subscribe(data => {
         const allowed = ['DEMANDE_PUBLICATION', 'TOUS_ONT_REPONDU'];
         const filtered = data.filter((n: any) => allowed.includes(n.type));
@@ -113,8 +121,13 @@ export class DashboardGestionnaire implements OnInit {
 
     this.loadQuestionnaires();
     this.loadOffresIA();
+    this.loadRecommendations();
     this.http.get<any[]>(this.apiUrl + '/questions').subscribe({
       next: (data) => { this.questions = data; },
+      error: () => {}
+    });
+    this.api.getClientsFiltres({}).subscribe({
+      next: (data) => { this.allClients = data; },
       error: () => {}
     });
   }
@@ -129,10 +142,19 @@ export class DashboardGestionnaire implements OnInit {
     if (section === 'reponses') {
       this.reponses = [];
       this.selectedQuestionnaireId = '';
-    }
-    if (section === 'reponses') {
       this.loadRecommendations();
     }
+    if (section === 'home') {
+      // Wait for Angular to re-insert the canvas elements (*ngIf recreates the DOM)
+      setTimeout(() => this.renderAllCharts(), 200);
+    }
+  }
+
+  private renderAllCharts() {
+    this.renderSentimentChart();
+    this.renderScoreChart();
+    this.renderStatutChart();
+    this.renderReponsesChart();
   }
 
   getSectionTitle() {
@@ -165,19 +187,230 @@ export class DashboardGestionnaire implements OnInit {
   private mapStatut(q: any): any {
     if (!q.statut || q.statut === '') {
       q.statut = q.confirmed === true ? 'PUBLIE' : 'BROUILLON';
+    } else {
+      q.statut = q.statut.toUpperCase().trim();
     }
     return q;
+  }
+
+  private sentimentChart: Chart | null = null;
+  private reponsesParQuestionChart: Chart | null = null;
+
+  private scoreChart: Chart | null = null;
+  private statutChart: Chart | null = null;
+  private reponsesChart: Chart | null = null;
+
+  private countUp(target: number, setter: (v: number) => void, duration = 1100) {
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setter(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(tick);
+      else { setter(target); this.cdr.detectChanges(); }
+    };
+    requestAnimationFrame(tick);
   }
 
   private updateStats() {
     const mine = this.canManageAll()
       ? this.questionnaires
       : this.questionnaires.filter(q => q.gestionnaire?.id === this.gestionnaire.id);
-    this.totalQuestionnaires = mine.length;
-    this.pendingCount = mine.filter(q => q.statut === 'EN_ATTENTE').length;
-    this.publishedCount = mine.filter(q => q.statut === 'PUBLIE').length;
+    const total     = mine.length;
+    const pending   = mine.filter(q => (q.statut||'').toUpperCase() === 'EN_ATTENTE').length;
+    const published = mine.filter(q => ['PUBLIE','APPROUVE'].includes((q.statut||'').toUpperCase())).length;
+    this.countUp(total,     v => { this.totalQuestionnaires = v; this.cdr.detectChanges(); });
+    this.countUp(pending,   v => { this.pendingCount        = v; this.cdr.detectChanges(); });
+    this.countUp(published, v => { this.publishedCount      = v; this.cdr.detectChanges(); });
     this.loadTotalReponses(mine.map(q => q.id));
+    if (this.activeSection === 'home') setTimeout(() => this.renderAllCharts(), 200);
   }
+
+  renderSentimentChart() {
+    const sentMap: any = { VERY_POSITIVE: 0, POSITIVE: 0, NEUTRAL: 0, NEGATIVE: 0, VERY_NEGATIVE: 0 };
+    for (const r of this.recommendations) {
+      const s = r.clientKpi?.sentiment;
+      if (s && sentMap[s] !== undefined) sentMap[s]++;
+    }
+    const canvas = document.getElementById('sentimentChart') as HTMLCanvasElement;
+    if (!canvas) return;
+    if (this.sentimentChart) { this.sentimentChart.destroy(); this.sentimentChart = null; }
+    this.sentimentChart = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Très positif', 'Positif', 'Neutre', 'Négatif', 'Très négatif'],
+        datasets: [{
+          data: [sentMap.VERY_POSITIVE, sentMap.POSITIVE, sentMap.NEUTRAL, sentMap.NEGATIVE, sentMap.VERY_NEGATIVE],
+          backgroundColor: ['#1abc9c', '#2ecc71', '#f39c12', '#e67e22', '#e74c3c'],
+          borderWidth: 2
+        }]
+      },
+      options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+    });
+  }
+
+  renderScoreChart() {
+    const labels = this.recommendations.filter((r: any) => r.clientKpi?.score != null).map((r: any) => r.clientKpi?.client?.fullName || 'Client');
+    const scores = this.recommendations.filter((r: any) => r.clientKpi?.score != null).map((r: any) => r.clientKpi.score);
+     const canvas = document.getElementById('scoreChart') as HTMLCanvasElement;
+     if (!canvas) return;
+
+      if (this.scoreChart) {
+    this.scoreChart.destroy();
+    this.scoreChart = null;
+  }
+   this.scoreChart = new Chart(canvas, {
+    type: 'bar', 
+    data: {
+      labels ,   
+      datasets: [{
+        label: 'Score',
+        data: scores, 
+         backgroundColor: scores.map(s =>
+          s >= 70 ? '#27ae60' : s >= 40 ? '#f39c12' : '#e74c3c'
+        ),
+        borderRadius: 6,        
+        borderSkipped: false     
+      }]
+    },
+    options: {
+      plugins: {
+           legend: { display: false }  
+      },
+      scales: {
+        y: {
+          min: 0,           
+          max: 100,         
+          ticks: { stepSize: 20 } 
+        },
+         x: {
+          ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+  }
+
+  renderStatutChart() {
+
+  // Scope to questionnaires visible to this user
+  const visible = this.canManageAll()
+    ? this.questionnaires
+    : this.questionnaires.filter(q => q.gestionnaire?.id === this.gestionnaire?.id);
+
+  const brouillon = visible.filter(q => (q.statut||'').toUpperCase() === 'BROUILLON').length;
+  const enAttente = visible.filter(q => (q.statut||'').toUpperCase() === 'EN_ATTENTE').length;
+  const approuve  = visible.filter(q => ['PUBLIE','APPROUVE'].includes((q.statut||'').toUpperCase())).length;
+  const rejete    = visible.filter(q => (q.statut||'').toUpperCase() === 'REJETE').length;
+
+  
+  const canvas = document.getElementById('statutChart') as HTMLCanvasElement;
+  if (!canvas) return;
+
+  
+  if (this.statutChart) {
+    this.statutChart.destroy();
+    this.statutChart = null;
+  }
+
+
+  this.statutChart = new Chart(canvas, {
+    type: 'pie',
+    data: {
+      labels: ['Brouillon', 'En attente', 'Approuvé', 'Rejeté'],
+      datasets: [{
+        data: [brouillon, enAttente, approuve, rejete],
+        backgroundColor: [
+          '#95a5a6',  
+          '#f39c12',  
+          '#27ae60',  
+          '#e74c3c'   
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+}
+renderReponsesChart() {
+
+  // Only show questionnaires visible to the current user
+  const visibleIds = new Set(
+    (this.canManageAll()
+      ? this.questionnaires
+      : this.questionnaires.filter(q => q.gestionnaire?.id === this.gestionnaire?.id)
+    ).map((q: any) => q.id)
+  );
+
+  this.http.get<any[]>(this.apiUrl + '/reponses').subscribe({
+    next: (data) => {
+
+      const map = new Map<string, Set<number>>();
+
+      for (const r of data) {
+        const qId = r.questionnaire?.id;
+        const qTitre = r.questionnaire?.titre || 'Questionnaire ' + qId;
+        const clientId = r.client?.id;
+        if (!qId || !clientId) continue;
+        if (!visibleIds.has(qId)) continue;   // ← skip questionnaires the user can't see
+
+        const key = qTitre;
+        if (!map.has(key)) map.set(key, new Set());
+        map.get(key)!.add(clientId);
+      }
+
+      
+      const labels = Array.from(map.keys());
+      const counts = Array.from(map.values()).map(set => set.size);
+
+      
+      const canvas = document.getElementById('reponsesChart') as HTMLCanvasElement;
+      if (!canvas) return;
+
+      
+      if (this.reponsesChart) {
+        this.reponsesChart.destroy();
+        this.reponsesChart = null;
+      }
+
+    
+      this.reponsesChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Clients ayant répondu',
+            data: counts,
+            backgroundColor: '#3498db',
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          indexAxis: 'y',  
+          responsive: true,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }  
+            },
+            y: {
+              ticks: { font: { size: 11 } }
+            }
+          }
+        }
+      });
+    },
+    error: () => {}
+  });
+}
 
   private loadTotalReponses(questionnaireIds: number[]) {
     if (!questionnaireIds.length) { this.totalReponses = 0; this.cdr.detectChanges(); return; }
@@ -186,8 +419,7 @@ export class DashboardGestionnaire implements OnInit {
         const idSet = new Set(questionnaireIds);
         const relevant = all.filter(r => idSet.has(r.questionnaire?.id));
         const unique = new Set(relevant.map(r => `${r.client?.id}-${r.questionnaire?.id}`));
-        this.totalReponses = unique.size;
-        this.cdr.detectChanges();
+        this.countUp(unique.size, v => { this.totalReponses = v; this.cdr.detectChanges(); });
       },
       error: () => {}
     });
@@ -201,10 +433,15 @@ export class DashboardGestionnaire implements OnInit {
     this.http.get<any[]>(url).subscribe({
       next: (data) => {
         this.questionnaires = data.map(q => this.mapStatut(q));
+        this.isLoading = false;
         this.updateStats();
         this.cdr.detectChanges();
+        setTimeout(() =>{
+           this.renderStatutChart();
+          this.renderReponsesChart() ;
+        }, 100);
       },
-      error: () => this.showToastMessage('Erreur lors du chargement des questionnaires', 'error')
+      error: () => { this.isLoading = false; this.showToastMessage('Erreur lors du chargement des questionnaires', 'error'); }
     });
   }
 
@@ -290,8 +527,6 @@ export class DashboardGestionnaire implements OnInit {
         description: this.questform.description,
         questions: this.selectedquestion
       };
-      // Regular gestionnaire editing a non-brouillon resets to brouillon (re-approval needed)
-      // Directeur edits keep the questionnaire published
       if (wasNotBrouillon && !isDirecteur) payload.statut = 'BROUILLON';
       this.http.put<any>(this.apiUrl + '/questionnaires/' + this.editingquest.id, payload).subscribe({
         next: () => {
@@ -393,19 +628,21 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   getBadgeClass(statut: string) {
-    if (statut === 'BROUILLON') return 'badge-brouillon';
-    if (statut === 'EN_ATTENTE') return 'badge-pending';
-    if (statut === 'PUBLIE') return 'badge-published';
-    if (statut === 'REJETE') return 'badge-danger';
+    const s = (statut || '').toUpperCase().trim();
+    if (s === 'BROUILLON') return 'badge-brouillon';
+    if (s === 'EN_ATTENTE') return 'badge-pending';
+    if (s === 'PUBLIE' || s === 'APPROUVE') return 'badge-published';
+    if (s === 'REJETE') return 'badge-danger';
     return 'badge-brouillon';
   }
 
   getStatutLabel(statut: string) {
-    if (statut === 'BROUILLON') return 'Brouillon';
-    if (statut === 'EN_ATTENTE') return 'En attente';
-    if (statut === 'PUBLIE') return 'Approuvé';
-    if (statut === 'REJETE') return 'Rejeté';
-    return statut;
+    const s = (statut || '').toUpperCase().trim();
+    if (s === 'BROUILLON') return 'Brouillon';
+    if (s === 'EN_ATTENTE') return 'En attente';
+    if (s === 'PUBLIE' || s === 'APPROUVE') return 'Approuvé';
+    if (s === 'REJETE') return 'Rejeté';
+    return 'Brouillon';
   }
 
   isMyQuestionnaire(q: any): boolean {
@@ -416,36 +653,82 @@ export class DashboardGestionnaire implements OnInit {
     return this.canManageAll() || this.isMyQuestionnaire(q);
   }
 
+  private statut(q: any): string {
+    return (q.statut || '').toUpperCase().trim();
+  }
+
   canDelete(q: any): boolean {
     return this.canManageAll() || this.isMyQuestionnaire(q);
   }
 
   canRequestPublication(q: any): boolean {
+    const s = this.statut(q);
     return !this.canManageAll() && this.isMyQuestionnaire(q) &&
-      (q.statut === 'BROUILLON' || q.statut === 'REJETE');
+      (s === 'BROUILLON' || s === 'REJETE');
   }
 
   canWithdraw(q: any): boolean {
-    return !this.canManageAll() && this.isMyQuestionnaire(q) && q.statut === 'EN_ATTENTE';
+    return !this.canManageAll() && this.isMyQuestionnaire(q) && this.statut(q) === 'EN_ATTENTE';
   }
 
   canApprove(q: any): boolean {
-    return this.canManageAll() && q.statut === 'EN_ATTENTE';
+    return this.canManageAll() && this.statut(q) === 'EN_ATTENTE';
   }
 
   canReject(q: any): boolean {
+    const s = this.statut(q);
     const isDirecteurQuestionnaire = q?.gestionnaire?.role?.name?.toUpperCase() === 'DIRECTEUR';
     return this.canManageAll() && !isDirecteurQuestionnaire &&
-      (q.statut === 'EN_ATTENTE' || q.statut === 'PUBLIE');
+      (s === 'EN_ATTENTE' || s === 'PUBLIE' || s === 'APPROUVE');
   }
 
   canShare(q: any): boolean {
-    return q.statut === 'PUBLIE';
+    const s = this.statut(q);
+    return s === 'PUBLIE' || s === 'APPROUVE';
   }
 
   showClientReponsesModal = false;
   selectedClientData: any = null;
   selectedClientReponses: any[] = [];
+
+  renderReponsesParQuestion(sent: number, repondu: number) {
+    const canvas = document.getElementById('reponsesParQuestionChart') as HTMLCanvasElement;
+    if (!canvas) return;
+    if (this.reponsesParQuestionChart) { this.reponsesParQuestionChart.destroy(); this.reponsesParQuestionChart = null; }
+
+    this.reponsesParQuestionChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: ['Total clients', 'Ont répondu'],
+        datasets: [{
+          data: [sent, repondu],
+          backgroundColor: ['#1a56db', '#27ae60'],
+          borderRadius: 8,
+          barThickness: 40
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const val = ctx.parsed.y ?? 0;
+                const pct = sent > 0 ? Math.round((val / sent) * 100) : 0;
+                return ` ${val} clients (${pct}%)`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
 
   loadReponses() {
     if (!this.selectedQuestionnaireId) { this.reponses = []; return; }
@@ -458,22 +741,23 @@ export class DashboardGestionnaire implements OnInit {
         this.cdr.detectChanges();
         const nb = data.length;
         Swal.fire({
-          title: `📋 ${titre}`,
+          title: `${titre}`,
           html: nb === 0
             ? `<p>Aucune réponse reçue pour ce questionnaire.</p>`
             : `<p><b>${clients} client${clients > 1 ? 's' : ''}</b> ont répondu à ce questionnaire.</p>`,
           icon: nb === 0 ? 'info' : 'success',
-          confirmButtonText: nb === 0 ? 'OK' : '📊 Voir les réponses',
+          confirmButtonText: nb === 0 ? 'OK' : 'Voir les réponses',
           confirmButtonColor: '#27ae60',
           timer: nb === 0 ? 2500 : undefined,
           showConfirmButton: true
+        }).then(() => {
+          setTimeout(() => this.renderReponsesParQuestion(this.allClients.length, clients), 150);
         });
       },
       error: () => this.showToastMessage('Erreur lors du chargement des réponses', 'error')
     });
   }
 
-  // Group flat responses into one entry per client
   get clientsReponses(): any[] {
     const map = new Map<number, any>();
     for (const r of this.reponses) {
@@ -498,10 +782,10 @@ export class DashboardGestionnaire implements OnInit {
     const clientName = entry.client?.fullName || entry.client?.mail || 'Client';
 
     Swal.fire({
-      title: `📋 ${questionnaireTitre}`,
+      title: `${questionnaireTitre}`,
       html: `<b>${clientName}</b> a soumis <b>${nb} réponse${nb > 1 ? 's' : ''}</b> à ce questionnaire.`,
       icon: 'info',
-      confirmButtonText: '👁 Voir les réponses',
+      confirmButtonText: 'Voir les réponses',
       showCancelButton: true,
       cancelButtonText: 'Annuler',
       confirmButtonColor: '#27ae60',
@@ -523,7 +807,7 @@ export class DashboardGestionnaire implements OnInit {
     const d = new Date();
     const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
 
-    // Group by client for a cleaner CSV
+    
     let lignes = 'Client;Email;Téléphone;Question;Type;Réponse\r\n';
     for (const entry of this.clientsReponses) {
       for (const r of entry.reponses) {
@@ -537,7 +821,7 @@ export class DashboardGestionnaire implements OnInit {
           esc(r.reponse || '')
         ].join(';') + '\r\n';
       }
-      lignes += '\r\n'; // blank line between clients
+      lignes += '\r\n'; 
     }
 
     const blob = new Blob(['\uFEFF' + lignes], { type: 'text/csv;charset=utf-8;' });
@@ -565,7 +849,6 @@ export class DashboardGestionnaire implements OnInit {
       return;
     }
 
-    // Find AI recommendation for this client
     const rec = this.recommendations.find((r: any) =>
       r.clientKpi?.client?.id === client.id
     );
@@ -576,7 +859,7 @@ export class DashboardGestionnaire implements OnInit {
 
     const recHtml = rec ? `
       <div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:left;">
-        <div style="font-weight:700;color:#1a3d2b;margin-bottom:6px;">🤖 Suggestion IA</div>
+        <div style="font-weight:700;color:#1a3d2b;margin-bottom:6px;">Suggestion IA</div>
         <div style="font-size:13px;color:#555;margin-bottom:4px;">
           Score : <b style="color:#27ae60">${score}/100</b> &nbsp; ${sentimentEmoji} <b>${rec.clientKpi?.sentiment || ''}</b>
         </div>
@@ -584,17 +867,17 @@ export class DashboardGestionnaire implements OnInit {
           Offre recommandée : <b style="color:#2980b9">${aiOffre?.title || '—'}</b>
         </div>
         ${aiOffre ? `<button type="button" id="swal-use-ai-btn"
-          onclick="document.getElementById('swal-offre-select').value='${aiOffre.id}';this.style.background='#27ae60';this.textContent='✓ Sélectionnée'"
+          onclick="document.getElementById('swal-offre-select').value='${aiOffre.id}';this.style.background='#27ae60';this.textContent='Sélectionnée'"
           style="margin-top:10px;background:#2ecc71;color:white;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">
-          ✓ Utiliser cette offre
+          Utiliser cette offre
         </button>` : ''}
       </div>` : '';
 
     Swal.fire({
-      title: `📤 Envoyer une offre à ${client.fullName || 'ce client'}`,
+      title: `Envoyer une offre à ${client.fullName || 'ce client'}`,
       html: recHtml + this.buildOffreSelectHtml(aiOffre?.id),
       showCancelButton: true,
-      confirmButtonText: '📧 Envoyer par email',
+      confirmButtonText: 'Envoyer par email',
       cancelButtonText: 'Annuler',
       confirmButtonColor: '#27ae60',
       cancelButtonColor: '#95a5a6',
@@ -608,9 +891,8 @@ export class DashboardGestionnaire implements OnInit {
       if (!result.isConfirmed || !result.value) return;
       const offreId = Number(result.value);
 
-      // If rec exists and selected offre matches AI offre → accept the recommendation
       const sendOffer = () => this.api.envoyerOffre(offreId, [client.id]).subscribe({
-        next: () => Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '📧 Offre envoyée !', showConfirmButton: false, timer: 2500, timerProgressBar: true }),
+        next: () => Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Offre envoyée !', showConfirmButton: false, timer: 2500, timerProgressBar: true }),
         error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer l\'offre.', confirmButtonColor: '#27ae60' })
       });
 
@@ -635,7 +917,7 @@ export class DashboardGestionnaire implements OnInit {
     const clientIds = this.clientsReponses.map(e => e.client?.id).filter(Boolean);
     const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'ce questionnaire';
 
-    // Count how many clients each AI-recommended offer covers
+    
     const offreCountMap = new Map<number, { offre: any; clients: number }>();
     let noRecCount = 0;
     for (const e of this.clientsReponses) {
@@ -657,50 +939,63 @@ export class DashboardGestionnaire implements OnInit {
       .sort((a, b) => b.clients - a.clients);
     const topOffre = offreCounts[0]?.offre ?? null;
 
-    // Build percentage bars
-    const barsHtml = offreCounts.map(({ offre, clients }) => {
-      const pct = Math.round((clients / count) * 100);
-      const isTop = offre.id === topOffre?.id;
-      return `<div style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-          <span style="font-size:13px;font-weight:${isTop ? '700' : '500'};color:${isTop ? '#1a7a3c' : '#444'};">
-            ${isTop ? '🥇 ' : ''}${offre.title}
-          </span>
-          <span style="font-size:12px;color:#666;">${clients} client${clients > 1 ? 's' : ''} (${pct}%)</span>
-        </div>
-        <div style="background:#e0e0e0;border-radius:4px;height:8px;">
-          <div style="background:${isTop ? '#27ae60' : '#74b9ff'};width:${pct}%;height:8px;border-radius:4px;transition:width 0.3s;"></div>
-        </div>
-      </div>`;
-    }).join('');
-
+    const pieColors = ['#27ae60','#1a56db','#e67e22','#8e44ad','#e74c3c','#16a085','#f39c12','#2980b9'];
     const noRecHtml = noRecCount > 0
-      ? `<p style="font-size:12px;color:#999;margin-top:4px;">⚠️ ${noRecCount} client(s) sans recommandation IA recevront aussi l'offre sélectionnée.</p>`
+      ? `<p style="font-size:12px;color:#999;margin-top:6px;">${noRecCount} client(s) sans recommandation IA recevront aussi l'offre sélectionnée.</p>`
       : '';
 
     const aiSummary = offreCounts.length > 0
-      ? `<div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:12px 14px;margin-bottom:14px;text-align:left;">
-           <div style="font-weight:700;color:#1a3d2b;margin-bottom:10px;">🤖 Analyse IA — ${count} client${count > 1 ? 's' : ''}</div>
-           ${barsHtml}
+      ? `<div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:14px;margin-bottom:14px;">
+           <div style="font-weight:700;color:#1a3d2b;margin-bottom:10px;">Analyse IA — ${count} client${count > 1 ? 's' : ''}</div>
+           <canvas id="swal-pie-chart" width="260" height="260" style="display:block;margin:0 auto;max-width:260px;max-height:260px;"></canvas>
            ${noRecHtml}
          </div>`
       : `<div style="background:#fff8e1;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;color:#795548;">
-           ⚠️ Aucune recommandation IA disponible. Sélectionnez une offre manuellement.
+           Aucune recommandation IA disponible. Sélectionnez une offre manuellement.
          </div>`;
 
     Swal.fire({
-      title: `📢 Envoyer une offre à tous`,
+      title: `Envoyer une offre à tous`,
       html: `
         <p style="margin-bottom:12px;color:#555;font-size:13px;">Questionnaire : <b>${titre}</b></p>
         ${aiSummary}
         ${this.buildOffreSelectHtml(topOffre?.id)}`,
       showCancelButton: true,
-      confirmButtonText: `📧 Envoyer à ${count} client${count > 1 ? 's' : ''}`,
+      confirmButtonText: `Envoyer à ${count} client${count > 1 ? 's' : ''}`,
       cancelButtonText: 'Annuler',
       confirmButtonColor: '#27ae60',
       cancelButtonColor: '#95a5a6',
       reverseButtons: true,
       width: 560,
+      didOpen: () => {
+        const canvas = document.getElementById('swal-pie-chart') as HTMLCanvasElement;
+        if (!canvas || offreCounts.length === 0) return;
+        new Chart(canvas, {
+          type: 'pie',
+          data: {
+            labels: offreCounts.map(({ offre, clients }) => `${offre.title} (${clients})`),
+            datasets: [{
+              data: offreCounts.map(e => e.clients),
+              backgroundColor: offreCounts.map((_, i) => pieColors[i % pieColors.length]),
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: {
+            plugins: {
+              legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const pct = Math.round((ctx.parsed / count) * 100);
+                    return ` ${ctx.label}: ${pct}%`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      },
       preConfirm: () => {
         const sel = document.getElementById('swal-offre-select') as HTMLSelectElement;
         if (!sel || !sel.value) { Swal.showValidationMessage('Veuillez sélectionner une offre.'); return false; }
@@ -741,14 +1036,38 @@ export class DashboardGestionnaire implements OnInit {
 
   loadRecommendations() {
     this.http.get<any[]>(this.apiUrl + '/recommendations').subscribe({
-      next: (data) => { this.recommendations = data; this.cdr.detectChanges(); },
+      next: (data) => {
+        // Regular gestionnaire only sees recommendations linked to their own clients
+        // DIRECTEUR sees all
+        if (this.canManageAll()) {
+          this.recommendations = data;
+        } else {
+          const myQuestionnaireIds = new Set(
+            this.questionnaires
+              .filter(q => q.gestionnaire?.id === this.gestionnaire?.id)
+              .map((q: any) => q.id)
+          );
+          // Keep only recs where the client responded to one of my questionnaires
+          // Fall back to all if no questionnaire scoping is available
+          this.recommendations = myQuestionnaireIds.size > 0
+            ? data.filter((r: any) =>
+                r.clientKpi?.client?.id != null &&
+                // If the rec has a gestionnaire link use it, otherwise keep all
+                (r.gestionnaire?.id === this.gestionnaire?.id || !r.gestionnaire)
+              )
+            : data;
+        }
+        this.cdr.detectChanges();
+        if (this.activeSection === 'home') setTimeout(() => this.renderAllCharts(), 100);
+      },
       error: () => {}
     });
   }
 
+
   getSentimentEmoji(s: string): string {
-    const map: any = { VERY_POSITIVE: '😄', POSITIVE: '😊', NEUTRAL: '😐', NEGATIVE: '😟', VERY_NEGATIVE: '😢' };
-    return map[s] || '❓';
+    const map: any = { VERY_POSITIVE: 'Très positif', POSITIVE: 'Positif', NEUTRAL: 'Neutre', NEGATIVE: 'Négatif', VERY_NEGATIVE: 'Très négatif' };
+    return map[s] || '';
   }
 
   getStatusLabel(s: string): string {
@@ -988,10 +1307,9 @@ export class DashboardGestionnaire implements OnInit {
   // Flow B: sends email or SMS directly → client uses /fill-questionnaire
   envoyerDirectement(client: any) {
     const channel = this.clientChannels[client.id] || 'email';
-    const icon = channel === 'sms' ? '💬' : '📧';
     Swal.fire({
       title: `Envoyer à ${client.fullName} ?`,
-      html: `${icon} <b>${channel === 'sms' ? 'SMS' : 'Email'}</b> → ${channel === 'sms' ? client.tel : client.mail}`,
+      html: `<b>${channel === 'sms' ? 'SMS' : 'Email'}</b> → ${channel === 'sms' ? client.tel : client.mail}`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#27ae60',
@@ -1009,7 +1327,7 @@ export class DashboardGestionnaire implements OnInit {
           this.cdr.detectChanges();
           Swal.fire({
             toast: true, position: 'top-end', icon: 'success',
-            title: channel === 'sms' ? '💬 SMS envoyé !' : '📧 Email envoyé !',
+            title: channel === 'sms' ? 'SMS envoyé !' : 'Email envoyé !',
             showConfirmButton: false, timer: 2500, timerProgressBar: true
           });
         },
@@ -1035,7 +1353,7 @@ export class DashboardGestionnaire implements OnInit {
       showCancelButton: true,
       confirmButtonColor: '#27ae60',
       cancelButtonColor: '#95a5a6',
-      confirmButtonText: '📢 Envoyer maintenant',
+      confirmButtonText: 'Envoyer maintenant',
       cancelButtonText: 'Annuler',
       reverseButtons: true
     }).then(result => {

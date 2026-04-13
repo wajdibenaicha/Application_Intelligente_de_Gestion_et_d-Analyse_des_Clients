@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
+import Chart from 'chart.js/auto';
 import { Api } from '../../../services/api';
 import { WebSocketService } from '../../../services/websocket.service';
 
@@ -17,7 +18,18 @@ import { WebSocketService } from '../../../services/websocket.service';
   styleUrl: './dashbord-admin.css'
 })
 export class DashbordAdmin implements OnInit {
-    activeTab = 'gestionnaires';
+    activeTab = 'home';
+
+    private statutChart:  Chart | null = null;
+    private reponsesChart: Chart | null = null;
+    private rolesChart:   Chart | null = null;
+    private offresChart:  Chart | null = null;
+    private participationChart: Chart | null = null;
+    totalClientsCount: number = 0;
+    displayGestCount  = 0;
+    displayQuestCount = 0;
+    displayRepCount   = 0;
+    displayOffresCount = 0;
     sidebarCollapsed = false;
     today: Date = new Date();
     isLoading = true;
@@ -78,8 +90,121 @@ export class DashbordAdmin implements OnInit {
 
     constructor(private api: Api, private router: Router, private wsService: WebSocketService, private ngZone: NgZone, private cdr: ChangeDetectorRef, private http: HttpClient) {}
 
+    private countUp(target: number, setter: (v: number) => void, duration = 1100) {
+        const startTime = performance.now();
+        const tick = (now: number) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setter(Math.round(eased * target));
+            if (progress < 1) requestAnimationFrame(tick);
+            else { setter(target); this.cdr.detectChanges(); }
+        };
+        requestAnimationFrame(tick);
+    }
+
     toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
     logout() { this.router.navigate(['/login']); }
+
+    setTab(tab: string) {
+      this.activeTab = tab;
+      if (tab === 'home') {
+        setTimeout(() => this.renderAllCharts(), 200);
+      }
+    }
+
+    private renderAllCharts() {
+      this.renderStatutChart();
+      this.renderReponsesChart();
+      this.renderRolesChart();
+      this.renderOffresChart();
+    }
+
+    private renderStatutChart() {
+      const canvas = document.getElementById('adminStatutChart') as HTMLCanvasElement;
+      if (!canvas) return;
+      if (this.statutChart) { this.statutChart.destroy(); this.statutChart = null; }
+      const counts = {
+        brouillon: this.questionnaires.filter(q => (q.statut||'').toUpperCase() === 'BROUILLON').length,
+        enAttente: this.questionnaires.filter(q => (q.statut||'').toUpperCase() === 'EN_ATTENTE').length,
+        approuve:  this.questionnaires.filter(q => q.confirmed || ['PUBLIE','APPROUVE'].includes((q.statut||'').toUpperCase())).length,
+        rejete:    this.questionnaires.filter(q => (q.statut||'').toUpperCase() === 'REJETE').length,
+      };
+      this.statutChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Brouillon', 'En attente', 'Approuvé', 'Rejeté'],
+          datasets: [{ data: [counts.brouillon, counts.enAttente, counts.approuve, counts.rejete],
+            backgroundColor: ['#95a5a6', '#f39c12', '#27ae60', '#e74c3c'], borderWidth: 2 }]
+        },
+        options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+      });
+    }
+
+    private renderReponsesChart() {
+      const canvas = document.getElementById('adminReponsesChart') as HTMLCanvasElement;
+      if (!canvas) return;
+      if (this.reponsesChart) { this.reponsesChart.destroy(); this.reponsesChart = null; }
+      const map = new Map<string, Set<number>>();
+      for (const r of this.responses) {
+        const qId = r.questionnaire?.id;
+        const titre = r.questionnaire?.titre || ('Q' + qId);
+        const cId = r.client?.id;
+        if (!qId || !cId) continue;
+        if (!map.has(titre)) map.set(titre, new Set());
+        map.get(titre)!.add(cId);
+      }
+      const labels = Array.from(map.keys());
+      const counts = Array.from(map.values()).map(s => s.size);
+      this.reponsesChart = new Chart(canvas, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Clients', data: counts,
+          backgroundColor: '#3498db', borderRadius: 6, borderSkipped: false }] },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+      });
+    }
+
+    private renderRolesChart() {
+      const canvas = document.getElementById('adminRolesChart') as HTMLCanvasElement;
+      if (!canvas) return;
+      if (this.rolesChart) { this.rolesChart.destroy(); this.rolesChart = null; }
+      const map = new Map<string, number>();
+      for (const g of this.gestionnaire) {
+        const role = g.role?.name || 'Sans rôle';
+        map.set(role, (map.get(role) || 0) + 1);
+      }
+      const labels = Array.from(map.keys());
+      const counts = Array.from(map.values());
+      const palette = ['#1a56db','#27ae60','#e67e22','#8e44ad','#e74c3c','#16a085'];
+      this.rolesChart = new Chart(canvas, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Gestionnaires', data: counts,
+          backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+          borderRadius: 8, borderSkipped: false }] },
+        options: { plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+      });
+    }
+
+    private renderOffresChart() {
+      const canvas = document.getElementById('adminOffresChart') as HTMLCanvasElement;
+      if (!canvas) return;
+      if (this.offresChart) { this.offresChart.destroy(); this.offresChart = null; }
+      const map = new Map<string, number>();
+      for (const o of this.offres) {
+        const cat = o.categorie || 'GENERAL';
+        map.set(cat, (map.get(cat) || 0) + 1);
+      }
+      const labels = Array.from(map.keys());
+      const counts = Array.from(map.values());
+      const palette = ['#27ae60','#1a56db','#e67e22','#8e44ad','#e74c3c','#16a085'];
+      this.offresChart = new Chart(canvas, {
+        type: 'pie',
+        data: { labels, datasets: [{ data: counts,
+          backgroundColor: labels.map((_, i) => palette[i % palette.length]), borderWidth: 2 }] },
+        options: { plugins: { legend: { position: 'bottom' } } }
+      });
+    }
 
     ngOnInit(): void {
         this.wsService.connect();
@@ -99,6 +224,7 @@ export class DashbordAdmin implements OnInit {
 
         this.loadInitialData();
         this.loadNotifications();
+        this.http.get<any[]>('http://localhost:8081/api/clients').subscribe({ next: (c) => this.totalClientsCount = c.length, error: () => {} });
     }
 
     private loadInitialData(): void {
@@ -123,6 +249,11 @@ export class DashbordAdmin implements OnInit {
                 this.responses = responses as any[];
                 this.isLoading = false;
                 this.cdr.detectChanges();
+                this.countUp(this.gestionnaire.length,  v => { this.displayGestCount   = v; this.cdr.detectChanges(); });
+                this.countUp(this.questionnaires.length, v => { this.displayQuestCount  = v; this.cdr.detectChanges(); });
+                this.countUp(this.totalReponsesCount,    v => { this.displayRepCount    = v; this.cdr.detectChanges(); });
+                this.countUp(this.offres.length,         v => { this.displayOffresCount = v; this.cdr.detectChanges(); });
+                if (this.activeTab === 'home') setTimeout(() => this.renderAllCharts(), 200);
             },
             error: () => {
                 this.isLoading = false;
@@ -157,7 +288,7 @@ export class DashbordAdmin implements OnInit {
 
     reinitialiserMotDePasse(gestionnaireId: number) {
         Swal.fire({
-            title: '🔑 Réinitialiser le mot de passe',
+            title: 'Réinitialiser le mot de passe',
             html: `<p style="margin-bottom:12px;color:#555">Entrez le nouveau mot de passe pour ce gestionnaire.</p>`,
             input: 'password',
             inputPlaceholder: 'Nouveau mot de passe...',
@@ -399,6 +530,31 @@ export class DashbordAdmin implements OnInit {
         return result;
     }
 
+    renderAdminParticipationChart() {
+        const canvas = document.getElementById('adminParticipationChart') as HTMLCanvasElement;
+        if (!canvas) return;
+        if (this.participationChart) { this.participationChart.destroy(); this.participationChart = null; }
+        const repondu = this.clientsReponses.length;
+        this.participationChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['Total clients', 'Ont répondu'],
+                datasets: [{ data: [this.totalClientsCount, repondu],
+                    backgroundColor: ['#1a56db', '#27ae60'], borderRadius: 8, barThickness: 40 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => {
+                        const val = ctx.parsed.y ?? 0;
+                        const pct = this.totalClientsCount > 0 ? Math.round((val / this.totalClientsCount) * 100) : 0;
+                        return ` ${val} clients (${pct}%)`;
+                    }}}},
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
+            }
+        });
+    }
+
     loadAdminReponses() {
         if (!this.selectedQuestionnaireId) { this.adminReponses = []; return; }
         const titre = this.questionnaires.find(q => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
@@ -409,15 +565,17 @@ export class DashbordAdmin implements OnInit {
                 const nb = data.length;
                 const clients = new Set(data.map(r => r.client?.id)).size;
                 Swal.fire({
-                    title: `📋 ${titre}`,
+                    title: `${titre}`,
                     html: nb === 0
                         ? `<p>Aucune réponse reçue pour ce questionnaire.</p>`
                         : `<p><b>${clients} client${clients > 1 ? 's' : ''}</b> ont répondu à ce questionnaire.</p>`,
                     icon: nb === 0 ? 'info' : 'success',
-                    confirmButtonText: nb === 0 ? 'OK' : '📊 Voir les réponses',
+                    confirmButtonText: nb === 0 ? 'OK' : 'Voir les réponses',
                     confirmButtonColor: '#27ae60',
                     timer: nb === 0 ? 2500 : undefined,
                     showConfirmButton: true
+                }).then(() => {
+                    setTimeout(() => this.renderAdminParticipationChart(), 150);
                 });
             },
             error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de charger les réponses.' })
@@ -450,10 +608,10 @@ export class DashbordAdmin implements OnInit {
         const nb = entry.nbReponses;
         const clientName = entry.client?.fullName || entry.client?.mail || 'Client';
         Swal.fire({
-            title: `📋 ${questionnaireTitre}`,
+            title: `${questionnaireTitre}`,
             html: `<b>${clientName}</b> a soumis <b>${nb} réponse${nb > 1 ? 's' : ''}</b> à ce questionnaire.`,
             icon: 'info',
-            confirmButtonText: '👁 Voir les réponses',
+            confirmButtonText: 'Voir les réponses',
             showCancelButton: true,
             cancelButtonText: 'Annuler',
             confirmButtonColor: '#27ae60',
@@ -613,5 +771,21 @@ export class DashbordAdmin implements OnInit {
             if (!this.questionnaires[i].confirmed) count++;
         }
         return count;
+    }
+
+    getBadgeClass(q: any): string {
+        const s = (q.statut || '').toUpperCase().trim();
+        if (s === 'REJETE') return 'badge-danger';
+        if (q.confirmed || s === 'APPROUVE' || s === 'PUBLIE') return 'badge-confirmed';
+        if (s === 'EN_ATTENTE') return 'badge-pending';
+        return 'badge-brouillon';
+    }
+
+    getStatutLabel(q: any): string {
+        const s = (q.statut || '').toUpperCase().trim();
+        if (s === 'REJETE') return 'Rejeté';
+        if (q.confirmed || s === 'APPROUVE' || s === 'PUBLIE') return 'Approuvé';
+        if (s === 'EN_ATTENTE') return 'En attente';
+        return 'Brouillon';
     }
 }

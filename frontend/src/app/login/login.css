@@ -286,6 +286,36 @@ input::placeholder {
   text-align: center;
 }
 
+/* ── Option 3: Floating background shapes ── */
+.float-shape {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.shape-1 { width: 110px; height: 110px; background: rgba(255,255,255,0.07); top: 8%; left: 7%; animation: floatA 9s ease-in-out infinite; }
+.shape-2 { width: 60px; height: 60px; background: rgba(255,255,255,0.10); top: 18%; right: 10%; animation: floatB 7s ease-in-out infinite; animation-delay: -2s; }
+.shape-3 { width: 160px; height: 160px; background: rgba(255,255,255,0.04); bottom: 12%; right: 7%; animation: floatA 12s ease-in-out infinite; animation-delay: -4s; }
+.shape-4 { width: 45px; height: 45px; background: rgba(255,255,255,0.12); bottom: 22%; left: 12%; animation: floatB 8s ease-in-out infinite; animation-delay: -1s; }
+.shape-5 { width: 80px; height: 80px; background: rgba(255,255,255,0.06); top: 48%; left: 2%; animation: floatC 10s ease-in-out infinite; animation-delay: -3s; }
+.shape-6 { width: 32px; height: 32px; background: rgba(255,255,255,0.14); top: 32%; right: 18%; animation: floatC 6s ease-in-out infinite; animation-delay: -5s; }
+
+@keyframes floatA {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25%       { transform: translateY(-22px) translateX(12px); }
+  50%       { transform: translateY(-12px) translateX(-8px); }
+  75%       { transform: translateY(-28px) translateX(6px); }
+}
+@keyframes floatB {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33%       { transform: translateY(-18px) rotate(22deg); }
+  66%       { transform: translateY(12px) rotate(-15deg); }
+}
+@keyframes floatC {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50%       { transform: scale(1.18) translateY(-16px); }
+}
+
 /* ── Responsive ── */
 @media (max-width: 480px) {
   .login-page {

@@ -1,4 +1,10 @@
 <div class="login-page">
+  <div class="float-shape shape-1"></div>
+  <div class="float-shape shape-2"></div>
+  <div class="float-shape shape-3"></div>
+  <div class="float-shape shape-4"></div>
+  <div class="float-shape shape-5"></div>
+  <div class="float-shape shape-6"></div>
   <div class="login-wrapper">
 
     <div class="login-card">
@@ -10,14 +16,14 @@
       </div>
 
       <div class="error-message" *ngIf="errorMessage">
-        <span>⚠</span> {{ errorMessage }}
+        <i class="bi bi-exclamation-triangle"></i> {{ errorMessage }}
       </div>
 
       <form>
         <div class="form-group">
           <label for="full_name">Nom Complet</label>
           <div class="input-wrapper">
-            <span class="input-icon">👤</span>
+            <i class="bi bi-person input-icon"></i>
             <input
               id="full_name"
               type="text"
@@ -32,7 +38,7 @@
         <div class="form-group">
           <label for="password">Mot de passe</label>
           <div class="input-wrapper">
-            <span class="input-icon">🔒</span>
+            <i class="bi bi-lock input-icon"></i>
             <input
               id="password"
               type="password"
