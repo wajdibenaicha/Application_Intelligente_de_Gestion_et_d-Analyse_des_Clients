@@ -16,7 +16,7 @@ The application implements an intelligent recommendation engine using **Google G
   ```properties
   ai.enabled=true
   ai.provider=gemini
-  ai.api-key=YOUR_API_KEY_HERE
+  ai.api-key=YOUR_GROQ_API_KEY_HERE
   ai.model=gemini-2.0-flash
   ai.api-url=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
   ```
