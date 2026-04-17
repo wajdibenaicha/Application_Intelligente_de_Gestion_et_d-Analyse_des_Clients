@@ -39,6 +39,10 @@
         <span class="nav-icon"><i class="bi bi-gift"></i></span>
         <span class="nav-label">Offres</span>
       </button>
+      <button class="nav-item" *ngIf="canManageAll()" [class.active]="activeSection === 'teams'" (click)="setSection('teams')">
+        <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
+        <span class="nav-label">Mes Équipes</span>
+      </button>
     </nav>
 
     <button class="logout-btn" (click)="logout()">
@@ -52,7 +56,7 @@
     <header class="topbar">
       <h2 class="section-title">{{ getSectionTitle() }}</h2>
       <div class="topbar-right">
-        <div class="notif-icon" *ngIf="canManageAll()" (click)="toggleNotifPanel()">
+        <div class="notif-icon" (click)="toggleNotifPanel()">
           <i class="bi bi-bell-fill"></i>
           <span class="notif-badge" *ngIf="unreadNotifCount > 0">{{ unreadNotifCount }}</span>
         </div>
@@ -111,7 +115,7 @@
       <div class="quick-actions">
         <h3>Actions rapides</h3>
         <div class="actions-grid">
-          <button class="action-card" (click)="openCreateQuestionnaire()">
+          <button class="action-card" (click)="openWizard()">
             <span class="action-icon"><i class="bi bi-plus-circle"></i></span>
             <span>Nouveau questionnaire</span>
           </button>
@@ -206,29 +210,65 @@
     <section *ngIf="activeSection === 'questionnaires'" class="content-section">
 
       <div class="section-toolbar">
-        <button class="btn-primary" (click)="openCreateQuestionnaire()"><i class="bi bi-plus-lg"></i> Nouveau questionnaire</button>
-        <span class="role-info-badge" *ngIf="canManageAll()">
-          <i class="bi bi-key-fill"></i> {{ gestionnaire?.role?.name }} — vous gérez tous les questionnaires
-        </span>
+        <button class="btn-primary" (click)="openWizard()"><i class="bi bi-plus-lg"></i> Nouveau questionnaire</button>
+        <button class="btn-delegate" *ngIf="canManageAll() && allTeamMembers.length > 0" (click)="openDelegateModal()">
+          <i class="bi bi-person-plus"></i> Déléguer la création
+        </button>
       </div>
 
-      <div class="table-wrapper">
+      <!-- Tabs for directeur: mine + one per team -->
+      <div class="quest-tabs" *ngIf="canManageAll() && myTeams.length > 0">
+        <button class="quest-tab" [class.active]="questTab === 'mine'" (click)="questTab = 'mine'">
+          <i class="bi bi-person"></i> Mes questionnaires
+          <span class="tab-count">{{ myOwnQuestionnaires.length }}</span>
+        </button>
+        <button class="quest-tab" *ngFor="let team of myTeams"
+          [class.active]="questTab === team.id.toString()"
+          (click)="questTab = team.id.toString()">
+          <i class="bi bi-people"></i> {{ team.name }}
+          <span class="tab-count">{{ questionnairesForTeam(team).length }}</span>
+        </button>
+      </div>
+
+      <!-- Table shown depends on active tab -->
+
+      <!-- Directeur — my own questionnaires tab -->
+      <div class="table-wrapper" *ngIf="canManageAll() && myTeams.length > 0 && questTab === 'mine'">
+        <ng-container *ngTemplateOutlet="questTable; context: { list: myOwnQuestionnaires, showGest: false }"></ng-container>
+      </div>
+
+      <!-- Directeur — per-team tabs -->
+      <ng-container *ngIf="canManageAll() && myTeams.length > 0">
+        <ng-container *ngFor="let team of myTeams">
+          <div class="table-wrapper" *ngIf="questTab === team.id.toString()">
+            <ng-container *ngTemplateOutlet="questTable; context: { list: questionnairesForTeam(team), showGest: true }"></ng-container>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- Regular gestionnaire OR directeur without teams -->
+      <div class="table-wrapper" *ngIf="!(canManageAll() && myTeams.length > 0)">
+        <ng-container *ngTemplateOutlet="questTable; context: { list: questionnaires, showGest: false }"></ng-container>
+      </div>
+
+      <!-- Shared table template -->
+      <ng-template #questTable let-list="list" let-showGest="showGest">
         <table class="data-table">
           <thead>
             <tr>
               <th>Titre</th>
               <th>Description</th>
-              <th *ngIf="canManageAll()">Gestionnaire</th>
+              <th *ngIf="showGest">Gestionnaire</th>
               <th>Questions</th>
               <th>Statut</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let q of questionnaires">
+            <tr *ngFor="let q of list">
               <td><strong>{{ q.titre }}</strong></td>
               <td class="td-desc">{{ q.description || '—' }}</td>
-              <td *ngIf="canManageAll()">{{ q.gestionnaire?.fullName || '—' }}</td>
+              <td *ngIf="showGest">{{ q.gestionnaire?.fullName || '—' }}</td>
               <td>{{ q.questions?.length || 0 }}</td>
               <td>
                 <span class="badge" [ngClass]="getBadgeClass(q.statut)">{{ getStatutLabel(q.statut) }}</span>
@@ -237,7 +277,7 @@
                 </span>
               </td>
               <td class="actions-cell">
-                <button class="btn-icon btn-view" title="Voir les questions" (click)="viewQuestions(q)"><i class="bi bi-eye"></i></button>
+                <button class="btn-icon btn-view" title="Voir" (click)="viewQuestions(q)"><i class="bi bi-eye"></i></button>
                 <button class="btn-icon btn-edit" title="Modifier" (click)="editQuestionnaire(q)" *ngIf="canEdit(q)"><i class="bi bi-pencil"></i></button>
                 <button class="btn-icon btn-send" title="Demander publication" (click)="demanderPublication(q)" *ngIf="canRequestPublication(q)"><i class="bi bi-send"></i></button>
                 <button class="btn-icon btn-warning" title="Retirer la demande" (click)="retirerDemande(q)" *ngIf="canWithdraw(q)"><i class="bi bi-arrow-counterclockwise"></i></button>
@@ -247,12 +287,12 @@
                 <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteQuestionnaire(q.id)" *ngIf="canDelete(q)"><i class="bi bi-trash"></i></button>
               </td>
             </tr>
-            <tr *ngIf="questionnaires.length === 0">
-              <td [attr.colspan]="canManageAll() ? 6 : 5" class="empty-row">Aucun questionnaire</td>
+            <tr *ngIf="!list.length">
+              <td [attr.colspan]="showGest ? 6 : 5" class="empty-row">Aucun questionnaire</td>
             </tr>
           </tbody>
         </table>
-      </div>
+      </ng-template>
 
     </section>
 
@@ -273,55 +313,60 @@
         </button>
       </div>
 
-      <!-- Summary bar -->
-      <div class="reponses-summary" *ngIf="reponses.length > 0">
-        <span class="summary-chip"><i class="bi bi-people"></i> <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
-        <span class="summary-chip"><i class="bi bi-chat-dots"></i> <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
-      </div>
+      <!-- Dynamic content: scales in when questionnaire is selected -->
+      <div class="reponses-content" *ngIf="reponses.length > 0">
 
-      <!-- Participation chart -->
-      <div class="reponses-chart-card" *ngIf="reponses.length > 0">
-        <div class="reponses-chart-header">
-          <i class="bi bi-bar-chart-line"></i>
-          <span>Participation au questionnaire</span>
+        <!-- Summary bar -->
+        <div class="reponses-summary">
+          <span class="summary-chip"><i class="bi bi-people"></i> <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
+          <span class="summary-chip"><i class="bi bi-chat-dots"></i> <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
         </div>
-        <div class="reponses-chart-body">
-          <canvas id="reponsesParQuestionChart"></canvas>
-        </div>
-      </div>
 
-      <!-- Clients table -->
-      <div class="table-wrapper" *ngIf="reponses.length > 0">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Email</th>
-              <th>Téléphone</th>
-              <th>Réponses</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let entry of clientsReponses">
-              <td>
-                <div class="client-cell">
-                  <div class="client-avatar-sm">{{ (entry.client?.fullName || entry.client?.mail || '?').charAt(0).toUpperCase() }}</div>
-                  <span>{{ entry.client?.fullName || '—' }}</span>
-                </div>
-              </td>
-              <td>{{ entry.client?.mail || '—' }}</td>
-              <td>{{ entry.client?.tel || '—' }}</td>
-              <td>
-                <span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span>
-              </td>
-              <td>
-                <button class="btn-voir" (click)="voirReponsesClient(entry)"><i class="bi bi-eye"></i> Voir</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <!-- Participation chart -->
+        <div class="reponses-chart-card">
+          <div class="reponses-chart-header">
+            <i class="bi bi-bar-chart-line"></i>
+            <span>Participation au questionnaire</span>
+          </div>
+          <div class="reponses-chart-body">
+            <canvas id="reponsesParQuestionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Clients table -->
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Réponses</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let entry of clientsReponses">
+                <td>
+                  <div class="client-cell">
+                    <div class="client-avatar-sm">{{ (entry.client?.fullName || entry.client?.mail || '?').charAt(0).toUpperCase() }}</div>
+                    <span>{{ entry.client?.fullName || '—' }}</span>
+                  </div>
+                </td>
+                <td>{{ entry.client?.mail || '—' }}</td>
+                <td>{{ entry.client?.tel || '—' }}</td>
+                <td>
+                  <span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span>
+                </td>
+                <td>
+                  <button class="btn-voir" (click)="voirReponsesClient(entry)"><i class="bi bi-eye"></i> Voir</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /.reponses-content -->
 
       <div class="empty-state" *ngIf="reponses.length === 0 && selectedQuestionnaireId !== ''">
         <i class="bi bi-chat-left-dots"></i><p>Aucune réponse reçue pour ce questionnaire</p>
@@ -425,10 +470,65 @@
       </div>
     </div>
 
+    <!-- ── TEAMS SECTION ── -->
+    <section *ngIf="activeSection === 'teams'" class="content-section">
+      <div class="section-toolbar" style="margin-bottom:18px">
+        <span class="role-info-badge">
+          <i class="bi bi-people-fill"></i> {{ myTeams.length }} équipe(s) sous votre direction
+        </span>
+        <button class="btn-delegate" *ngIf="allTeamMembers.length > 0" (click)="openDelegateModal()">
+          <i class="bi bi-person-plus"></i> Déléguer la création d'un questionnaire
+        </button>
+      </div>
+
+      <div class="teams-grid" *ngIf="myTeams.length > 0">
+        <div class="team-card" *ngFor="let team of myTeams">
+          <div class="team-card-top">
+            <div class="team-avatar"><i class="bi bi-people-fill"></i></div>
+            <div class="team-card-info">
+              <h3 class="team-name">{{ team.name }}</h3>
+              <span class="team-dir-label">
+                <i class="bi bi-person-badge"></i> Vous êtes directeur
+              </span>
+            </div>
+          </div>
+          <div class="team-card-body">
+            <div class="team-members-preview">
+              <span class="member-chip" *ngFor="let m of (team.members || []).slice(0,5)">
+                {{ m.fullName.charAt(0).toUpperCase() }}
+              </span>
+              <span class="member-chip more" *ngIf="(team.members || []).length > 5">
+                +{{ team.members.length - 5 }}
+              </span>
+              <span class="no-members" *ngIf="!(team.members || []).length">Aucun membre</span>
+            </div>
+            <span class="team-count">{{ (team.members || []).length }} membre(s)</span>
+          </div>
+          <div class="team-members-list">
+            <div class="team-member-row" *ngFor="let m of team.members">
+              <div class="member-avatar-sm">{{ m.fullName.charAt(0).toUpperCase() }}</div>
+              <span class="member-name">{{ m.fullName }}</span>
+              <span class="role-chip">{{ m.role?.name || '—' }}</span>
+              <span class="quest-mini-count">
+                <i class="bi bi-clipboard-check"></i>
+                {{ questionnairesForTeam({ members: [m] }).length }}
+              </span>
+            </div>
+            <p class="empty-hint" *ngIf="!(team.members || []).length">Aucun membre dans cette équipe.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="myTeams.length === 0">
+        <i class="bi bi-people"></i>
+        <p>Vous ne dirigez aucune équipe pour le moment.</p>
+      </div>
+    </section>
+
   </main>
 </div>
 
-<div class="notif-panel" *ngIf="showNotifPanel && canManageAll()">
+<div class="notif-panel" *ngIf="showNotifPanel">
   <div class="notif-header">
     <span><i class="bi bi-bell-fill"></i> Notifications</span>
     <button class="btn-close-panel" (click)="showNotifPanel=false">✕</button>
@@ -483,89 +583,424 @@
 <div class="modal-overlay" *ngIf="showquestform" (click)="showquestform=false">
   <div class="modal modal-large" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ editingquest ? 'Modifier Questionnaire' : 'Nouveau Questionnaire' }}</h2>
+      <h2>
+        <i class="bi bi-stars"></i>
+        {{ editingquest ? 'Modifier Questionnaire' : 'Nouveau Questionnaire' }}
+      </h2>
       <button class="btn-close" (click)="showquestform=false">✕</button>
     </div>
-    <label>Titre</label>
-    <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
-    <label>Description</label>
-    <input [(ngModel)]="questform.description" placeholder="Description" />
 
-    <div class="questions-section">
-      <div class="questions-pool">
-        <div class="section-title">Questions existantes</div>
-        <div class="search-hint">Cliquez pour ajouter / retirer</div>
-        <div class="questions-list">
-          <div *ngFor="let q of questions"
-               class="q-chip"
-               [class.selected]="isselectedquestion(q.id)"
-               (click)="changequestion(q.id)">
-            <span class="q-type-badge">{{ q.type }}</span>
-            {{ q.titre || q.title }}
-            <span class="q-check" *ngIf="isselectedquestion(q.id)">✓</span>
+    <!-- ═══ MODE ÉDITION : formulaire classique ═══ -->
+    <ng-container *ngIf="editingquest">
+      <label>Titre</label>
+      <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
+      <label>Description</label>
+      <input [(ngModel)]="questform.description" placeholder="Description" />
+      <div class="questions-section">
+        <div class="questions-pool">
+          <div class="section-title">Questions existantes</div>
+          <div class="search-hint">Cliquez pour ajouter / retirer</div>
+          <div class="q-search-wrap">
+            <input class="q-search-input"
+                   [(ngModel)]="questionSearchText"
+                   placeholder="Rechercher une question..."
+                   (click)="$event.stopPropagation()" />
+            <span class="q-search-icon"><i class="bi bi-search"></i></span>
           </div>
-          <div *ngIf="questions.length===0" class="empty-pool">Aucune question disponible</div>
-        </div>
-        <button class="btn-new-q" (click)="showaddquestion=!showaddquestion">+ Créer nouvelle question</button>
-        <div *ngIf="showaddquestion" class="new-q-form">
-          <input [(ngModel)]="newquest.titre" placeholder="Titre de la question" />
-          <select [(ngModel)]="newquest.type">
-            <option value="text">Texte libre</option>
-            <option value="radio">Choix unique</option>
-            <option value="checkbox">Choix multiple</option>
-            <option value="select">Liste déroulante</option>
-          </select>
-          <div *ngIf="newquest.type!=='text'" class="options-input-wrapper">
-            <input [(ngModel)]="newquest.options" placeholder="Options séparées par virgule (ex: Oui, Non, Peut-être)" [class.input-error]="newquest.type!=='text' && !newquest.options?.trim()" />
-            <span class="options-hint">* Obligatoire pour ce type</span>
-          </div>
-          <label class="required-toggle">
-            <input type="checkbox" [(ngModel)]="newquest.required" />
-            <span>Question obligatoire</span>
-          </label>
-          <button class="btn-save-q" (click)="createaddquestion()">✓ Ajouter</button>
-        </div>
-      </div>
-      <div class="questions-selected">
-        <div class="section-title">Questions sélectionnées</div>
-        <div class="search-hint">Glissez pour réorganiser</div>
-        <div class="drop-zone">
-          <div *ngFor="let q of selectedquestion; let i=index"
-               class="selected-chip-block"
-               draggable="true"
-               [class.drag-over]="dragoverIndex===i"
-               (dragstart)="dragStart(i,$event)"
-               (dragover)="dragover(i,$event)"
-               (drop)="drop(i,$event)">
-            <div class="selected-chip-row">
-              <span class="drag-handle">⠿</span>
-              <span class="q-num">{{ i+1 }}</span>
+          <div class="questions-list">
+            <div *ngFor="let q of filteredQuestions"
+                 class="q-chip"
+                 [class.selected]="isselectedquestion(q.id)"
+                 (click)="changequestion(q.id)">
               <span class="q-type-badge">{{ q.type }}</span>
-              <span style="flex:1;">{{ q.titre || q.title }}</span>
-              <button *ngIf="q.type !== 'text'" class="btn-edit-opts" (click)="$event.stopPropagation(); toggleOptionsEdit(q.id)" title="Modifier les choix"><i class="bi bi-pencil"></i></button>
-              <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
+              {{ q.titre || q.title }}
+              <span class="q-check" *ngIf="isselectedquestion(q.id)">✓</span>
             </div>
-            <div *ngIf="q.type !== 'text' && editingOptionsId !== q.id" class="q-options-chips">
-              <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
-              <span *ngIf="!q.options || q.options.trim() === ''" class="q-options-empty">Aucun choix défini</span>
-            </div>
-            <div *ngIf="q.type !== 'text' && editingOptionsId === q.id" class="q-options-edit">
-              <input [(ngModel)]="q.options" placeholder="Choix séparés par virgule (ex: Oui, Non, Peut-être)" class="options-edit-input" />
-              <div class="q-options-chips" *ngIf="q.options?.trim()">
-                <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
-              </div>
-              <button class="btn-save-opts" (click)="toggleOptionsEdit(q.id)">✓ Valider</button>
+            <div *ngIf="filteredQuestions.length===0" class="empty-pool">
+              {{ questions.length === 0 ? 'Aucune question disponible' : 'Aucun résultat' }}
             </div>
           </div>
-          <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
+          <button class="btn-new-q" (click)="showaddquestion=!showaddquestion; iaAutoSuggestion=null; iaDoublonWarning=null; iaOptionsSuggestion=[]">+ Créer nouvelle question</button>
+          <div *ngIf="showaddquestion" class="new-q-form">
+            <input [(ngModel)]="newquest.titre"
+                   (ngModelChange)="onTitreChange()"
+                   placeholder="Titre de la question"
+                   [class.input-doublon]="!!iaDoublonWarning" />
+
+            <!-- Semantic duplicate warning -->
+            <div *ngIf="iaDoublonWarning" class="ia-doublon-card">
+              <div class="ia-doublon-card-header">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>Doublon sémantique détecté</span>
+                <span class="ia-doublon-pct" *ngIf="iaDoublonWarning.questionSimilaire?.similarite">
+                  {{ iaDoublonWarning.questionSimilaire.similarite * 100 | number:'1.0-0' }}% similaire
+                </span>
+              </div>
+              <div class="ia-doublon-card-body">
+                <p class="ia-doublon-msg">{{ iaDoublonWarning.message }}</p>
+                <div *ngIf="iaDoublonWarning.questionSimilaire?.titre" class="ia-doublon-match">
+                  <i class="bi bi-arrow-right-short"></i>
+                  <span class="ia-doublon-match-text">"{{ iaDoublonWarning.questionSimilaire.titre }}"</span>
+                </div>
+                <span class="ia-doublon-hint"><i class="bi bi-pencil"></i> Reformulez votre question pour continuer.</span>
+              </div>
+            </div>
+
+            <!-- AI reformulation suggestion — hidden when any warning is active -->
+            <div *ngIf="iaAutoSuggestion && !iaDoublonWarning && !iaCoherenceWarning" class="ia-suggestion-card">
+              <div class="ia-suggestion-card-header">
+                <i class="bi bi-stars"></i> Suggestion IA
+                <span class="ia-model-badge">Llama 3.3</span>
+              </div>
+              <div class="ia-suggestion-card-body">
+                <span class="ia-suggestion-label">Reformulation proposée :</span>
+                <span class="ia-suggestion-text">{{ iaAutoSuggestion.titreReformule }}</span>
+                <span class="ia-suggestion-reason"><i class="bi bi-info-circle"></i> {{ iaAutoSuggestion.explication }}</span>
+              </div>
+              <div class="ia-suggestion-actions">
+                <button class="btn-ia-apply" (click)="acceptAutoSuggestion()">
+                  <i class="bi bi-check-lg"></i> Appliquer
+                </button>
+                <button class="btn-ia-dismiss" (click)="iaAutoSuggestion=null">
+                  <i class="bi bi-x"></i> Ignorer
+                </button>
+              </div>
+            </div>
+
+            <select [(ngModel)]="newquest.type" (change)="suggestOptions()">
+              <option value="text">Texte libre</option>
+              <option value="radio">Choix unique</option>
+              <option value="checkbox">Choix multiple</option>
+              <option value="scale">Échelle</option>
+              <option value="select">Liste déroulante</option>
+            </select>
+
+            <div *ngIf="newquest.type!=='text'" class="options-input-wrapper">
+              <input [(ngModel)]="newquest.options"
+                     placeholder="Options séparées par virgule"
+                     [class.input-error]="newquest.type!=='text' && !newquest.options?.trim()" />
+              <span class="options-hint">* Obligatoire pour ce type</span>
+            </div>
+
+            <!-- AI options suggestion -->
+            <div *ngIf="iaOptionsSuggestion.length > 0" class="ia-suggestion-card">
+              <div class="ia-suggestion-card-header">
+                <i class="bi bi-stars"></i> Choix suggérés par l'IA
+                <span class="ia-model-badge">Llama 3.3</span>
+              </div>
+              <div class="ia-options-chips">
+                <span *ngFor="let opt of iaOptionsSuggestion" class="q-option-chip">{{ opt }}</span>
+              </div>
+              <div class="ia-suggestion-actions">
+                <button class="btn-ia-apply" (click)="acceptOptionsSuggestion()">
+                  <i class="bi bi-check-lg"></i> Utiliser ces choix
+                </button>
+                <button class="btn-ia-dismiss" (click)="iaOptionsSuggestion=[]">
+                  <i class="bi bi-x"></i> Ignorer
+                </button>
+              </div>
+            </div>
+
+            <!-- Coherence / text-limit warning -->
+            <div *ngIf="iaCoherenceWarning" class="ia-coherence-card">
+              <div class="ia-coherence-card-header">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span>Question hors contexte</span>
+              </div>
+              <div class="ia-coherence-card-body">
+                <p class="ia-coherence-msg">{{ iaCoherenceWarning.message }}</p>
+                <span class="ia-coherence-conseil" *ngIf="iaCoherenceWarning.conseil">
+                  <i class="bi bi-lightbulb"></i> {{ iaCoherenceWarning.conseil }}
+                </span>
+              </div>
+              <button class="btn-dismiss-coherence" (click)="iaCoherenceWarning=null">
+                <i class="bi bi-x-lg"></i> Ajouter quand même
+              </button>
+            </div>
+
+            <!-- AI loading indicator -->
+            <div *ngIf="iaLoading" class="ia-loading-bar">
+              <span class="ia-loading-dot"></span>
+              <span class="ia-loading-dot"></span>
+              <span class="ia-loading-dot"></span>
+              <span class="ia-loading-text">Analyse IA en cours…</span>
+            </div>
+
+            <label class="required-toggle">
+              <input type="checkbox" [(ngModel)]="newquest.required" />
+              <span>Question obligatoire</span>
+            </label>
+            <button class="btn-save-q"
+                    [disabled]="!canAddQuestion || iaLoading"
+                    [class.btn-save-q-blocked]="!canAddQuestion"
+                    (click)="createaddquestion()">
+              <i class="bi" [ngClass]="iaDoublonWarning ? 'bi-lock-fill' : (iaCoherenceWarning ? 'bi-exclamation-circle' : (!newquest.titre?.trim() ? 'bi-pencil' : 'bi-check-lg'))"></i>
+              {{ iaDoublonWarning ? 'Doublon détecté' : (iaCoherenceWarning ? 'Hors contexte' : (!newquest.titre?.trim() ? 'Saisissez une question' : 'Ajouter la question')) }}
+            </button>
+          </div>
+        </div>
+        <div class="questions-selected">
+          <div class="section-title">
+            Questions sélectionnées
+            <span *ngIf="selectedquestion.length > 0" class="text-pct-badge"
+                  [class.text-pct-warn]="currentTextPct > 15">
+              Texte libre : {{ currentTextPct }}%
+            </span>
+          </div>
+          <div class="search-hint">
+            <span *ngIf="iaReordering" class="ia-reorder-hint"><i class="bi bi-arrow-repeat ia-spin"></i> Réorganisation IA…</span>
+            <span *ngIf="!iaReordering">Organisé automatiquement par l'IA · Glissez pour réajuster</span>
+          </div>
+          <div class="drop-zone">
+            <div *ngFor="let q of selectedquestion; let i=index"
+                 class="selected-chip-block"
+                 draggable="true"
+                 [class.drag-over]="dragoverIndex===i"
+                 (dragstart)="dragStart(i,$event)"
+                 (dragover)="dragover(i,$event)"
+                 (drop)="drop(i,$event)">
+              <div class="selected-chip-row">
+                <span class="drag-handle">⠿</span>
+                <span class="q-num">{{ i+1 }}</span>
+                <span class="q-type-badge">{{ q.type }}</span>
+                <span style="flex:1;">{{ q.titre || q.title }}</span>
+                <button *ngIf="q.type !== 'text'" class="btn-edit-opts" (click)="$event.stopPropagation(); toggleOptionsEdit(q.id)" title="Modifier les choix"><i class="bi bi-pencil"></i></button>
+                <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
+              </div>
+              <div *ngIf="q.type !== 'text' && editingOptionsId !== q.id" class="q-options-chips">
+                <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+                <span *ngIf="!q.options || q.options.trim() === ''" class="q-options-empty">Aucun choix défini</span>
+              </div>
+              <div *ngIf="q.type !== 'text' && editingOptionsId === q.id" class="q-options-edit">
+                <input [(ngModel)]="q.options" placeholder="Choix séparés par virgule" class="options-edit-input" />
+                <div class="q-options-chips" *ngIf="q.options?.trim()">
+                  <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+                </div>
+                <button class="btn-save-opts" (click)="toggleOptionsEdit(q.id)">✓ Valider</button>
+              </div>
+            </div>
+            <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
+          </div>
         </div>
       </div>
-    </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="showquestform=false">Annuler</button>
+        <button class="btn-save" (click)="savequestionnaire()">Modifier</button>
+      </div>
+    </ng-container>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" (click)="showquestform=false">Annuler</button>
-      <button class="btn-save" (click)="savequestionnaire()">{{ editingquest ? 'Modifier' : 'Créer' }}</button>
-    </div>
+    <!-- ═══ MODE CRÉATION : Formulaire simplifié ═══ -->
+    <ng-container *ngIf="!editingquest">
+
+      <label>Titre <span style="color:red">*</span></label>
+      <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
+      <label>Description</label>
+      <input [(ngModel)]="questform.description" placeholder="Description (optionnel)" />
+
+      <div class="questions-section">
+
+        <!-- LEFT: pool -->
+        <div class="questions-pool">
+          <div class="section-title">Questions disponibles</div>
+          <div class="search-hint">Cliquez pour ajouter / retirer</div>
+
+          <div class="q-search-wrap">
+            <input class="q-search-input"
+                   [(ngModel)]="questionSearchText"
+                   placeholder="Rechercher une question..."
+                   (click)="$event.stopPropagation()" />
+            <span class="q-search-icon"><i class="bi bi-search"></i></span>
+          </div>
+          <div class="questions-list">
+            <div *ngFor="let q of filteredQuestions"
+                 class="q-chip"
+                 [class.selected]="isselectedquestion(q.id)"
+                 (click)="changequestion(q.id)">
+              <span class="q-type-badge">{{ q.type }}</span>
+              {{ q.titre || q.title }}
+              <span class="q-check" *ngIf="isselectedquestion(q.id)">✓</span>
+            </div>
+            <div *ngIf="filteredQuestions.length===0" class="empty-pool">
+              {{ questions.length === 0 ? 'Aucune question disponible' : 'Aucun résultat' }}
+            </div>
+          </div>
+
+          <button class="btn-new-q" (click)="showaddquestion=!showaddquestion; iaAutoSuggestion=null; iaDoublonWarning=null; iaOptionsSuggestion=[]">+ Créer nouvelle question</button>
+          <div *ngIf="showaddquestion" class="new-q-form">
+            <input [(ngModel)]="newquest.titre"
+                   (ngModelChange)="onTitreChange()"
+                   placeholder="Titre de la question"
+                   [class.input-doublon]="!!iaDoublonWarning" />
+
+            <!-- Semantic duplicate warning -->
+            <div *ngIf="iaDoublonWarning" class="ia-doublon-card">
+              <div class="ia-doublon-card-header">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>Doublon sémantique détecté</span>
+                <span class="ia-doublon-pct" *ngIf="iaDoublonWarning.questionSimilaire?.similarite">
+                  {{ iaDoublonWarning.questionSimilaire.similarite * 100 | number:'1.0-0' }}% similaire
+                </span>
+              </div>
+              <div class="ia-doublon-card-body">
+                <p class="ia-doublon-msg">{{ iaDoublonWarning.message }}</p>
+                <div *ngIf="iaDoublonWarning.questionSimilaire?.titre" class="ia-doublon-match">
+                  <i class="bi bi-arrow-right-short"></i>
+                  <span class="ia-doublon-match-text">"{{ iaDoublonWarning.questionSimilaire.titre }}"</span>
+                </div>
+                <span class="ia-doublon-hint"><i class="bi bi-pencil"></i> Reformulez votre question pour continuer.</span>
+              </div>
+            </div>
+
+            <!-- AI reformulation suggestion — hidden when any warning is active -->
+            <div *ngIf="iaAutoSuggestion && !iaDoublonWarning && !iaCoherenceWarning" class="ia-suggestion-card">
+              <div class="ia-suggestion-card-header">
+                <i class="bi bi-stars"></i> Suggestion IA
+                <span class="ia-model-badge">Llama 3.3</span>
+              </div>
+              <div class="ia-suggestion-card-body">
+                <span class="ia-suggestion-label">Reformulation proposée :</span>
+                <span class="ia-suggestion-text">{{ iaAutoSuggestion.titreReformule }}</span>
+                <span class="ia-suggestion-reason"><i class="bi bi-info-circle"></i> {{ iaAutoSuggestion.explication }}</span>
+              </div>
+              <div class="ia-suggestion-actions">
+                <button class="btn-ia-apply" (click)="acceptAutoSuggestion()">
+                  <i class="bi bi-check-lg"></i> Appliquer
+                </button>
+                <button class="btn-ia-dismiss" (click)="iaAutoSuggestion=null">
+                  <i class="bi bi-x"></i> Ignorer
+                </button>
+              </div>
+            </div>
+
+            <select [(ngModel)]="newquest.type" (change)="suggestOptions()">
+              <option value="text">Texte libre</option>
+              <option value="radio">Choix unique</option>
+              <option value="checkbox">Choix multiple</option>
+              <option value="scale">Échelle</option>
+              <option value="select">Liste déroulante</option>
+            </select>
+
+            <div *ngIf="newquest.type!=='text'" class="options-input-wrapper">
+              <input [(ngModel)]="newquest.options"
+                     placeholder="Options séparées par virgule"
+                     [class.input-error]="newquest.type!=='text' && !newquest.options?.trim()" />
+              <span class="options-hint">* Obligatoire pour ce type</span>
+            </div>
+
+            <!-- AI options suggestion -->
+            <div *ngIf="iaOptionsSuggestion.length > 0" class="ia-suggestion-card">
+              <div class="ia-suggestion-card-header">
+                <i class="bi bi-stars"></i> Choix suggérés par l'IA
+                <span class="ia-model-badge">Llama 3.3</span>
+              </div>
+              <div class="ia-options-chips">
+                <span *ngFor="let opt of iaOptionsSuggestion" class="q-option-chip">{{ opt }}</span>
+              </div>
+              <div class="ia-suggestion-actions">
+                <button class="btn-ia-apply" (click)="acceptOptionsSuggestion()">
+                  <i class="bi bi-check-lg"></i> Utiliser ces choix
+                </button>
+                <button class="btn-ia-dismiss" (click)="iaOptionsSuggestion=[]">
+                  <i class="bi bi-x"></i> Ignorer
+                </button>
+              </div>
+            </div>
+
+            <!-- Coherence / text-limit warning -->
+            <div *ngIf="iaCoherenceWarning" class="ia-coherence-card">
+              <div class="ia-coherence-card-header">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span>Question hors contexte</span>
+              </div>
+              <div class="ia-coherence-card-body">
+                <p class="ia-coherence-msg">{{ iaCoherenceWarning.message }}</p>
+                <span class="ia-coherence-conseil" *ngIf="iaCoherenceWarning.conseil">
+                  <i class="bi bi-lightbulb"></i> {{ iaCoherenceWarning.conseil }}
+                </span>
+              </div>
+              <button class="btn-dismiss-coherence" (click)="iaCoherenceWarning=null">
+                <i class="bi bi-x-lg"></i> Ajouter quand même
+              </button>
+            </div>
+
+            <!-- AI loading indicator -->
+            <div *ngIf="iaLoading" class="ia-loading-bar">
+              <span class="ia-loading-dot"></span>
+              <span class="ia-loading-dot"></span>
+              <span class="ia-loading-dot"></span>
+              <span class="ia-loading-text">Analyse IA en cours…</span>
+            </div>
+
+            <label class="required-toggle">
+              <input type="checkbox" [(ngModel)]="newquest.required" />
+              <span>Question obligatoire</span>
+            </label>
+            <button class="btn-save-q"
+                    [disabled]="!canAddQuestion || iaLoading"
+                    [class.btn-save-q-blocked]="!canAddQuestion"
+                    (click)="createaddquestion()">
+              <i class="bi" [ngClass]="iaDoublonWarning ? 'bi-lock-fill' : (iaCoherenceWarning ? 'bi-exclamation-circle' : (!newquest.titre?.trim() ? 'bi-pencil' : 'bi-check-lg'))"></i>
+              {{ iaDoublonWarning ? 'Doublon détecté' : (iaCoherenceWarning ? 'Hors contexte' : (!newquest.titre?.trim() ? 'Saisissez une question' : 'Ajouter la question')) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- RIGHT: selected -->
+        <div class="questions-selected">
+          <div class="section-title">
+            Questions sélectionnées
+            <span *ngIf="selectedquestion.length > 0" class="text-pct-badge"
+                  [class.text-pct-warn]="currentTextPct > 15">
+              Texte libre : {{ currentTextPct }}%
+            </span>
+          </div>
+          <div class="search-hint">
+            <span *ngIf="iaReordering" class="ia-reorder-hint"><i class="bi bi-arrow-repeat ia-spin"></i> Réorganisation IA…</span>
+            <span *ngIf="!iaReordering">Organisé automatiquement par l'IA · Glissez pour réajuster</span>
+          </div>
+          <div class="drop-zone">
+            <div *ngFor="let q of selectedquestion; let i=index"
+                 class="selected-chip-block"
+                 draggable="true"
+                 [class.drag-over]="dragoverIndex===i"
+                 (dragstart)="dragStart(i,$event)"
+                 (dragover)="dragover(i,$event)"
+                 (drop)="drop(i,$event)">
+              <div class="selected-chip-row">
+                <span class="drag-handle">⠿</span>
+                <span class="q-num">{{ i+1 }}</span>
+                <span class="q-type-badge">{{ q.type }}</span>
+                <span *ngIf="q.required" class="badge-req" title="Obligatoire pour le client">*</span>
+                <span style="flex:1;">{{ q.titre || q.title }}</span>
+                <button *ngIf="q.type !== 'text'" class="btn-edit-opts" (click)="$event.stopPropagation(); toggleOptionsEdit(q.id)" title="Modifier les choix"><i class="bi bi-pencil"></i></button>
+                <button class="remove-q" (click)="removeselectedquestion(q.id)">✕</button>
+              </div>
+              <div *ngIf="q.type !== 'text' && editingOptionsId !== q.id" class="q-options-chips">
+                <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+                <span *ngIf="!q.options || q.options.trim() === ''" class="q-options-empty">Aucun choix défini</span>
+              </div>
+              <div *ngIf="q.type !== 'text' && editingOptionsId === q.id" class="q-options-edit">
+                <input [(ngModel)]="q.options" placeholder="Choix séparés par virgule" class="options-edit-input" />
+                <div class="q-options-chips" *ngIf="q.options?.trim()">
+                  <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+                </div>
+                <button class="btn-save-opts" (click)="toggleOptionsEdit(q.id)">✓ Valider</button>
+              </div>
+            </div>
+
+            <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="showquestform=false">Annuler</button>
+        <button class="btn-save" (click)="saveCreateQuestionnaire()" [disabled]="!questform.titre">
+          <i class="bi bi-check2-circle"></i> Créer le questionnaire
+        </button>
+      </div>
+
+    </ng-container>
   </div>
 </div>
 
@@ -657,6 +1092,35 @@
     <div class="modal-actions">
       <button class="btn-send-offre" (click)="envoyerOffreClient(selectedClientData)"><i class="bi bi-gift"></i> Envoyer une offre</button>
       <button class="btn-close-modal" (click)="showClientReponsesModal=false">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELEGATE QUESTIONNAIRE MODAL ── -->
+<div class="modal-overlay" *ngIf="showDelegateModal" (click)="showDelegateModal=false">
+  <div class="modal modal-gest" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="bi bi-person-plus"></i> Déléguer la création</h2>
+      <button class="btn-close" (click)="showDelegateModal=false">✕</button>
+    </div>
+    <p class="delegate-desc">Choisissez un gestionnaire de votre équipe et envoyez-lui une demande de création de questionnaire.</p>
+
+    <label>Gestionnaire <span style="color:red">*</span></label>
+    <select [(ngModel)]="delegateform.gestionnaireId">
+      <option [ngValue]="null" disabled>— Choisir un gestionnaire —</option>
+      <optgroup *ngFor="let team of myTeams" [label]="team.name">
+        <option *ngFor="let m of team.members" [ngValue]="m.id">{{ m.fullName }}</option>
+      </optgroup>
+    </select>
+
+    <label>Sujet du questionnaire <span style="color:red">*</span></label>
+    <input [(ngModel)]="delegateform.titreHint" placeholder="Ex: Satisfaction client 2025" />
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showDelegateModal=false">Annuler</button>
+      <button class="btn-save" (click)="sendDelegateRequest()" [disabled]="!delegateform.gestionnaireId || !delegateform.titreHint?.trim()">
+        <i class="bi bi-send"></i> Envoyer la demande
+      </button>
     </div>
   </div>
 </div>

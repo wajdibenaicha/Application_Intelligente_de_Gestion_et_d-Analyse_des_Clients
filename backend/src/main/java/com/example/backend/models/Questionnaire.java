@@ -34,6 +34,10 @@ public class Questionnaire {
     @Column(columnDefinition = "VARCHAR(50) DEFAULT 'BROUILLON'")
     private String statut = "BROUILLON";
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role_questionnaire")
+    private RoleQuestionnaire roleQuestionnaire;
+
     private String lienGoogleForm;
 
     @Column(length = 500)
@@ -109,5 +113,13 @@ public class Questionnaire {
 
     public void setRaisonRejet(String raisonRejet) {
         this.raisonRejet = raisonRejet;
+    }
+
+    public RoleQuestionnaire getRoleQuestionnaire() {
+        return roleQuestionnaire;
+    }
+
+    public void setRoleQuestionnaire(RoleQuestionnaire roleQuestionnaire) {
+        this.roleQuestionnaire = roleQuestionnaire;
     }
 }

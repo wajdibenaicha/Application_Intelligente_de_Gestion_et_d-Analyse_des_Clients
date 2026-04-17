@@ -6,8 +6,14 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.backend.Repository.QuestionnaireRepository;
+import com.example.backend.Repository.ReponseRepository;
+import com.example.backend.Repository.EnvoiQuestionnaireRepository;
+import com.example.backend.Repository.ClientKpiRepository;
+import com.example.backend.Repository.OffreRecommendationRepository;
+import com.example.backend.models.ClientKpi;
 import com.example.backend.models.Questionnaire;
 
 @Service
@@ -20,6 +26,18 @@ public class QuestionnaireService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private ReponseRepository reponseRepository;
+
+    @Autowired
+    private EnvoiQuestionnaireRepository envoiRepository;
+
+    @Autowired
+    private ClientKpiRepository clientKpiRepository;
+
+    @Autowired
+    private OffreRecommendationRepository offreRecommendationRepository;
 
     public List<Questionnaire> getAll() {
         return questionnaireRepository.findAll();
@@ -65,9 +83,25 @@ public class QuestionnaireService {
         return questionnaireRepository.findById(id).orElse(null);
     }
 
+    @Transactional
     public void delete(Long id) {
         Questionnaire q = getQuestionnaireById(id);
         if (q != null) {
+            // 1. Delete offre_recommendation → depends on client_kpi
+            List<ClientKpi> kpis = clientKpiRepository.findByQuestionnaireId(id);
+            for (ClientKpi kpi : kpis) {
+                offreRecommendationRepository.findByClientKpiId(kpi.getId())
+                    .ifPresent(offreRecommendationRepository::delete);
+            }
+            // 2. Delete client_kpi → depends on questionnaire
+            clientKpiRepository.deleteAll(kpis);
+            // 3. Delete reponses → depends on questionnaire
+            reponseRepository.deleteByQuestionnaireId(id);
+            // 4. Delete envois → depends on questionnaire
+            envoiRepository.deleteByQuestionnaireId(id);
+            // 5. Delete notifications linked to this questionnaire
+            notificationService.deleteBySource(id, "QUESTIONNAIRE");
+            // 6. Clear questions join table, then delete questionnaire
             q.getQuestions().clear();
             questionnaireRepository.save(q);
             questionnaireRepository.deleteById(id);
@@ -122,8 +156,11 @@ public class QuestionnaireService {
             q.setStatut("EN_ATTENTE");
             q.setRaisonRejet(null);
             Questionnaire saved = questionnaireRepository.save(q);
+            String gestName = (q.getGestionnaire() != null && q.getGestionnaire().getFullName() != null)
+                    ? q.getGestionnaire().getFullName()
+                    : "Un gestionnaire";
             notificationService.createNotification("DEMANDE_PUBLICATION",
-                    "Le gestionnaire demande la publication du questionnaire : " + q.getTitre(),
+                    gestName + " demande la publication du questionnaire : " + q.getTitre(),
                     id, "QUESTIONNAIRE");
             messagingTemplate.convertAndSend("/topic/questionnaires", getAll());
             return saved;

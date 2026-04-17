@@ -36,8 +36,22 @@ public class NotificationService {
 
     // Only questionnaire-related notifications → for directeur/gestionnaire
     public List<Notification> getGestionnaireNotifications() {
-        List<String> types = java.util.List.of("DEMANDE_PUBLICATION", "TOUS_ONT_REPONDU");
+        List<String> types = java.util.List.of("DEMANDE_PUBLICATION", "TOUS_ONT_REPONDU", "DEMANDE_CREATION_QUESTIONNAIRE");
         return notificationRepository.findByTypeInAndVueFalseOrderByDateCreationDesc(types);
+    }
+
+    // Directeur → Gestionnaire delegation request
+    public Notification sendDelegationRequest(Long directeurId, Long gestionnaireId, String titreHint) {
+        Notification notif = new Notification();
+        notif.setType("DEMANDE_CREATION_QUESTIONNAIRE");
+        notif.setMessage(titreHint != null && !titreHint.isBlank()
+            ? "Votre directeur vous demande de créer un questionnaire : \"" + titreHint + "\""
+            : "Votre directeur vous demande de créer un questionnaire.");
+        notif.setSourceId(gestionnaireId);   // target gestionnaire
+        notif.setSourceType("GESTIONNAIRE");
+        Notification saved = notificationRepository.save(notif);
+        messagingTemplate.convertAndSend("/topic/admin/notifications", getGestionnaireNotifications());
+        return saved;
     }
 
     public void marquerVue(Long id) {

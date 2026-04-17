@@ -8,4 +8,5 @@ public interface ClientKpiRepository extends JpaRepository<ClientKpi, Long> {
     List<ClientKpi> findByClientId(Long clientId);
     Optional<ClientKpi> findByClientIdAndQuestionnaireId(
         Long clientId, Long questionnaireId);
+    List<ClientKpi> findByQuestionnaireId(Long questionnaireId);
 }

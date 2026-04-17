@@ -23,6 +23,11 @@ public class Gestionnaire {
     @JsonIgnoreProperties({ "gestionnaires" })
     private Role role;
 
+    @ManyToOne
+    @JoinColumn(name = "team_id")
+    @JsonIgnoreProperties({ "members", "directeur" })
+    private Team team;
+
     public Gestionnaire() {
     }
 
@@ -64,5 +69,13 @@ public class Gestionnaire {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 }

@@ -76,4 +76,27 @@ export class Api {
   envoyerOffre(offreId: number, clientIds: number[]): Observable<any> {
     return this.http.post(`${this.base}/offres/envoyer`, { offreId, clientIds });
   }
+  sendDelegationRequest(directeurId: number, gestionnaireId: number, titreHint: string) {
+    return this.http.post<any>(`${this.base}/notifications/delegation`, { directeurId, gestionnaireId, titreHint });
+  }
+
+  getTeams() {
+    return this.http.get<any[]>('http://localhost:8081/api/teams');
+  }
+createTeam(name: string, directeurId: number) {
+  return this.http.post<any>('http://localhost:8081/api/teams', { name, directeurId });
+}
+deleteTeam(id: number) { 
+  return this.http.delete(`http://localhost:8081/api/teams/${id}`);
+ }
+changeDirecteur(teamId: number, gestionnaireId: number) {
+  return this.http.put<any>(`http://localhost:8081/api/teams/${teamId}/directeur/${gestionnaireId}`, {});
+}
+addMember(teamId: number, gestionnaireId: number) {
+  return this.http.post<any>(`http://localhost:8081/api/teams/${teamId}/members/${gestionnaireId}`, {});
+}
+removeMember(teamId: number, gestionnaireId: number) {
+  return this.http.delete<any>(`http://localhost:8081/api/teams/${teamId}/members/${gestionnaireId}`);
+}
+
 }

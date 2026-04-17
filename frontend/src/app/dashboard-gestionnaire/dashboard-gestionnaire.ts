@@ -5,7 +5,8 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import Chart from 'chart.js/auto';
 import { ViewChild, ElementRef } from '@angular/core';
-
+import { finalize, timeout, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 import { WebSocketService } from '../services/websocket.service';
 import { Api } from '../services/api';
@@ -24,6 +25,8 @@ export class DashboardGestionnaire implements OnInit {
   activeSection = 'home';
   sidebarCollapsed = false;
   isLoading = true;
+  private allReponses: any[] = [];      // cached — loaded once per updateStats
+  private reponsesLoading = false;      // guard against duplicate /reponses calls
   showToast = false;
   toastMessage = '';
   toastType = 'success';
@@ -56,6 +59,21 @@ export class DashboardGestionnaire implements OnInit {
   showaddquestion = false;
   newquest: any = { titre: '', type: 'text', options: '', required: false };
   selectedquestion: any[] = [];
+  questionSearchText = '';
+
+  iaAutoSuggestion: any = null;
+  iaDoublonWarning: any = null;
+  iaCoherenceWarning: any = null;
+  iaOptionsSuggestion: string[] = [];
+  iaLoading = false;
+  iaReordering = false;
+
+
+  get filteredQuestions(): any[] {
+    const term = this.questionSearchText.trim().toLowerCase();
+    if (!term) return this.questions;
+    return this.questions.filter(q => (q.titre || q.title || '').toLowerCase().includes(term));
+  }
   dragoverIndex = -1;
 
   showPartageModal = false;
@@ -68,6 +86,7 @@ export class DashboardGestionnaire implements OnInit {
   showNotifPanel = false;
 
   private platformId = inject(PLATFORM_ID);
+  private iaDebounceTimer: any = null;
 
   constructor(
     private http: HttpClient,
@@ -95,7 +114,11 @@ export class DashboardGestionnaire implements OnInit {
 
     // Questionnaires changed → refresh stats + all charts (updateStats triggers renderAllCharts)
     this.wsService.questionnaires$.subscribe(data => {
-      this.questionnaires = data.map(q => this.mapStatut(q));
+      const all = data.map((q: any) => this.mapStatut(q));
+      // Directeur sees all; regular gestionnaire sees only their own
+      this.questionnaires = this.canManageAll()
+        ? all
+        : all.filter((q: any) => q.gestionnaire?.id === this.gestionnaire.id);
       this.updateStats();
       this.cdr.detectChanges();
     });
@@ -108,20 +131,28 @@ export class DashboardGestionnaire implements OnInit {
       this.cdr.detectChanges();
     });
 
-    if (this.canManageAll()) {
-      this.wsService.adminNotifications$.subscribe(data => {
+    this.wsService.adminNotifications$.subscribe(data => {
+      if (this.canManageAll()) {
         const allowed = ['DEMANDE_PUBLICATION', 'TOUS_ONT_REPONDU'];
         const filtered = data.filter((n: any) => allowed.includes(n.type));
         this.notifications = filtered;
         this.unreadNotifCount = filtered.filter((n: any) => !n.vue).length;
-        this.cdr.detectChanges();
-      });
-      this.loadNotifications();
-    }
+      } else {
+        // Regular gestionnaire: show delegation requests addressed to them
+        const mine = data.filter((n: any) =>
+          n.type === 'DEMANDE_CREATION_QUESTIONNAIRE' && n.sourceId === this.gestionnaire.id
+        );
+        this.notifications = mine;
+        this.unreadNotifCount = mine.filter((n: any) => !n.vue).length;
+      }
+      this.cdr.detectChanges();
+    });
+    this.loadNotifications();
 
     this.loadQuestionnaires();
     this.loadOffresIA();
     this.loadRecommendations();
+    if (this.canManageAll()) this.loadMyTeams();
     this.http.get<any[]>(this.apiUrl + '/questions').subscribe({
       next: (data) => { this.questions = data; },
       error: () => {}
@@ -133,7 +164,7 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   canManageAll(): boolean {
-    return this.permission === 'DIRECTEUR';
+    return this.permission?.toUpperCase() === 'DIRECTEUR';
   }
 
   setSection(section: string) {
@@ -162,6 +193,7 @@ export class DashboardGestionnaire implements OnInit {
     if (this.activeSection === 'questionnaires') return 'Questionnaires';
     if (this.activeSection === 'reponses') return 'Réponses des clients';
     if (this.activeSection === 'offres') return 'Offres';
+    if (this.activeSection === 'teams') return 'Mes Équipes';
     return '';
   }
 
@@ -215,15 +247,31 @@ export class DashboardGestionnaire implements OnInit {
   private updateStats() {
     const mine = this.canManageAll()
       ? this.questionnaires
-      : this.questionnaires.filter(q => q.gestionnaire?.id === this.gestionnaire.id);
+      : this.questionnaires.filter((q: any) => q.gestionnaire?.id === this.gestionnaire.id);
     const total     = mine.length;
-    const pending   = mine.filter(q => (q.statut||'').toUpperCase() === 'EN_ATTENTE').length;
-    const published = mine.filter(q => ['PUBLIE','APPROUVE'].includes((q.statut||'').toUpperCase())).length;
+    const pending   = mine.filter((q: any) => (q.statut||'').toUpperCase() === 'EN_ATTENTE').length;
+    const published = mine.filter((q: any) => ['PUBLIE','APPROUVE'].includes((q.statut||'').toUpperCase())).length;
     this.countUp(total,     v => { this.totalQuestionnaires = v; this.cdr.detectChanges(); });
     this.countUp(pending,   v => { this.pendingCount        = v; this.cdr.detectChanges(); });
     this.countUp(published, v => { this.publishedCount      = v; this.cdr.detectChanges(); });
-    this.loadTotalReponses(mine.map(q => q.id));
-    if (this.activeSection === 'home') setTimeout(() => this.renderAllCharts(), 200);
+
+    // Load /reponses ONCE — used by both totalReponses counter and reponsesChart
+    if (this.reponsesLoading) return;
+    this.reponsesLoading = true;
+    this.http.get<any[]>(this.apiUrl + '/reponses').pipe(
+      timeout(10000),
+      catchError(() => of([])),
+      finalize(() => { this.reponsesLoading = false; })
+    ).subscribe({
+      next: (data) => {
+        this.allReponses = data || [];
+        const ids = new Set(mine.map((q: any) => q.id));
+        const relevant = this.allReponses.filter((r: any) => ids.has(r.questionnaire?.id));
+        const unique = new Set(relevant.map((r: any) => `${r.client?.id}-${r.questionnaire?.id}`));
+        this.countUp(unique.size, v => { this.totalReponses = v; this.cdr.detectChanges(); });
+        if (this.activeSection === 'home') setTimeout(() => this.renderAllCharts(), 150);
+      }
+    });
   }
 
   renderSentimentChart() {
@@ -342,13 +390,12 @@ renderReponsesChart() {
   const visibleIds = new Set(
     (this.canManageAll()
       ? this.questionnaires
-      : this.questionnaires.filter(q => q.gestionnaire?.id === this.gestionnaire?.id)
+      : this.questionnaires.filter((q: any) => q.gestionnaire?.id === this.gestionnaire?.id)
     ).map((q: any) => q.id)
   );
 
-  this.http.get<any[]>(this.apiUrl + '/reponses').subscribe({
-    next: (data) => {
-
+  // Use already-loaded cached responses (no extra HTTP call)
+  const buildChart = (data: any[]) => {
       const map = new Map<string, Set<number>>();
 
       for (const r of data) {
@@ -356,7 +403,7 @@ renderReponsesChart() {
         const qTitre = r.questionnaire?.titre || 'Questionnaire ' + qId;
         const clientId = r.client?.id;
         if (!qId || !clientId) continue;
-        if (!visibleIds.has(qId)) continue;   // ← skip questionnaires the user can't see
+        if (!visibleIds.has(qId)) continue;
 
         const key = qTitre;
         if (!map.has(key)) map.set(key, new Set());
@@ -407,9 +454,9 @@ renderReponsesChart() {
           }
         }
       });
-    },
-    error: () => {}
-  });
+  };
+
+  buildChart(this.allReponses);
 }
 
   private loadTotalReponses(questionnaireIds: number[]) {
@@ -430,26 +477,34 @@ renderReponsesChart() {
       ? this.apiUrl + '/questionnaires'
       : this.apiUrl + '/questionnaires/gestionnaire/' + this.gestionnaire.id;
 
-    this.http.get<any[]>(url).subscribe({
+    this.http.get<any[]>(url).pipe(
+      timeout(12000),
+      catchError(() => of([])),
+      finalize(() => { this.isLoading = false; this.cdr.detectChanges(); })
+    ).subscribe({
       next: (data) => {
-        this.questionnaires = data.map(q => this.mapStatut(q));
-        this.isLoading = false;
+        this.questionnaires = (data || []).map((q: any) => this.mapStatut(q));
         this.updateStats();
         this.cdr.detectChanges();
-        setTimeout(() =>{
-           this.renderStatutChart();
-          this.renderReponsesChart() ;
-        }, 100);
-      },
-      error: () => { this.isLoading = false; this.showToastMessage('Erreur lors du chargement des questionnaires', 'error'); }
+      }
     });
   }
 
   loadNotifications() {
     this.api.getNotifications().subscribe({
       next: (data: any[]) => {
-        this.notifications = data;
-        this.unreadNotifCount = data.filter(n => !n.vue).length;
+        if (this.canManageAll()) {
+          const allowed = ['DEMANDE_PUBLICATION', 'TOUS_ONT_REPONDU'];
+          const filtered = data.filter((n: any) => allowed.includes(n.type));
+          this.notifications = filtered;
+          this.unreadNotifCount = filtered.filter((n: any) => !n.vue).length;
+        } else {
+          const mine = data.filter((n: any) =>
+            n.type === 'DEMANDE_CREATION_QUESTIONNAIRE' && n.sourceId === this.gestionnaire.id
+          );
+          this.notifications = mine;
+          this.unreadNotifCount = mine.filter((n: any) => !n.vue).length;
+        }
         this.cdr.detectChanges();
       },
       error: () => {}
@@ -502,6 +557,7 @@ renderReponsesChart() {
     this.editingquest = null;
     this.selectedquestion = [];
     this.questform = { titre: '', description: '', questions: [] };
+    this.questionSearchText = '';
     this.showquestform = true;
     this.activeSection = 'questionnaires';
   }
@@ -514,6 +570,7 @@ renderReponsesChart() {
       questions: q.questions ? q.questions.map((item: any) => item.id) : []
     };
     this.selectedquestion = q.questions ? [...q.questions] : [];
+    this.questionSearchText = '';
     this.showquestform = true;
   }
 
@@ -740,19 +797,22 @@ renderReponsesChart() {
         this.totalReponses = clients;
         this.cdr.detectChanges();
         const nb = data.length;
-        Swal.fire({
-          title: `${titre}`,
-          html: nb === 0
-            ? `<p>Aucune réponse reçue pour ce questionnaire.</p>`
-            : `<p><b>${clients} client${clients > 1 ? 's' : ''}</b> ont répondu à ce questionnaire.</p>`,
-          icon: nb === 0 ? 'info' : 'success',
-          confirmButtonText: nb === 0 ? 'OK' : 'Voir les réponses',
-          confirmButtonColor: '#27ae60',
-          timer: nb === 0 ? 2500 : undefined,
-          showConfirmButton: true
-        }).then(() => {
-          setTimeout(() => this.renderReponsesParQuestion(this.allClients.length, clients), 150);
-        });
+        if (nb === 0) {
+          Swal.fire({
+            title: `${titre}`,
+            html: `<p>Aucune réponse reçue pour ce questionnaire.</p>`,
+            icon: 'info',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#27ae60',
+            timer: 2500,
+            showConfirmButton: true
+          });
+        } else {
+          this.http.get<any>(this.apiUrl + '/envoi/stats?questionnaireId=' + this.selectedQuestionnaireId).subscribe({
+            next: (stats) => setTimeout(() => this.renderReponsesParQuestion(stats['sent'], stats['repondu']), 150),
+            error: ()    => setTimeout(() => this.renderReponsesParQuestion(this.allClients.length, clients), 150)
+          });
+        }
       },
       error: () => this.showToastMessage('Erreur lors du chargement des réponses', 'error')
     });
@@ -777,27 +837,10 @@ renderReponsesChart() {
   }
 
   voirReponsesClient(entry: any) {
-    const questionnaireTitre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
-    const nb = entry.nbReponses;
-    const clientName = entry.client?.fullName || entry.client?.mail || 'Client';
-
-    Swal.fire({
-      title: `${questionnaireTitre}`,
-      html: `<b>${clientName}</b> a soumis <b>${nb} réponse${nb > 1 ? 's' : ''}</b> à ce questionnaire.`,
-      icon: 'info',
-      confirmButtonText: 'Voir les réponses',
-      showCancelButton: true,
-      cancelButtonText: 'Annuler',
-      confirmButtonColor: '#27ae60',
-      cancelButtonColor: '#95a5a6',
-      reverseButtons: true
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.selectedClientData = entry.client;
-      this.selectedClientReponses = entry.reponses;
-      this.showClientReponsesModal = true;
-      this.cdr.detectChanges();
-    });
+    this.selectedClientData = entry.client;
+    this.selectedClientReponses = entry.reponses;
+    this.showClientReponsesModal = true;
+    this.cdr.detectChanges();
   }
 
   exportReponsesCSV() {
@@ -1223,10 +1266,54 @@ renderReponsesChart() {
     return options.split(',').map(o => o.trim()).filter(o => o !== '');
   }
 
+  get canAddQuestion(): boolean {
+    if (!this.newquest.titre?.trim()) return false;
+    if (this.iaDoublonWarning) return false;
+    if (this.iaCoherenceWarning) return false;
+    if (this.newquest.type !== 'text' && !this.newquest.options?.trim()) return false;
+    if (this.newquest.type === 'scale' && !this.hasNeutralOption(this.newquest.options)) return false;
+    if (this.newquest.type === 'text' && this.textQuestionPct() > 0.15) return false;
+    return true;
+  }
+
+  get currentTextPct(): number {
+    const total = this.selectedquestion.length;
+    if (total === 0) return 0;
+    return Math.round((this.selectedquestion.filter((q: any) => q.type === 'text').length / total) * 100);
+  }
+
+  private hasNeutralOption(options: string): boolean {
+    const neutralWords = ['parfois', 'neutre', 'moyen', 'modéré', 'modere', 'neither', 'sometimes'];
+    const opts = (options || '').toLowerCase();
+    return neutralWords.some(w => opts.includes(w));
+  }
+
+  private textQuestionPct(): number {
+    const total = this.selectedquestion.length + 1; // +1 for the one being added
+    const textCount = this.selectedquestion.filter((q: any) => q.type === 'text').length
+      + (this.newquest.type === 'text' ? 1 : 0);
+    return textCount / total;
+  }
+
   createaddquestion() {
-    if (!this.newquest.titre) return;
+    if (!this.newquest.titre?.trim()) {
+      Swal.fire({ icon: 'warning', title: 'Titre manquant', text: 'Veuillez saisir le texte de la question.', confirmButtonColor: '#e67e22' });
+      return;
+    }
+    if (this.iaDoublonWarning) {
+      Swal.fire({ icon: 'warning', title: 'Doublon sémantique détecté', text: 'Cette question couvre déjà un sujet existant dans le questionnaire. Modifiez-la ou ignorez l\'avertissement pour continuer.', confirmButtonColor: '#e67e22' });
+      return;
+    }
     if (this.newquest.type !== 'text' && !this.newquest.options?.trim()) {
-      Swal.fire({ icon: 'warning', title: 'Choix manquants', text: 'Les choix sont obligatoires pour une question de type "' + this.newquest.type + '". Séparez-les par des virgules.', confirmButtonColor: '#27ae60' });
+      Swal.fire({ icon: 'warning', title: 'Choix manquants', text: 'Les choix sont obligatoires pour ce type de question. Utilisez les suggestions IA ou saisissez-les séparés par des virgules.', confirmButtonColor: '#e67e22' });
+      return;
+    }
+    if (this.newquest.type === 'scale' && !this.hasNeutralOption(this.newquest.options)) {
+      Swal.fire({ icon: 'warning', title: 'Option neutre manquante', text: 'Une échelle doit contenir une option neutre centrale (ex: "Parfois"). Utilisez les suggestions IA pour corriger.', confirmButtonColor: '#e67e22' });
+      return;
+    }
+    if (this.newquest.type === 'text' && this.textQuestionPct() > 0.15) {
+      Swal.fire({ icon: 'warning', title: 'Limite atteinte (15%)', text: 'Les questions à texte libre ne peuvent pas dépasser 15% du questionnaire. Privilégiez un type avec choix.', confirmButtonColor: '#e67e22' });
       return;
     }
     this.http.post<any>(this.apiUrl + '/questions', this.newquest).subscribe({
@@ -1235,6 +1322,12 @@ renderReponsesChart() {
         this.questions.push(c);
         this.questform.questions.push(c.id);
         this.newquest = { titre: '', type: 'text', options: '', required: false };
+        this.iaAutoSuggestion = null;
+        this.iaDoublonWarning = null;
+        this.iaCoherenceWarning = null;
+        this.iaOptionsSuggestion = [];
+        this.iaLoading = false;
+        this.reorderSelectedQuestions();
         this.showaddquestion = false;
         this.cdr.detectChanges();
       },
@@ -1408,6 +1501,258 @@ renderReponsesChart() {
       showConfirmButton: false,
       timer: 2500,
       timerProgressBar: true
+    });
+  }
+
+  
+
+  myTeams: any[] = [];
+  questTab = 'mine';           
+  showDelegateModal = false;
+  delegateform: any = { gestionnaireId: null, titreHint: '' };
+
+  loadMyTeams() {
+    this.api.getTeams().subscribe({
+      next: (teams) => {
+        this.myTeams = teams.filter((t: any) => t.directeur?.id === this.gestionnaire.id);
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+
+  get allTeamMembers(): any[] {
+    const seen = new Set<number>();
+    const result: any[] = [];
+    for (const team of this.myTeams) {
+      for (const m of (team.members || [])) {
+        if (!seen.has(m.id)) {
+          seen.add(m.id);
+          result.push({ ...m, teamName: team.name });
+        }
+      }
+    }
+    return result;
+  }
+
+
+  questionnairesForTeam(team: any): any[] {
+    const memberIds = new Set((team.members || []).map((m: any) => m.id));
+    return this.questionnaires.filter(q => memberIds.has(q.gestionnaire?.id));
+  }
+
+  
+  get myOwnQuestionnaires(): any[] {
+    return this.questionnaires.filter(q => q.gestionnaire?.id === this.gestionnaire.id);
+  }
+
+  openDelegateModal() {
+    this.delegateform = { gestionnaireId: null, titreHint: '' };
+    this.showDelegateModal = true;
+  }
+
+  sendDelegateRequest() {
+    if (!this.delegateform.gestionnaireId) return;
+    this.api.sendDelegationRequest(
+      this.gestionnaire.id,
+      this.delegateform.gestionnaireId,
+      this.delegateform.titreHint
+    ).subscribe({
+      next: () => {
+        this.showDelegateModal = false;
+        this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'success',
+          title: 'Demande envoyée !',
+          text: 'Le gestionnaire recevra une notification pour créer le questionnaire.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      },
+      error: () => {
+        this.showDelegateModal = false;
+        this.cdr.detectChanges();
+        Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer la demande.' });
+      }
+    });
+  }
+
+  openWizard() {
+    this.editingquest = null;
+    this.selectedquestion = [];
+    this.questform = { titre: '', description: '', questions: [] };
+    this.questionSearchText = '';
+    this.showaddquestion = false;
+    this.newquest = { titre: '', type: 'text', options: '', required: false };
+    this.iaAutoSuggestion = null;
+    this.iaDoublonWarning = null;
+    this.iaOptionsSuggestion = [];
+    this.showquestform = true;
+    this.activeSection = 'questionnaires';
+  }
+
+  onTitreChange() {
+    clearTimeout(this.iaDebounceTimer);
+    this.iaAutoSuggestion = null;
+    this.iaDoublonWarning = null;
+    this.iaCoherenceWarning = null;
+    this.iaLoading = false;
+    if (!this.newquest.titre || this.newquest.titre.length < 5) return;
+    this.iaLoading = true;
+    this.cdr.detectChanges();
+    this.iaDebounceTimer = setTimeout(() => this.autoSuggestQuestion(), 800);
+  }
+
+  autoSuggestQuestion() {
+    if (!this.newquest.titre || this.newquest.titre.length < 5) { this.iaLoading = false; return; }
+    this.iaAutoSuggestion = null;
+    this.iaDoublonWarning = null;
+    this.iaCoherenceWarning = null;
+    this.iaOptionsSuggestion = [];
+
+    let pending = 0;
+    const done = () => { if (--pending === 0) { this.iaLoading = false; this.cdr.detectChanges(); } };
+
+    const existingTitles = [
+      ...this.questions.map((q: any) => q.titre || q.title),
+      ...this.selectedquestion.map((q: any) => q.titre || q.title),
+    ].filter((t: string) => t && t.trim().length > 0);
+
+    // 1. Reformulation for ALL question types
+    pending++;
+    this.http.post<any>(this.apiUrl + '/ia/reformuler-question', {
+      titre: this.newquest.titre,
+      type: this.newquest.type || 'text'
+    }).subscribe({
+      next: (res) => {
+        if (res?.titreReformule && res.titreReformule !== this.newquest.titre) this.iaAutoSuggestion = res;
+        done();
+      },
+      error: () => done()
+    });
+
+    // 2. Duplicate detection
+    if (existingTitles.length > 0) {
+      pending++;
+      this.http.post<any>(this.apiUrl + '/ia/check-doublon', {
+        titre: this.newquest.titre,
+        roleQuestionnaire: 'SATISFACTION_CLIENT',
+        existingTitles
+      }).subscribe({
+        next: (res) => { if (res?.doublon === true) this.iaDoublonWarning = res; done(); },
+        error: () => done()
+      });
+    }
+
+    // 3. Coherence check (only when 2+ questions already selected)
+    if (this.selectedquestion.length >= 2) {
+      const selectedTitles = this.selectedquestion.map((q: any) => q.titre || q.title).filter(Boolean);
+      pending++;
+      this.http.post<any>(this.apiUrl + '/ia/verifier-coherence', {
+        titre: this.newquest.titre,
+        existingTitles: selectedTitles
+      }).subscribe({
+        next: (res) => { if (res?.coherente === false) this.iaCoherenceWarning = res; done(); },
+        error: () => done()
+      });
+    }
+
+    // 4. Text % warning — only when existing questions already push it over 15%
+    if (this.newquest.type === 'text' && this.selectedquestion.length > 0 && this.textQuestionPct() > 0.15) {
+      this.iaCoherenceWarning = {
+        coherente: false,
+        message: `Les questions à texte libre représentent déjà ${this.currentTextPct}% du questionnaire (max 15%).`,
+        conseil: 'Choisissez un type avec choix (radio, checkbox, échelle).'
+      };
+    }
+
+    // 5. Option suggestions for non-text types
+    if (this.newquest.type !== 'text') this.suggestOptions();
+  }
+
+  reorderSelectedQuestions() {
+    if (this.selectedquestion.length < 2) return;
+    this.iaReordering = true;
+    const payload = this.selectedquestion.map((q: any) => ({
+      id: q.id,
+      titre: q.titre || q.title,
+      type: q.type
+    }));
+    this.http.post<any[]>(this.apiUrl + '/ia/reordonner', { questions: payload }).subscribe({
+      next: (ordered) => {
+        if (ordered?.length) {
+          this.selectedquestion = ordered;
+          this.questform.questions = ordered.map((q: any) => q.id);
+        }
+        this.iaReordering = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.iaReordering = false; }
+    });
+  }
+
+  suggestOptions() {
+    if (!this.newquest.titre || this.newquest.type === 'text') return;
+    this.iaOptionsSuggestion = [];
+
+    // Scale: always use the standard 5-point scale instantly, no AI call needed
+    if (this.newquest.type === 'scale') {
+      this.iaOptionsSuggestion = ['Toujours', 'Souvent', 'Parfois', 'Rarement', 'Jamais'];
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const currentOptions = this.newquest.options
+      ? this.newquest.options.split(',').map((o: string) => o.trim()).filter(Boolean)
+      : [];
+    this.http.post<any>(this.apiUrl + '/ia/valider-choix', {
+      titre: this.newquest.titre,
+      type: this.newquest.type,
+      options: currentOptions
+    }).subscribe({
+      next: (res) => {
+        if (!res?.error && res?.optionsSuggerees?.length) {
+          this.iaOptionsSuggestion = res.optionsSuggerees;
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  acceptOptionsSuggestion() {
+    this.newquest.options = this.iaOptionsSuggestion.join(', ');
+    this.iaOptionsSuggestion = [];
+    this.cdr.detectChanges();
+  }
+
+  acceptAutoSuggestion() {
+    this.newquest = { ...this.newquest, titre: this.iaAutoSuggestion.titreReformule };
+    this.iaAutoSuggestion = null;
+    this.iaDoublonWarning = null;
+    this.iaOptionsSuggestion = [];
+    this.cdr.detectChanges();
+  }
+
+  saveCreateQuestionnaire() {
+    if (!this.questform.titre) {
+      this.showToastMessage('Donnez un titre au questionnaire', 'error');
+      return;
+    }
+    const payload = {
+      titre: this.questform.titre,
+      description: this.questform.description || '',
+      gestionnaire: { id: this.gestionnaire.id },
+      questions: [...this.selectedquestion]
+    };
+    this.http.post<any>(this.apiUrl + '/questionnaires', payload).subscribe({
+      next: () => {
+        this.showquestform = false;
+        this.loadQuestionnaires();
+        this.showToastMessage('Questionnaire créé avec succès');
+      },
+      error: () => this.showToastMessage('Erreur lors de la création', 'error')
     });
   }
 }

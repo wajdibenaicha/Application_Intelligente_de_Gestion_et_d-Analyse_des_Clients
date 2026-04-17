@@ -30,6 +30,7 @@ export class DashbordAdmin implements OnInit {
     displayQuestCount = 0;
     displayRepCount   = 0;
     displayOffresCount = 0;
+    displayTeamsCount  = 0;
     sidebarCollapsed = false;
     today: Date = new Date();
     isLoading = true;
@@ -87,6 +88,11 @@ export class DashbordAdmin implements OnInit {
 
     selectedQuestionnaireId: string = '';
     adminReponses: any[] = [];
+    teams: any[] = [];
+    showteamform = false;
+    teamform: any = { name: '', directeurId: null };
+    selectedTeam: any = null;
+    showteammembersmodal = false;
 
     constructor(private api: Api, private router: Router, private wsService: WebSocketService, private ngZone: NgZone, private cdr: ChangeDetectorRef, private http: HttpClient) {}
 
@@ -214,6 +220,15 @@ export class DashbordAdmin implements OnInit {
         this.wsService.role$.subscribe(data => { this.roles = data; this.cdr.detectChanges(); });
         this.wsService.permission$.subscribe(data => { this.permissions = data; this.cdr.detectChanges(); });
         this.wsService.offre$.subscribe(data => { this.offres = data; this.cdr.detectChanges(); });
+        this.wsService.teams$.subscribe(data => {
+            this.teams = data;
+            // Keep the open modal in sync with the updated team data
+            if (this.selectedTeam) {
+                const updated = data.find((t: any) => t.id === this.selectedTeam.id);
+                if (updated) this.selectedTeam = updated;
+            }
+            this.cdr.detectChanges();
+        });
         this.wsService.adminNotifications$.subscribe(data => {
             // admin sees only password reset notifications
             const adminOnly = data.filter((n: any) => n.type === 'DEMANDE_MOT_DE_PASSE');
@@ -236,10 +251,11 @@ export class DashbordAdmin implements OnInit {
             this.api.getroles().pipe(catchError(() => of([]))),
             this.api.getpermissions().pipe(catchError(() => of([]))),
             this.api.getoffres().pipe(catchError(() => of([]))),
-            this.api.getResponses().pipe(catchError(() => of([])))
+            this.api.getResponses().pipe(catchError(() => of([]))),
+            this.api.getTeams().pipe(catchError(() => of([])))
         ];
         forkJoin(requests).subscribe({
-            next: ([questionnaires, questions, gestionnaire, roles, permissions, offres, responses]) => {
+            next: ([questionnaires, questions, gestionnaire, roles, permissions, offres, responses, teams]) => {
                 this.questionnaires = questionnaires as any[];
                 this.questions = questions as any[];
                 this.gestionnaire = gestionnaire as any[];
@@ -247,12 +263,14 @@ export class DashbordAdmin implements OnInit {
                 this.permissions = permissions as any[];
                 this.offres = offres as any[];
                 this.responses = responses as any[];
+                this.teams = teams as any[];
                 this.isLoading = false;
                 this.cdr.detectChanges();
                 this.countUp(this.gestionnaire.length,  v => { this.displayGestCount   = v; this.cdr.detectChanges(); });
                 this.countUp(this.questionnaires.length, v => { this.displayQuestCount  = v; this.cdr.detectChanges(); });
                 this.countUp(this.totalReponsesCount,    v => { this.displayRepCount    = v; this.cdr.detectChanges(); });
                 this.countUp(this.offres.length,         v => { this.displayOffresCount = v; this.cdr.detectChanges(); });
+                this.countUp(this.teams.length,          v => { this.displayTeamsCount = v; this.cdr.detectChanges(); });
                 if (this.activeTab === 'home') setTimeout(() => this.renderAllCharts(), 200);
             },
             error: () => {
@@ -530,16 +548,15 @@ export class DashbordAdmin implements OnInit {
         return result;
     }
 
-    renderAdminParticipationChart() {
+    renderAdminParticipationChart(sent: number, repondu: number) {
         const canvas = document.getElementById('adminParticipationChart') as HTMLCanvasElement;
         if (!canvas) return;
         if (this.participationChart) { this.participationChart.destroy(); this.participationChart = null; }
-        const repondu = this.clientsReponses.length;
         this.participationChart = new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: ['Total clients', 'Ont répondu'],
-                datasets: [{ data: [this.totalClientsCount, repondu],
+                labels: ['Total envois', 'Ont répondu'],
+                datasets: [{ data: [sent, repondu],
                     backgroundColor: ['#1a56db', '#27ae60'], borderRadius: 8, barThickness: 40 }]
             },
             options: {
@@ -547,7 +564,7 @@ export class DashbordAdmin implements OnInit {
                 plugins: { legend: { display: false },
                     tooltip: { callbacks: { label: (ctx) => {
                         const val = ctx.parsed.y ?? 0;
-                        const pct = this.totalClientsCount > 0 ? Math.round((val / this.totalClientsCount) * 100) : 0;
+                        const pct = sent > 0 ? Math.round((val / sent) * 100) : 0;
                         return ` ${val} clients (${pct}%)`;
                     }}}},
                 scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
@@ -563,20 +580,22 @@ export class DashbordAdmin implements OnInit {
                 this.adminReponses = data;
                 this.cdr.detectChanges();
                 const nb = data.length;
-                const clients = new Set(data.map(r => r.client?.id)).size;
-                Swal.fire({
-                    title: `${titre}`,
-                    html: nb === 0
-                        ? `<p>Aucune réponse reçue pour ce questionnaire.</p>`
-                        : `<p><b>${clients} client${clients > 1 ? 's' : ''}</b> ont répondu à ce questionnaire.</p>`,
-                    icon: nb === 0 ? 'info' : 'success',
-                    confirmButtonText: nb === 0 ? 'OK' : 'Voir les réponses',
-                    confirmButtonColor: '#27ae60',
-                    timer: nb === 0 ? 2500 : undefined,
-                    showConfirmButton: true
-                }).then(() => {
-                    setTimeout(() => this.renderAdminParticipationChart(), 150);
-                });
+                if (nb === 0) {
+                    Swal.fire({
+                        title: `${titre}`,
+                        html: `<p>Aucune réponse reçue pour ce questionnaire.</p>`,
+                        icon: 'info',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#27ae60',
+                        timer: 2500,
+                        showConfirmButton: true
+                    });
+                } else {
+                    this.http.get<any>(`http://localhost:8081/api/envoi/stats?questionnaireId=${this.selectedQuestionnaireId}`).subscribe({
+                        next: (stats) => setTimeout(() => this.renderAdminParticipationChart(stats['sent'], stats['repondu']), 150),
+                        error: ()    => setTimeout(() => this.renderAdminParticipationChart(data.length, new Set(data.map((r: any) => r.client?.id)).size), 150)
+                    });
+                }
             },
             error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de charger les réponses.' })
         });
@@ -604,26 +623,10 @@ export class DashbordAdmin implements OnInit {
     }
 
     voirReponsesClient(entry: any) {
-        const questionnaireTitre = this.questionnaires.find(q => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
-        const nb = entry.nbReponses;
-        const clientName = entry.client?.fullName || entry.client?.mail || 'Client';
-        Swal.fire({
-            title: `${questionnaireTitre}`,
-            html: `<b>${clientName}</b> a soumis <b>${nb} réponse${nb > 1 ? 's' : ''}</b> à ce questionnaire.`,
-            icon: 'info',
-            confirmButtonText: 'Voir les réponses',
-            showCancelButton: true,
-            cancelButtonText: 'Annuler',
-            confirmButtonColor: '#27ae60',
-            cancelButtonColor: '#95a5a6',
-            reverseButtons: true
-        }).then(result => {
-            if (!result.isConfirmed) return;
-            this.selectedClientData = entry.client;
-            this.selectedClientReponses = entry.reponses;
-            this.showClientReponsesModal = true;
-            this.cdr.detectChanges();
-        });
+        this.selectedClientData = entry.client;
+        this.selectedClientReponses = entry.reponses;
+        this.showClientReponsesModal = true;
+        this.cdr.detectChanges();
     }
 
     exportReponsesCSV() {
@@ -788,4 +791,95 @@ export class DashbordAdmin implements OnInit {
         if (s === 'EN_ATTENTE') return 'En attente';
         return 'Brouillon';
     }
+    openaddteam() {
+  this.teamform = { name: '', directeurId: null };
+  this.showteamform = true;
+}
+saveteam() {
+  this.showteamform = false;
+  this.api.createTeam(this.teamform.name, this.teamform.directeurId).subscribe({
+    next: (t) => { this.teams.push(t); this.cdr.detectChanges();
+      Swal.fire({ icon: 'success', title: 'Équipe créée', timer: 1500, showConfirmButton: false }); },
+    error: (e) => Swal.fire({ icon: 'error', title: 'Erreur', text: e.error?.error || 'Impossible de créer l\'équipe.' })
+  });
+
+}
+async deleteteam(id: number) {
+  const r = await Swal.fire({ title: 'Supprimer cette équipe ?', icon: 'warning',
+    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Supprimer', cancelButtonText: 'Annuler' });
+  if (r.isConfirmed) {
+    this.api.deleteTeam(id).subscribe({
+      next: () => {
+        this.teams = this.teams.filter(t => t.id !== id);
+        if (this.selectedTeam?.id === id) { this.showteammembersmodal = false; this.selectedTeam = null; }
+        this.cdr.detectChanges();
+        Swal.fire({ icon: 'success', title: 'Supprimée !', timer: 1200, showConfirmButton: false });
+      },
+      error: () => Swal.fire({ icon: 'error', title: 'Erreur lors de la suppression' })
+    });
+  }
+}
+openteammembers(team: any) {
+  // Always use a fresh reference from the teams array
+  this.selectedTeam = this.teams.find((t: any) => t.id === team.id) ?? team;
+  this.showteammembersmodal = true;
+}
+
+private syncTeam(updated: any) {
+  this.selectedTeam = updated;
+  const idx = this.teams.findIndex((t: any) => t.id === updated.id);
+  if (idx !== -1) this.teams[idx] = updated;
+  this.cdr.detectChanges();
+}
+
+addmembertoteam(gestionnaireId: number) {
+  this.api.addMember(this.selectedTeam.id, gestionnaireId).subscribe({
+    next: (t) => this.syncTeam(t),
+    error: (e) => Swal.fire({ icon: 'error', title: 'Erreur', text: e.error?.error || 'Impossible d\'ajouter le membre.' })
+  });
+}
+
+removememberfromteam(gestionnaireId: number) {
+  this.api.removeMember(this.selectedTeam.id, gestionnaireId).subscribe({
+    next: (t) => this.syncTeam(t),
+    error: (e) => Swal.fire({ icon: 'error', title: 'Erreur', text: e.error?.error || 'Impossible de retirer le membre.' })
+  });
+}
+
+async changeDirecteurForTeam() {
+  const options: any = {};
+  this.directeurs.forEach(d => { options[d.id] = d.fullName; });
+  const { value: gestionnaireId } = await Swal.fire({
+    title: 'Changer le directeur',
+    input: 'select',
+    inputOptions: options,
+    inputPlaceholder: '— Choisir un directeur —',
+    showCancelButton: true,
+    confirmButtonText: 'Confirmer',
+    cancelButtonText: 'Annuler',
+    confirmButtonColor: '#27ae60',
+    inputValidator: (v) => v ? null : 'Veuillez choisir un directeur'
+  });
+  if (!gestionnaireId) return;
+  this.api.changeDirecteur(this.selectedTeam.id, Number(gestionnaireId)).subscribe({
+    next: (t) => {
+      this.syncTeam(t);
+      Swal.fire({ icon: 'success', title: 'Directeur mis à jour', timer: 1500, showConfirmButton: false });
+    },
+    error: (e) => Swal.fire({ icon: 'error', title: 'Erreur', text: e.error?.error })
+  });
+}
+
+get availableGestionnaires(): any[] {
+  const memberIds = new Set((this.selectedTeam?.members || []).map((m: any) => m.id));
+  const directeurId = this.selectedTeam?.directeur?.id;
+  return this.gestionnaire.filter(g =>
+    g.team == null &&
+    !memberIds.has(g.id) &&
+    g.id !== directeurId
+  );
+}
+get directeurs(): any[] {
+  return this.gestionnaire.filter(g => g.role?.name?.toUpperCase() === 'DIRECTEUR');
+}
 }

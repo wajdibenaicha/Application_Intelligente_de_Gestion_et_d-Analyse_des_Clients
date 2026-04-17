@@ -16,6 +16,7 @@ export class WebSocketService {
   offre$ = new Subject<any[]>();
   adminNotifications$ = new Subject<any[]>();
   recommendations$ = new Subject<any>();
+  teams$ = new Subject<any[]>();
 
   constructor(private ngZone: NgZone) {}
 
@@ -52,6 +53,9 @@ export class WebSocketService {
         });
         this.stompClient.subscribe('/topic/recommendations', (message) => {
           this.ngZone.run(() => this.recommendations$.next(JSON.parse(message.body)));
+        });
+        this.stompClient.subscribe('/topic/teams', (message) => {
+          this.ngZone.run(() => this.teams$.next(JSON.parse(message.body)));
         });
       }
     });

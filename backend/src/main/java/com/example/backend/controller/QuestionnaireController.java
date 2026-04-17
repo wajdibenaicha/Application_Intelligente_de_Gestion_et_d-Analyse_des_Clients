@@ -95,6 +95,9 @@ public class QuestionnaireController {
                         q.setTitre(qData.get("titre") != null ? qData.get("titre").toString() : "");
                         q.setType(qData.get("type") != null ? qData.get("type").toString() : "input");
                         q.setOptions(qData.get("options") != null ? qData.get("options").toString() : "");
+                        if (qData.get("required") != null) {
+                            q.setRequired(Boolean.parseBoolean(qData.get("required").toString()));
+                        }
                         questionList.add(q);
                     }
                 }
@@ -144,6 +147,9 @@ public class QuestionnaireController {
                         q.setTitre(qData.get("titre") != null ? qData.get("titre").toString() : "");
                         q.setType(qData.get("type") != null ? qData.get("type").toString() : "input");
                         q.setOptions(qData.get("options") != null ? qData.get("options").toString() : "");
+                        if (qData.get("required") != null) {
+                            q.setRequired(Boolean.parseBoolean(qData.get("required").toString()));
+                        }
                         questionList.add(q);
                     }
                 }

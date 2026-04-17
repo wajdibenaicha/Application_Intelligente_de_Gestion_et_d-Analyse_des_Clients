@@ -10,4 +10,5 @@ public interface EnvoiQuestionnaireRepository extends JpaRepository<EnvoiQuestio
     Optional<EnvoiQuestionnaire> findFirstByQuestionnaireIdAndClientIdAndReponduFalse(Long questionnaireId, Long clientId);
     java.util.List<EnvoiQuestionnaire> findByQuestionnaireId(Long questionnaireId);
     boolean existsByQuestionnaireIdAndReponduFalse(Long questionnaireId);
+    void deleteByQuestionnaireId(Long questionnaireId);
 }

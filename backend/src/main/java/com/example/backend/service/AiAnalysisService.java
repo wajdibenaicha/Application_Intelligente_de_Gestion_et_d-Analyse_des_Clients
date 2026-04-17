@@ -19,7 +19,7 @@ public class AiAnalysisService {
     @Value("${ai.api-url:}")
     private String apiUrl;
 
-    @Value("${ai.model:gpt-3.5-turbo}")
+    @Value("${ai.model:llama-3.3-70b-versatile}")
     private String model;
 
     private final RestTemplate restTemplate = new RestTemplate();

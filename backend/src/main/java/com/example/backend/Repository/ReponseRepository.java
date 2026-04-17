@@ -11,4 +11,5 @@ public interface ReponseRepository extends JpaRepository<Reponse, Long> {
     List<Reponse> findByClientIdAndQuestionnaireId(
     Long clientId, Long questionnaireId);
 
+    void deleteByQuestionnaireId(Long questionnaireId);
 }
