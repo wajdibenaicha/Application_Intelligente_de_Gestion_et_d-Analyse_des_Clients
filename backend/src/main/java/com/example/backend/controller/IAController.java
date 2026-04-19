@@ -65,12 +65,62 @@ public class IAController {
         }
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<Map<String, Object>> test() {
+        try {
+            String result = iaService.callAI("Réponds juste: {\"ok\": true}");
+            return ResponseEntity.ok(Map.of("status", "OK", "response", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(503).body(Map.of("status", "ERREUR", "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/analyser-question")
+    public ResponseEntity<Map<String, Object>> analyserQuestion(@RequestBody AnalyserQuestionRequest req) {
+        try {
+            return ResponseEntity.ok(iaService.analyserQuestion(req.titre(), req.type(), req.existingTitles(), req.selectedTitles()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", true, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verifier-type")
+    public ResponseEntity<Map<String, Object>> verifierType(@RequestBody VerifierTypeRequest req) {
+        try {
+            return ResponseEntity.ok(iaService.verifierType(req.titre(), req.type()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", true, "message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/reordonner")
     public ResponseEntity<List<Map<String, Object>>> reordonner(@RequestBody ReordonnerRequest req) {
         try {
             return ResponseEntity.ok(iaService.reordonner(req.questions()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+    }
+
+    @PostMapping("/verifier-ensemble")
+    public ResponseEntity<Map<String, Object>> verifierEnsemble(@RequestBody VerifierEnsembleRequest req) {
+        try {
+            return ResponseEntity.ok(iaService.verifierEnsemble(req.questions()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", true, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verifier-doublon-questionnaire")
+    public ResponseEntity<Map<String, Object>> verifierDoublonQuestionnaire(@RequestBody VerifierDoublonQuestionnaireRequest req) {
+        try {
+            return ResponseEntity.ok(iaService.verifierDoublonQuestionnaire(req.titre(), req.description(), req.existingTitles()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", true, "message", e.getMessage()));
         }
     }
 }

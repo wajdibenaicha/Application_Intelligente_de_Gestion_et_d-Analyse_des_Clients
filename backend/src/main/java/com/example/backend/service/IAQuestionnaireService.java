@@ -70,8 +70,8 @@ public class IAQuestionnaireService {
 
     public IAQuestionnaireService() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5_000);
-        factory.setReadTimeout(30_000);
+        factory.setConnectTimeout(10_000);
+        factory.setReadTimeout(60_000);
         this.restTemplate = new RestTemplate(factory);
     }
 
@@ -107,7 +107,7 @@ public class IAQuestionnaireService {
     }
 
     // ── Main call to Groq (OpenAI-compatible) API ──
-    public String callAI(String userMessage) {
+    public String callAI(String userMessage) throws Exception {
         validateConfig();
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -144,37 +144,42 @@ public class IAQuestionnaireService {
 
     public Map<String, Object> checkDoublon(String newTitre, String role, List<String> existingTitles) throws Exception {
         String prompt = """
-            Analyse si la nouvelle question est un doublon sémantique des questions existantes.
-            Critères de doublon (TRÈS STRICT) :
-            - Même sujet ou même objectif de mesure → doublon même si formulé différemment
-            - Même thème abordé sous un angle très proche → doublon
-            - Exemple : "Êtes-vous satisfait ?" ≈ "Comment évaluez-vous notre service ?" → doublon
-            - Seuil : similarité ≥ 0.65 → doublon = true
+            Analyse si la nouvelle question est un VRAI doublon sémantique d'une question existante.
+            Un vrai doublon = même objectif de mesure ET même sujet précis.
+            Ce N'EST PAS un doublon si les questions abordent des sujets distincts même si elles partagent une structure grammaticale similaire.
+
+            Exemples de VRAIS doublons (similarité >= 0.85) :
+            - "Êtes-vous satisfait ?" ≈ "Comment évaluez-vous notre service ?" → doublon (même mesure)
+            - "Quel canal préférez-vous ?" ≈ "Comment souhaitez-vous être contacté ?" → doublon (même sujet)
+
+            Exemples de FAUX doublons (à rejeter) :
+            - "Quelles fonctionnalités souhaitez-vous ?" vs "Quelles informations avez-vous reçues sur vos données ?" → sujets totalement différents, pas un doublon
+            - "Êtes-vous satisfait du produit ?" vs "Recommanderiez-vous le produit ?" → mesurent des choses différentes
+
+            Seuil strict : doublon = true UNIQUEMENT si similarité >= 0.85 ET même sujet précis.
 
             Nouvelle question : "%s"
             Questions existantes : %s
 
             JSON uniquement : {"doublon": boolean, "questionSimilaire": {"titre": string, "similarite": number}, "message": string}
-            Le message doit expliquer POURQUOI c'est un doublon en 1 phrase courte.
             """.formatted(newTitre, mapper.writeValueAsString(existingTitles));
         return mapper.readValue(callAI(prompt), Map.class);
     }
 
     public Map<String, Object> reformuler(String titre, String type) throws Exception {
         String prompt = """
-            Tu reformules une question pour un questionnaire client d'assurance.
-            Règles STRICTES :
-            - Phrase courte, directe, vocabulaire simple (niveau lycée)
-            - Commence par un verbe ou un pronom interrogatif
-            - Pas de double négation, pas de jargon, pas d'ambiguïté
-            - Garde exactement l'intention originale
-            - L'explication doit tenir en 1 phrase max
-            Question originale : "%s"
+            Corrige et améliore cette question pour un questionnaire client d'assurance.
+            Question : "%s"
             Type : %s
-            JSON uniquement : {"titreOriginal": string, "titreReformule": string, "explication": string}
+            Règles : corrige les fautes, remplace "avec nous/chez nous" par "avec notre compagnie d'assurance", rends la question plus précise et professionnelle.
+            La reformulation doit toujours être différente et meilleure.
+            Exemples : "êtes-vous avec nous ?" -> "êtes-vous client de notre compagnie ?", "vous etez satisfait ?" -> "Êtes-vous satisfait de nos services ?"
+            JSON uniquement : {"titreOriginal": string, "titreReformule": string, "explication": string, "needsImprovement": boolean}
+            needsImprovement = true si la question avait des fautes ou était vague.
             """.formatted(titre, type);
         return mapper.readValue(callAI(prompt), Map.class);
     }
+
 
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> reorderQuestions(List<Map<String, Object>> questions) throws Exception {
@@ -255,26 +260,164 @@ public class IAQuestionnaireService {
 
     public Map<String, Object> verifierCoherence(String newTitre, List<String> existingTitles) throws Exception {
         String prompt = """
-            Analyse si cette nouvelle question est cohérente avec les questions existantes du même questionnaire.
-            Une question est INCOHÉRENTE si :
-            - Elle porte sur un domaine totalement différent (ex: question médicale dans un questionnaire satisfaction auto)
-            - Elle change radicalement le sujet ou la cible du questionnaire
-            - Elle n'a aucun rapport thématique avec les autres questions
-
-            Une question EST cohérente si elle aborde un aspect complémentaire du même domaine.
+            Tu analyses un questionnaire de satisfaction client pour une compagnie d'assurance.
+            La nouvelle question est-elle cohérente avec les questions existantes ?
 
             Nouvelle question : "%s"
             Questions existantes : %s
 
+            Dans un questionnaire assurance, les thèmes suivants sont TOUJOURS cohérents ensemble :
+            satisfaction générale, service client, sinistres, remboursements, contrats, transparence,
+            ancienneté, fidélité, recommandation, amélioration, informations générales du client.
+
+            coherente = false UNIQUEMENT si la nouvelle question porte sur un domaine SANS AUCUN RAPPORT
+            avec l'assurance ou la relation client (ex: une question sur la santé dans un questionnaire auto,
+            une question RH interne dans un questionnaire client).
+            Par défaut, si tu as le moindre doute : coherente = true.
+
             JSON uniquement : {"coherente": boolean, "message": string, "conseil": string}
-            message = 1 phrase expliquant pourquoi ce n'est pas cohérent (vide si cohérent)
-            conseil = suggestion courte pour l'adapter (vide si cohérent)
+            message = 1 phrase si incohérent (vide si cohérent)
+            conseil = suggestion courte si incohérent (vide si cohérent)
             """.formatted(newTitre, mapper.writeValueAsString(existingTitles));
+        return mapper.readValue(callAI(prompt), Map.class);
+    }
+
+    public Map<String, Object> verifierType(String titre, String type) throws Exception {
+        String prompt = """
+            Vérifie strictement si le type de question correspond au contenu de la question.
+
+            Question : "%s"
+            Type sélectionné : "%s"
+
+            Définitions STRICTES des types :
+            - text    : Question ouverte → réponse libre (commentaire, description, explication, nom, adresse)
+            - radio   : Choix unique tranché → Oui/Non, binaire, une seule option parmi une liste courte
+            - checkbox: Choix multiple → l'utilisateur peut cocher plusieurs éléments d'une liste
+            - scale   : Échelle de FRÉQUENCE ou d'INTENSITÉ UNIQUEMENT → (Toujours/Jamais, Très satisfait/Très insatisfait)
+                        N'est PAS adapté pour : durées, dates, données personnelles, choix de catégories
+            - select  : Liste déroulante → choisir UNE catégorie, une période, un type parmi plusieurs options
+
+            Incompatibilités CRITIQUES (retourner compatible: false) :
+            - Question de DURÉE (depuis combien de temps, depuis quand, combien d'années) + type "scale" → incompatible, utiliser "select"
+            - Question ouverte (quel est, décrivez, expliquez, votre nom) + type autre que "text" → incompatible
+            - Question à choix multiple évident (choisissez plusieurs, quels services) + type "radio" → incompatible
+            - Question Oui/Non ou binaire + type "text" ou "scale" → incompatible
+
+            JSON uniquement : {"compatible": boolean, "message": string, "typeRecommande": string}
+            message = 1 phrase courte expliquant l'incompatibilité (chaîne vide si compatible)
+            typeRecommande = type le mieux adapté parmi [text, radio, checkbox, scale, select] (chaîne vide si compatible)
+            """.formatted(titre, type);
+        return mapper.readValue(callAI(prompt), Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> analyserQuestion(String titre, String type, List<String> existingTitles, List<String> selectedTitles) throws Exception {
+        String existing = (existingTitles != null && !existingTitles.isEmpty())
+            ? mapper.writeValueAsString(existingTitles) : "[]";
+        String selected = (selectedTitles != null && selectedTitles.size() >= 2)
+            ? mapper.writeValueAsString(selectedTitles) : "[]";
+
+        String prompt = String.format(
+            "Analyse cette question pour un questionnaire satisfaction client assurance.\n" +
+            "Question: \"%s\"\nType: %s\nQuestions existantes: %s\nQuestions selectionnees: %s\n\n" +
+            "Retourne UNIQUEMENT ce JSON valide, aucun texte avant ou apres:\n" +
+            "{\n" +
+            "  \"titreReformule\": \"question corrigee et amelioree (TOUJOURS differente et plus professionnelle)\",\n" +
+            "  \"reformuleExplication\": \"ce qui a ete ameliore en une phrase\",\n" +
+            "  \"needsImprovement\": true,\n" +
+            "  \"typeCompatible\": true,\n" +
+            "  \"typeMessage\": \"explication si incompatible sinon vide\",\n" +
+            "  \"typeRecommande\": \"type recommande si incompatible sinon vide\",\n" +
+            "  \"doublon\": false,\n" +
+            "  \"doublonTitre\": \"titre similaire ou vide\",\n" +
+            "  \"doublonSimilarite\": 0.0,\n" +
+            "  \"doublonMessage\": \"explication ou vide\",\n" +
+            "  \"coherente\": true,\n" +
+            "  \"coherenceMessage\": \"explication si incoherent sinon vide\",\n" +
+            "  \"conseil\": \"conseil si incoherent sinon vide\",\n" +
+            "  \"options\": []\n" +
+            "}\n\n" +
+            "Regles:\n" +
+            "- titreReformule: corrige fautes, remplace 'avec nous/chez nous' par 'avec notre compagnie d assurance', rends plus professionnel\n" +
+            "- needsImprovement: true si la question avait des fautes ou etait vague/informelle\n" +
+            "- typeCompatible: false si question de duree + scale, question ouverte + radio/scale, choix multiple + radio\n" +
+            "- scale valide UNIQUEMENT pour frequence/intensite (Toujours/Jamais), PAS pour durees ou donnees personnelles\n" +
+            "- doublon: true UNIQUEMENT si similarite semantique >= 0.85 ET meme objectif de mesure exact. En cas de doute, doublon = false\n" +
+            "- coherente: false si la question n a aucun rapport avec les questions selectionnees (ignorer si liste vide)\n" +
+            "- options: pour scale retourne [\"Toujours\",\"Souvent\",\"Parfois\",\"Rarement\",\"Jamais\"], pour text retourne [], pour autres types retourne 4-5 options adaptees",
+            titre, type, existing, selected
+        );
+
+        return mapper.readValue(callAI(prompt), Map.class);
+    }
+
+    public Map<String, Object> verifierEnsemble(List<String> questions) throws Exception {
+        String prompt = """
+            Tu analyses un questionnaire de satisfaction client pour une compagnie d'assurance.
+            Ces questions appartiennent-elles au MÊME questionnaire ?
+
+            Questions : %s
+
+            RÈGLE TRÈS IMPORTANTE : dans un questionnaire assurance, les thèmes suivants sont TOUJOURS compatibles entre eux :
+            - Satisfaction générale / expérience globale
+            - Contact avec le service client / support
+            - Clarté des contrats / transparence
+            - Ancienneté / durée de la relation client / type de contrat
+            - Recommandation / fidélité
+            - Sinistres / remboursements
+            - Amélioration / suggestions
+            - Informations générales (profession, âge, type de contrat)
+
+            compatible = false UNIQUEMENT si les questions mélangent des domaines SANS AUCUN RAPPORT avec l'assurance ou la relation client.
+            Exemples d'incompatibilité RÉELLE : questions médicales + satisfaction auto, ressources humaines internes + satisfaction client.
+
+            Par défaut, si tu as le moindre doute : compatible = true.
+
+            JSON uniquement :
+            {
+              "compatible": boolean,
+              "message": "explication courte si incompatible, sinon vide",
+              "groupes": [{"theme": "nom du thème", "questions": ["question1", "question2"]}]
+            }
+            groupes = groupes thématiques détectés (toujours remplir).
+            """.formatted(mapper.writeValueAsString(questions));
         return mapper.readValue(callAI(prompt), Map.class);
     }
 
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> reordonner(List<Map<String, Object>> questions) throws Exception {
         return reorderQuestions(questions);
+    }
+
+    public Map<String, Object> verifierDoublonQuestionnaire(String titre, String description, List<String> existingTitles) throws Exception {
+        String prompt = """
+            Tu vérifies si un nouveau questionnaire est un doublon d'un questionnaire existant pour un gestionnaire d'assurance.
+
+            Nouveau questionnaire :
+            - Titre : "%s"
+            - Description : "%s"
+
+            Questionnaires existants du même gestionnaire : %s
+
+            RÈGLE : doublon = true si le titre du nouveau questionnaire a une similarité thématique >= 0.50 avec un titre existant.
+            Cela inclut les reformulations, synonymes, et questionnaires couvrant le même sujet général.
+
+            Exemples de VRAIS doublons (similarité >= 0.50) :
+            - "Satisfaction client 2024" ≈ "Évaluation de la satisfaction des clients" → doublon
+            - "Questionnaire sinistres" ≈ "Enquête sur les sinistres auto" → doublon
+
+            Exemples de NON-doublons :
+            - "Satisfaction service client" vs "Questionnaire produits d'assurance vie" → différents
+            - "Enquête annuelle" vs "Feedback sinistres" → différents
+
+            JSON uniquement :
+            {
+              "doublon": boolean,
+              "questionnaireSimilaire": "titre du questionnaire similaire ou vide",
+              "similarite": number,
+              "message": "explication courte si doublon, sinon vide"
+            }
+            """.formatted(titre, description != null ? description : "", mapper.writeValueAsString(existingTitles));
+        return mapper.readValue(callAI(prompt), Map.class);
     }
 }

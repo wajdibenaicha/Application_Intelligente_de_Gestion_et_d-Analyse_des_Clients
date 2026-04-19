@@ -64,6 +64,8 @@ export class DashboardGestionnaire implements OnInit {
   iaAutoSuggestion: any = null;
   iaDoublonWarning: any = null;
   iaCoherenceWarning: any = null;
+  iaTypeWarning: any = null;
+  iaEnsembleWarning: any = null;
   iaOptionsSuggestion: string[] = [];
   iaLoading = false;
   iaReordering = false;
@@ -85,8 +87,15 @@ export class DashboardGestionnaire implements OnInit {
   unreadNotifCount = 0;
   showNotifPanel = false;
 
+  iaQuestDoublonWarning: any = null;
+  iaQuestDoublonLoading = false;
+
   private platformId = inject(PLATFORM_ID);
   private iaDebounceTimer: any = null;
+  private iaEnsembleTimer: any = null;
+  private iaQuestDoublonTimer: any = null;
+  private iaReorderTimer: any = null;
+  private iaActiveCalls = 0;
 
   constructor(
     private http: HttpClient,
@@ -1248,11 +1257,24 @@ renderReponsesChart() {
       const q = this.questions.find(q => q.id === id);
       if (q) this.selectedquestion.push(q);
     }
+    this.checkQuestDoublonParQuestions();
+    this.scheduleReorder();
   }
 
   removeselectedquestion(id: number) {
     this.questform.questions = this.questform.questions.filter((x: number) => x !== id);
     this.selectedquestion = this.selectedquestion.filter(q => q.id !== id);
+    this.checkQuestDoublonParQuestions();
+    this.scheduleReorder();
+  }
+
+  scheduleReorder() {
+    clearTimeout(this.iaReorderTimer);
+    if (this.selectedquestion.length < 2) return;
+    this.iaReorderTimer = setTimeout(() => {
+      if (this.iaActiveCalls > 0) { this.scheduleReorder(); return; }
+      this.reorderSelectedQuestions();
+    }, 1500);
   }
 
   editingOptionsId: number | null = null;
@@ -1269,11 +1291,22 @@ renderReponsesChart() {
   get canAddQuestion(): boolean {
     if (!this.newquest.titre?.trim()) return false;
     if (this.iaDoublonWarning) return false;
-    if (this.iaCoherenceWarning) return false;
     if (this.newquest.type !== 'text' && !this.newquest.options?.trim()) return false;
     if (this.newquest.type === 'scale' && !this.hasNeutralOption(this.newquest.options)) return false;
     if (this.newquest.type === 'text' && this.textQuestionPct() > 0.15) return false;
     return true;
+  }
+
+  get isTextLimitReached(): boolean {
+    return this.newquest.type === 'text' && this.textQuestionPct() > 0.15;
+  }
+
+  typeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      text: 'Texte libre', radio: 'Choix unique',
+      checkbox: 'Choix multiple', scale: 'Échelle', select: 'Liste déroulante'
+    };
+    return labels[type] || type;
   }
 
   get currentTextPct(): number {
@@ -1285,7 +1318,9 @@ renderReponsesChart() {
   private hasNeutralOption(options: string): boolean {
     const neutralWords = ['parfois', 'neutre', 'moyen', 'modéré', 'modere', 'neither', 'sometimes'];
     const opts = (options || '').toLowerCase();
-    return neutralWords.some(w => opts.includes(w));
+    const parts = opts.split(',').map(o => o.trim()).filter(o => o !== '');
+    const isNumericScale = parts.length >= 2 && parts.every(o => !isNaN(Number(o)));
+    return isNumericScale || neutralWords.some(w => opts.includes(w));
   }
 
   private textQuestionPct(): number {
@@ -1293,6 +1328,12 @@ renderReponsesChart() {
     const textCount = this.selectedquestion.filter((q: any) => q.type === 'text').length
       + (this.newquest.type === 'text' ? 1 : 0);
     return textCount / total;
+  }
+
+  forceAddQuestion() {
+    this.iaTypeWarning = null;
+    this.iaCoherenceWarning = null;
+    this.createaddquestion();
   }
 
   createaddquestion() {
@@ -1312,10 +1353,6 @@ renderReponsesChart() {
       Swal.fire({ icon: 'warning', title: 'Option neutre manquante', text: 'Une échelle doit contenir une option neutre centrale (ex: "Parfois"). Utilisez les suggestions IA pour corriger.', confirmButtonColor: '#e67e22' });
       return;
     }
-    if (this.newquest.type === 'text' && this.textQuestionPct() > 0.15) {
-      Swal.fire({ icon: 'warning', title: 'Limite atteinte (15%)', text: 'Les questions à texte libre ne peuvent pas dépasser 15% du questionnaire. Privilégiez un type avec choix.', confirmButtonColor: '#e67e22' });
-      return;
-    }
     this.http.post<any>(this.apiUrl + '/questions', this.newquest).subscribe({
       next: (c: any) => {
         this.selectedquestion.push(c);
@@ -1325,6 +1362,7 @@ renderReponsesChart() {
         this.iaAutoSuggestion = null;
         this.iaDoublonWarning = null;
         this.iaCoherenceWarning = null;
+        this.iaTypeWarning = null;
         this.iaOptionsSuggestion = [];
         this.iaLoading = false;
         this.reorderSelectedQuestions();
@@ -1587,9 +1625,47 @@ renderReponsesChart() {
     this.newquest = { titre: '', type: 'text', options: '', required: false };
     this.iaAutoSuggestion = null;
     this.iaDoublonWarning = null;
+    this.iaEnsembleWarning = null;
+    this.iaQuestDoublonWarning = null;
     this.iaOptionsSuggestion = [];
+    clearTimeout(this.iaReorderTimer);
     this.showquestform = true;
     this.activeSection = 'questionnaires';
+  }
+
+  onQuestTitreChange() {
+    // Title change alone doesn't trigger doublon check — question overlap is checked when questions change
+  }
+
+  checkQuestDoublonParQuestions() {
+    this.iaQuestDoublonWarning = null;
+    if (this.selectedquestion.length < 2) return;
+    const newIds = new Set<number>(this.selectedquestion.map((q: any) => q.id));
+    const existingQuestionnaires = this.questionnaires.filter((q: any) =>
+      !this.editingquest || q.id !== this.editingquest.id
+    );
+    let maxOverlap = 0;
+    let worstMatch: any = null;
+    for (const existing of existingQuestionnaires) {
+      const existingIds: number[] = (existing.questions || []).map((q: any) => q.id ?? q);
+      if (existingIds.length === 0) continue;
+      const common = existingIds.filter((id: number) => newIds.has(id)).length;
+      const union = newIds.size + existingIds.length - common;
+      const overlap = common / union; // Jaccard similarity
+      if (overlap > maxOverlap) {
+        maxOverlap = overlap;
+        worstMatch = existing;
+      }
+    }
+    if (maxOverlap > 0.49 && worstMatch) {
+      this.iaQuestDoublonWarning = {
+        doublon: true,
+        questionnaireSimilaire: worstMatch.titre,
+        similarite: maxOverlap,
+        message: `Ce questionnaire partage ${Math.round(maxOverlap * 100)}% de ses questions avec "${worstMatch.titre}". Modifiez les questions pour le différencier.`
+      };
+    }
+    this.cdr.detectChanges();
   }
 
   onTitreChange() {
@@ -1597,11 +1673,30 @@ renderReponsesChart() {
     this.iaAutoSuggestion = null;
     this.iaDoublonWarning = null;
     this.iaCoherenceWarning = null;
+    this.iaTypeWarning = null;
+    this.iaOptionsSuggestion = [];
     this.iaLoading = false;
+    this.cdr.detectChanges();
     if (!this.newquest.titre || this.newquest.titre.length < 5) return;
     this.iaLoading = true;
     this.cdr.detectChanges();
-    this.iaDebounceTimer = setTimeout(() => this.autoSuggestQuestion(), 800);
+    this.iaDebounceTimer = setTimeout(() => this.autoSuggestQuestion(), 1200);
+  }
+
+  onTypeChange() {
+    this.iaTypeWarning = null;
+    this.iaOptionsSuggestion = [];
+    this.iaAutoSuggestion = null;
+    if (!this.newquest.titre || this.newquest.titre.length < 5) {
+      if (this.newquest.type === 'scale') {
+        this.iaOptionsSuggestion = ['Toujours', 'Souvent', 'Parfois', 'Rarement', 'Jamais'];
+      }
+      this.cdr.detectChanges();
+      return;
+    }
+    this.iaLoading = true;
+    this.cdr.detectChanges();
+    this.autoSuggestQuestion();
   }
 
   autoSuggestQuestion() {
@@ -1609,94 +1704,93 @@ renderReponsesChart() {
     this.iaAutoSuggestion = null;
     this.iaDoublonWarning = null;
     this.iaCoherenceWarning = null;
+    this.iaTypeWarning = null;
     this.iaOptionsSuggestion = [];
-
-    let pending = 0;
-    const done = () => { if (--pending === 0) { this.iaLoading = false; this.cdr.detectChanges(); } };
 
     const existingTitles = [
       ...this.questions.map((q: any) => q.titre || q.title),
       ...this.selectedquestion.map((q: any) => q.titre || q.title),
     ].filter((t: string) => t && t.trim().length > 0);
 
-    // 1. Reformulation for ALL question types
-    pending++;
-    this.http.post<any>(this.apiUrl + '/ia/reformuler-question', {
+    const selectedTitles = this.selectedquestion.length >= 2
+      ? this.selectedquestion.map((q: any) => q.titre || q.title).filter(Boolean)
+      : [];
+
+    this.iaActiveCalls++;
+    this.http.post<any>(this.apiUrl + '/ia/analyser-question', {
       titre: this.newquest.titre,
-      type: this.newquest.type || 'text'
+      type: this.newquest.type || 'text',
+      existingTitles,
+      selectedTitles
     }).subscribe({
       next: (res) => {
-        if (res?.titreReformule && res.titreReformule !== this.newquest.titre) this.iaAutoSuggestion = res;
-        done();
+        this.iaActiveCalls = Math.max(0, this.iaActiveCalls - 1);
+        const normalize = (s: string) => s?.trim().toLowerCase().replace(/\s+/g, ' ').replace(/\s?[?!.]+$/, '');
+        if (res.needsImprovement && res.titreReformule && normalize(res.titreReformule) !== normalize(this.newquest.titre)) {
+          this.iaAutoSuggestion = { titreReformule: res.titreReformule, explication: res.reformuleExplication, needsImprovement: res.needsImprovement };
+        }
+        if (res.doublon && (res.doublonSimilarite ?? 0) >= 0.85) {
+          this.iaDoublonWarning = { doublon: true, questionSimilaire: { titre: res.doublonTitre, similarite: res.doublonSimilarite }, message: res.doublonMessage };
+        }
+        if (res.coherente === false) {
+          this.iaCoherenceWarning = { coherente: false, message: res.coherenceMessage, conseil: res.conseil };
+        }
+        if (res.typeCompatible === false) {
+          this.iaTypeWarning = { compatible: false, message: res.typeMessage, typeRecommande: res.typeRecommande };
+        }
+        if (res.options?.length > 0) {
+          this.iaOptionsSuggestion = res.options;
+        }
+        this.iaLoading = false;
+        this.cdr.detectChanges();
       },
-      error: () => done()
+      error: () => { this.iaActiveCalls = Math.max(0, this.iaActiveCalls - 1); this.iaLoading = false; this.cdr.detectChanges(); }
     });
+  }
 
-    // 2. Duplicate detection
-    if (existingTitles.length > 0) {
-      pending++;
-      this.http.post<any>(this.apiUrl + '/ia/check-doublon', {
-        titre: this.newquest.titre,
-        roleQuestionnaire: 'SATISFACTION_CLIENT',
-        existingTitles
-      }).subscribe({
-        next: (res) => { if (res?.doublon === true) this.iaDoublonWarning = res; done(); },
-        error: () => done()
+  verifierEnsemble() {
+    clearTimeout(this.iaEnsembleTimer);
+    if (this.selectedquestion.length < 3) { this.iaEnsembleWarning = null; return; }
+    this.iaEnsembleTimer = setTimeout(() => {
+      if (this.iaActiveCalls > 0) { this.verifierEnsemble(); return; }
+      const questions = this.selectedquestion.map((q: any) => q.titre || q.title).filter(Boolean);
+      this.iaActiveCalls++;
+      this.http.post<any>(this.apiUrl + '/ia/verifier-ensemble', { questions }).subscribe({
+        next: (res) => {
+          this.iaActiveCalls = Math.max(0, this.iaActiveCalls - 1);
+          this.iaEnsembleWarning = res?.compatible === false ? res : null;
+          this.cdr.detectChanges();
+        },
+        error: () => { this.iaActiveCalls = Math.max(0, this.iaActiveCalls - 1); }
       });
-    }
-
-    // 3. Coherence check (only when 2+ questions already selected)
-    if (this.selectedquestion.length >= 2) {
-      const selectedTitles = this.selectedquestion.map((q: any) => q.titre || q.title).filter(Boolean);
-      pending++;
-      this.http.post<any>(this.apiUrl + '/ia/verifier-coherence', {
-        titre: this.newquest.titre,
-        existingTitles: selectedTitles
-      }).subscribe({
-        next: (res) => { if (res?.coherente === false) this.iaCoherenceWarning = res; done(); },
-        error: () => done()
-      });
-    }
-
-    // 4. Text % warning — only when existing questions already push it over 15%
-    if (this.newquest.type === 'text' && this.selectedquestion.length > 0 && this.textQuestionPct() > 0.15) {
-      this.iaCoherenceWarning = {
-        coherente: false,
-        message: `Les questions à texte libre représentent déjà ${this.currentTextPct}% du questionnaire (max 15%).`,
-        conseil: 'Choisissez un type avec choix (radio, checkbox, échelle).'
-      };
-    }
-
-    // 5. Option suggestions for non-text types
-    if (this.newquest.type !== 'text') this.suggestOptions();
+    }, 2000);
   }
 
   reorderSelectedQuestions() {
     if (this.selectedquestion.length < 2) return;
     this.iaReordering = true;
-    const payload = this.selectedquestion.map((q: any) => ({
-      id: q.id,
-      titre: q.titre || q.title,
-      type: q.type
-    }));
-    this.http.post<any[]>(this.apiUrl + '/ia/reordonner', { questions: payload }).subscribe({
-      next: (ordered) => {
-        if (ordered?.length) {
-          this.selectedquestion = ordered;
-          this.questform.questions = ordered.map((q: any) => q.id);
-        }
-        this.iaReordering = false;
-        this.cdr.detectChanges();
-      },
-      error: () => { this.iaReordering = false; }
-    });
+    const score = (q: any): number => {
+      const t = (q.titre || q.title || '').toLowerCase();
+      const type = (q.type || '').toLowerCase();
+      if (type === 'text') return 7;
+      if (/satisf|globale|impression|recommand|fidél/.test(t)) return 1;
+      if (/service|sinistre|rembours|contrat|rapidit|clart|canal|communicat|contact|accueil|personnel/.test(t)) return 2;
+      if (/données|personnelles|transparence|confiance|éthique|vie privée|information.*reçu/.test(t)) return 3;
+      if (/amélioration|suggestion|fonctionnalit|problème|concurrent|souhait|aimer|manque/.test(t)) return 4;
+      if (/ancienneté|années|âge|type de contrat|profession|durée|client depuis|depuis combien/.test(t)) return 5;
+      if (/recommand|mot de fin|conclusion|commentaire final|dernier/.test(t)) return 6;
+      return 3;
+    };
+    this.selectedquestion = [...this.selectedquestion].sort((a, b) => score(a) - score(b));
+    this.questform.questions = this.selectedquestion.map((q: any) => q.id);
+    this.iaReordering = false;
+    this.cdr.detectChanges();
   }
 
   suggestOptions() {
     if (!this.newquest.titre || this.newquest.type === 'text') return;
     this.iaOptionsSuggestion = [];
 
-    // Scale: always use the standard 5-point scale instantly, no AI call needed
     if (this.newquest.type === 'scale') {
       this.iaOptionsSuggestion = ['Toujours', 'Souvent', 'Parfois', 'Rarement', 'Jamais'];
       this.cdr.detectChanges();
@@ -1740,6 +1834,28 @@ renderReponsesChart() {
       this.showToastMessage('Donnez un titre au questionnaire', 'error');
       return;
     }
+    if (this.iaQuestDoublonWarning) return;
+    if (this.selectedquestion.length >= 3) {
+      const questions = this.selectedquestion.map((q: any) => q.titre || q.title).filter(Boolean);
+      this.iaActiveCalls++;
+      this.http.post<any>(this.apiUrl + '/ia/verifier-ensemble', { questions }).subscribe({
+        next: (res) => {
+          this.iaActiveCalls = Math.max(0, this.iaActiveCalls - 1);
+          this.iaEnsembleWarning = res?.compatible === false ? res : null;
+          if (this.iaEnsembleWarning) { this.cdr.detectChanges(); return; }
+          this.doSaveQuestionnaire();
+        },
+        error: () => {
+          this.iaActiveCalls = Math.max(0, this.iaActiveCalls - 1);
+          this.doSaveQuestionnaire();
+        }
+      });
+    } else {
+      this.doSaveQuestionnaire();
+    }
+  }
+
+  private doSaveQuestionnaire() {
     const payload = {
       titre: this.questform.titre,
       description: this.questform.description || '',

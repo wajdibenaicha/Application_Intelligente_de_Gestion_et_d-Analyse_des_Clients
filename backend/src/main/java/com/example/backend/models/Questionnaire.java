@@ -26,6 +26,7 @@ public class Questionnaire {
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(name = "questionnaire_questions", joinColumns = @JoinColumn(name = "questionnaire_id"), inverseJoinColumns = @JoinColumn(name = "question_id"))
+    @OrderColumn(name = "question_order")
     private List<Question> questions = new ArrayList<>();
 
     @Column(nullable = false, columnDefinition = "boolean default false")
