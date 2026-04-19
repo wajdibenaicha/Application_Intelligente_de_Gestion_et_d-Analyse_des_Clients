@@ -60,40 +60,50 @@ public class QuestionnaireDistributionService {
             String link = "http://localhost:4200/fill-questionnaire?token=" + token;
 
             if ("sms".equals(effectiveChannel)) {
-                sendSms(client, q, link);
+                sendSms(client, q, link, d.getCorps());
             } else {
-                sendEmail(client, q, link);
+                sendEmail(client, q, link, d.getSujet(), d.getCorps());
             }
         }
     }
 
-    private void sendEmail(Client c, Questionnaire q, String link) {
+    private void sendEmail(Client c, Questionnaire q, String link, String sujet, String corps) {
         SimpleMailMessage msg = new SimpleMailMessage();
         msg.setTo(c.getMail());
-        msg.setSubject("Questionnaire: " + q.getTitre());
-        msg.setText("Bonjour " + c.getFullName() + ",\n\nVeuillez remplir ce questionnaire:\n" + link + "\n\nMerci.");
+        msg.setSubject(sujet != null && !sujet.isBlank() ? sujet : "Questionnaire: " + q.getTitre());
+        String body = corps != null && !corps.isBlank()
+            ? corps.replace("{NOM_CLIENT}", c.getFullName() != null ? c.getFullName() : "") + "\n\n" + link
+            : "Bonjour " + c.getFullName() + ",\n\nVeuillez remplir ce questionnaire:\n" + link + "\n\nMerci.";
+        msg.setText(body);
         mailSender.send(msg);
     }
 
-    private void sendSms(Client c, Questionnaire q, String link) {
+    private void sendSms(Client c, Questionnaire q, String link, String corps) {
         String tel = c.getTel() != null ? c.getTel().replaceAll("\\s+", "") : "";
-        if (!tel.startsWith("+")) {
-            tel = "+216" + tel;
-        }
+        if (!tel.startsWith("+")) tel = "+216" + tel;
+        String text = corps != null && !corps.isBlank()
+            ? corps.replace("{NOM_CLIENT}", c.getFullName() != null ? c.getFullName() : "") + " " + link
+            : "Questionnaire \"" + q.getTitre() + "\": " + link;
         Message.creator(
             new PhoneNumber(tel),
             new PhoneNumber(twilioPhone.replaceAll("\\s+", "")),
-            "Questionnaire \"" + q.getTitre() + "\": " + link
+            text
         ).create();
     }
 
     public static class DistributionRequest {
         private Long clientId;
         private String channel;
+        private String sujet;
+        private String corps;
 
         public Long getClientId() { return clientId; }
         public void setClientId(Long clientId) { this.clientId = clientId; }
         public String getChannel() { return channel; }
         public void setChannel(String channel) { this.channel = channel; }
+        public String getSujet() { return sujet; }
+        public void setSujet(String sujet) { this.sujet = sujet; }
+        public String getCorps() { return corps; }
+        public void setCorps(String corps) { this.corps = corps; }
     }
 }

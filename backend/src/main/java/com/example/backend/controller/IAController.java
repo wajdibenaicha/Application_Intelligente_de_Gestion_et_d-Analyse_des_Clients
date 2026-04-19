@@ -123,4 +123,24 @@ public class IAController {
                 .body(Map.of("error", true, "message", e.getMessage()));
         }
     }
+
+    @PostMapping("/generer-message")
+    public ResponseEntity<Map<String, Object>> genererMessage(@RequestBody Map<String, String> req) {
+        try {
+            return ResponseEntity.ok(iaService.genererMessage(req.get("type"), req.get("channel"), req.get("titre"), req.get("description")));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", true, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/evaluer-offre")
+    public ResponseEntity<Map<String, Object>> evaluerOffre(@RequestBody Map<String, String> req) {
+        try {
+            return ResponseEntity.ok(iaService.evaluerOffre(req.get("titre"), req.get("description"), req.get("categorie")));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", true, "message", e.getMessage()));
+        }
+    }
 }

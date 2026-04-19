@@ -308,8 +308,11 @@
         <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">
           <i class="bi bi-download"></i> Exporter CSV
         </button>
-        <button class="btn-offre-tous" (click)="envoyerOffreTous()" *ngIf="reponses.length > 0">
-          <i class="bi bi-gift"></i> Offre à tous
+        <button class="btn-offre-tous" (click)="voirRecommandationsIA()" *ngIf="reponses.length > 0">
+          <i class="bi bi-pie-chart-fill"></i> Recommandations IA
+        </button>
+        <button class="btn-danger-sm" (click)="supprimerToutesReponsesSection()" *ngIf="reponses.length > 0">
+          <i class="bi bi-trash3-fill"></i> Supprimer tout
         </button>
       </div>
 
@@ -358,8 +361,9 @@
                 <td>
                   <span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span>
                 </td>
-                <td>
+                <td style="display:flex;gap:8px;align-items:center;">
                   <button class="btn-voir" (click)="voirReponsesClient(entry)"><i class="bi bi-eye"></i> Voir</button>
+                  <button class="btn-danger-sm" (click)="supprimerReponseClientSection(entry.client?.id)"><i class="bi bi-trash-fill"></i> Supprimer</button>
                 </td>
               </tr>
             </tbody>
@@ -437,11 +441,11 @@
           <button class="btn-close" (click)="showOffreForm=false">✕</button>
         </div>
         <label>Titre <span style="color:red">*</span></label>
-        <input [(ngModel)]="offreForm.title" placeholder="Titre de l'offre" />
+        <input [(ngModel)]="offreForm.title" placeholder="Titre de l'offre" (ngModelChange)="scheduleOffreCoherenceCheck()" />
         <label>Description <span style="color:red">*</span></label>
-        <textarea [(ngModel)]="offreForm.description" placeholder="Description de l'offre..." rows="3"></textarea>
+        <textarea [(ngModel)]="offreForm.description" placeholder="Description de l'offre..." rows="3" (ngModelChange)="scheduleOffreCoherenceCheck()"></textarea>
         <label>Catégorie</label>
-        <select [(ngModel)]="offreForm.categorie" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+        <select [(ngModel)]="offreForm.categorie" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;" (ngModelChange)="scheduleOffreCoherenceCheck()">
           <option value="GENERAL">Général</option>
           <option value="SANTE">Santé</option>
           <option value="AUTO">Auto</option>
@@ -449,23 +453,76 @@
           <option value="VIE">Vie</option>
           <option value="VOYAGE">Voyage</option>
         </select>
-        <div style="display:flex;gap:12px;margin-top:8px;">
-          <div style="flex:1;">
-            <label>Score min (0-100)</label>
-            <input type="number" [(ngModel)]="offreForm.scoreMin" min="0" max="100" />
+
+        <!-- AI coherence warning -->
+        <div *ngIf="offreIaWarning" class="offre-ia-warning">
+          <div class="offre-ia-warning-header">
+            <span>⚠️</span> Incohérence détectée
+            <button class="offre-ia-warning-dismiss" (click)="offreIaWarning=null; offreIaSuggestion=null">✕</button>
           </div>
-          <div style="flex:1;">
-            <label>Score max (0-100)</label>
-            <input type="number" [(ngModel)]="offreForm.scoreMax" min="0" max="100" />
+          <div class="offre-ia-warning-body">
+            <p class="offre-ia-warning-msg">{{ offreIaWarning }}</p>
+            <div *ngIf="offreIaSuggestion?.categorie" class="offre-ia-categorie-suggest">
+              <span>Catégorie idéale :</span>
+              <strong>{{ offreIaSuggestion.categorie }}</strong>
+            </div>
+            <p class="offre-ia-warning-hint">Veuillez corriger le titre, la description ou la catégorie avant de continuer.</p>
           </div>
         </div>
-        <label class="required-toggle" style="margin-top:8px;">
-          <input type="checkbox" [(ngModel)]="offreForm.active" />
-          <span>Offre active (visible pour les recommandations)</span>
-        </label>
+
+        <!-- AI suggestion card -->
+        <div *ngIf="offreIaSuggestion" class="ia-suggestion-card">
+          <div class="ia-suggestion-card-header">
+            <i class="bi bi-stars"></i> Suggestion IA
+            <span class="ia-model-badge">Llama 3.3</span>
+          </div>
+          <div class="ia-suggestion-card-body">
+            <span *ngIf="offreIaSuggestion.titre" class="ia-suggestion-label">Titre proposé :</span>
+            <span *ngIf="offreIaSuggestion.titre" class="ia-suggestion-text">{{ offreIaSuggestion.titre }}</span>
+            <span *ngIf="offreIaSuggestion.description" class="ia-suggestion-label" style="margin-top:6px">Description proposée :</span>
+            <span *ngIf="offreIaSuggestion.description" class="ia-suggestion-text" style="font-size:11px;line-height:1.5">{{ offreIaSuggestion.description }}</span>
+            <span *ngIf="offreIaSuggestion.categorie" class="ia-suggestion-label" style="margin-top:6px">Catégorie proposée :</span>
+            <span *ngIf="offreIaSuggestion.categorie" class="ia-suggestion-text">{{ offreIaSuggestion.categorie }}</span>
+          </div>
+          <div class="ia-suggestion-actions">
+            <button class="btn-ia-apply" (click)="acceptOffreSuggestion()">
+              <i class="bi bi-check-lg"></i> Appliquer
+            </button>
+            <button class="btn-ia-dismiss" (click)="offreIaSuggestion=null">
+              <i class="bi bi-x"></i> Ignorer
+            </button>
+          </div>
+        </div>
+
+        <!-- AI score preview (shown after AI evaluates) -->
+        <div *ngIf="offreIaResult" class="offre-ia-result">
+          <div class="offre-ia-result-header">
+            <span>🎯</span> Ciblage IA
+            <span class="offre-ia-score-badge">KPI analysé</span>
+          </div>
+          <div class="offre-ia-result-body">
+            <div class="offre-ia-scores">
+              <span class="offre-ia-score-chip chip-min">Score min : {{ offreIaResult.scoreMin }}</span>
+              <span class="offre-ia-score-chip chip-max">Score max : {{ offreIaResult.scoreMax }}</span>
+            </div>
+            <p class="offre-ia-explication">{{ offreIaResult.explication }}</p>
+          </div>
+        </div>
+        <div *ngIf="offreIaChecking" class="offre-ia-loading">
+          <div class="offre-ia-dots"><span></span><span></span><span></span></div>
+          Vérification IA en cours…
+        </div>
+        <div *ngIf="offreIaLoading" class="offre-ia-loading">
+          <div class="offre-ia-dots"><span></span><span></span><span></span></div>
+          Analyse IA du ciblage en cours…
+        </div>
+
         <div class="modal-actions">
           <button class="btn-cancel" (click)="showOffreForm=false">Annuler</button>
-          <button class="btn-save" (click)="saveOffre()">{{ editingOffre ? 'Modifier' : 'Ajouter' }}</button>
+          <button class="btn-save" (click)="saveOffre()" [disabled]="offreIaLoading || offreIaChecking || !!offreIaWarning">
+            <i class="bi bi-stars" *ngIf="!editingOffre"></i>
+            {{ editingOffre ? 'Modifier' : (offreIaResult ? 'Créer l\'offre' : 'Analyser et ajouter') }}
+          </button>
         </div>
       </div>
     </div>
@@ -1137,19 +1194,28 @@
     </div>
     <div class="partage-count">
       <strong>{{ clientsFiltres.length }}</strong> client{{ clientsFiltres.length !== 1 ? 's' : '' }} trouvé{{ clientsFiltres.length !== 1 ? 's' : '' }}
+      <span *ngIf="clientsAyantRepondu.size > 0" class="partage-repondu-badge">
+        <i class="bi bi-check-circle-fill"></i> {{ clientsAyantRepondu.size }} ont déjà répondu
+      </span>
     </div>
     <div class="partage-client-list">
-      <div *ngFor="let c of clientsFiltres" class="partage-client-row">
-        <div class="partage-avatar">{{ (c.fullName || '?').charAt(0) }}</div>
+      <div *ngFor="let c of clientsFiltres" class="partage-client-row" [class.partage-row-repondu]="clientsAyantRepondu.has(c.id)">
+        <div class="partage-avatar" [class.partage-avatar-repondu]="clientsAyantRepondu.has(c.id)">{{ (c.fullName || '?').charAt(0) }}</div>
         <div class="partage-client-info">
           <span class="partage-client-name">{{ c.fullName }}</span>
           <span class="partage-client-meta">{{ c.mail }} · {{ c.typeContrat }}<span *ngIf="c.primeAnnuelle"> · {{ c.primeAnnuelle | number:'1.0-0' }} DT/an</span></span>
+          <span *ngIf="clientsAyantRepondu.has(c.id)" class="partage-repondu-label"><i class="bi bi-check2-circle"></i> A déjà répondu</span>
         </div>
-        <select [(ngModel)]="clientChannels[c.id]" class="channel-select">
-          <option value="email">Email</option>
-          <option value="sms" [disabled]="!c.tel">SMS</option>
-        </select>
-        <button (click)="envoyerDirectement(c)" class="btn-send">Envoyer</button>
+        <div class="partage-send-btns">
+          <ng-container *ngIf="!clientsAyantRepondu.has(c.id)">
+            <button class="partage-btn-email" (click)="envoyerDirectement(c, 'email')">
+              <i class="bi bi-envelope-fill"></i> Email
+            </button>
+            <button class="partage-btn-sms" [disabled]="!c.tel" (click)="envoyerDirectement(c, 'sms')">
+              <i class="bi bi-phone-fill"></i> SMS
+            </button>
+          </ng-container>
+        </div>
       </div>
       <div *ngIf="clientsFiltres.length === 0" class="partage-empty">
         <i class="bi bi-people partage-empty-icon"></i>

@@ -389,6 +389,106 @@ public class IAQuestionnaireService {
         return reorderQuestions(questions);
     }
 
+    public Map<String, Object> evaluerOffre(String titre, String description, String categorie) throws Exception {
+        String prompt = """
+            Tu es un expert en assurance. Analyse cette offre d'assurance.
+
+            Offre :
+            - Titre : "%s"
+            - Description : "%s"
+            - Catégorie : "%s"
+
+            ÉTAPE 1 — Cohérence : vérifie si le titre et la description décrivent bien la même offre, ET si la catégorie est compatible.
+            RÈGLES STRICTES :
+            - La catégorie GENERAL est TOUJOURS cohérente avec n'importe quel contenu — ne jamais la signaler comme incohérente.
+            - coherent = false UNIQUEMENT si : le titre et la description parlent de sujets clairement différents entre eux, OU si une catégorie spécifique (SANTE/AUTO/HABITATION/VIE/VOYAGE) est utilisée mais le contenu appartient clairement à une AUTRE catégorie spécifique.
+            - coherent = true si le contenu est globalement cohérent, même approximativement, ou si la catégorie est GENERAL.
+
+            ÉTAPE 2 — Si cohérent, détermine le scoreMin et scoreMax (0-100) représentant le profil KPI idéal des clients cibles.
+            - Offre premium/fidélité → scoreMin=60, scoreMax=100
+            - Offre bienvenue/nouveaux clients → scoreMin=0, scoreMax=40
+            - Offre standard → scoreMin=30, scoreMax=70
+            - Offre tous clients → scoreMin=0, scoreMax=100
+
+            Catégories disponibles : GENERAL, SANTE, AUTO, HABITATION, VIE, VOYAGE.
+
+            JSON uniquement (pas de texte autour) :
+            {
+              "coherent": boolean,
+              "coherenceMessage": "explication courte si non cohérent, sinon null",
+              "categorieSuggeree": "la catégorie idéale parmi GENERAL/SANTE/AUTO/HABITATION/VIE/VOYAGE si non cohérent, sinon null",
+              "titreSuggere": "titre corrigé et cohérent si non cohérent, sinon null",
+              "descriptionSugeree": "description corrigée et cohérente si non cohérent, sinon null",
+              "scoreMin": number or null,
+              "scoreMax": number or null,
+              "explication": "une phrase expliquant le ciblage, ou null si non cohérent"
+            }
+            """.formatted(titre, description, categorie);
+        return mapper.readValue(callAI(prompt), Map.class);
+    }
+
+    public Map<String, Object> genererMessage(String type, String channel, String titre, String description) throws Exception {
+        boolean isEmail = "email".equalsIgnoreCase(channel);
+        boolean isOffre = "offre".equalsIgnoreCase(type);
+
+        String prompt = isEmail ? """
+            Tu es un expert en communication client pour une compagnie d'assurance tunisienne (STAR Assurances).
+            Rédige un email professionnel, chaleureux et personnalisé pour envoyer %s à un client.
+            Utilise {NOM_CLIENT} comme placeholder pour le nom du client.
+
+            %s :
+            - Titre : "%s"
+            %s
+
+            Règles :
+            - Objet court et accrocheur (max 80 caractères)
+            - Corps : 3-5 phrases, ton professionnel mais humain, pas de jargon excessif
+            - Mentionne le nom du client avec {NOM_CLIENT}
+            - Signe avec "Cordialement, L'équipe STAR Assurances"
+            - Langue française
+
+            JSON uniquement :
+            {
+              "sujet": "objet de l'email",
+              "corps": "corps complet de l'email"
+            }
+            """.formatted(
+                isOffre ? "une offre personnalisée" : "un questionnaire de satisfaction",
+                isOffre ? "Offre" : "Questionnaire",
+                titre,
+                isOffre && description != null ? "- Description : \"" + description + "\"" : ""
+            )
+        : """
+            Tu es un expert en communication client pour une compagnie d'assurance tunisienne (STAR Assurances).
+            Rédige un SMS court et professionnel pour envoyer %s à un client.
+            Utilise {NOM_CLIENT} comme placeholder pour le nom du client.
+
+            %s :
+            - Titre : "%s"
+            %s
+
+            Règles :
+            - Max 160 caractères (SMS standard)
+            - Ton direct, professionnel et bienveillant
+            - Mentionne {NOM_CLIENT}
+            - Pas de liens (le lien sera ajouté automatiquement)
+            - Langue française
+
+            JSON uniquement :
+            {
+              "sujet": null,
+              "corps": "texte du SMS (max 160 caractères, sans lien)"
+            }
+            """.formatted(
+                isOffre ? "une offre personnalisée" : "un questionnaire de satisfaction",
+                isOffre ? "Offre" : "Questionnaire",
+                titre,
+                isOffre && description != null ? "- Description : \"" + description + "\"" : ""
+            );
+
+        return mapper.readValue(callAI(prompt), Map.class);
+    }
+
     public Map<String, Object> verifierDoublonQuestionnaire(String titre, String description, List<String> existingTitles) throws Exception {
         String prompt = """
             Tu vérifies si un nouveau questionnaire est un doublon d'un questionnaire existant pour un gestionnaire d'assurance.

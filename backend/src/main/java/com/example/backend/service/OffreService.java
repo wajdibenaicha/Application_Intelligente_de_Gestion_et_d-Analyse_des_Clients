@@ -6,8 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import com.example.backend.Repository.OffreRecommendationRepository;
 import com.example.backend.Repository.OffreRepository;
 import com.example.backend.models.Offre;
+import com.example.backend.models.OffreRecommendation;
 
 @Service
 public class OffreService {
@@ -16,6 +18,9 @@ public class OffreService {
 
     @Autowired
     private OffreRepository offreRepository;
+
+    @Autowired
+    private OffreRecommendationRepository recommendationRepository;
 
     public List<Offre> getAllOffres() {
         return offreRepository.findAll();
@@ -45,6 +50,14 @@ public class OffreService {
     public Offre deleteOffre(Long id) {
         Offre existing = getOffreById(id);
         if (existing != null) {
+            for (OffreRecommendation r : recommendationRepository.findByAiRecommendedOffreId(id)) {
+                r.setAiRecommendedOffre(null);
+                recommendationRepository.save(r);
+            }
+            for (OffreRecommendation r : recommendationRepository.findByFinalOffreId(id)) {
+                r.setFinalOffre(null);
+                recommendationRepository.save(r);
+            }
             offreRepository.delete(existing);
             messagingTemplate.convertAndSend("/topic/offres", getAllOffres());
             return existing;

@@ -27,7 +27,7 @@ public class ClientKpi {
     private Client client;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "questionnaire_id", nullable = false)
+    @JoinColumn(name = "questionnaire_id", nullable = true)
     private Questionnaire questionnaire;
 
     @Column(nullable = false)

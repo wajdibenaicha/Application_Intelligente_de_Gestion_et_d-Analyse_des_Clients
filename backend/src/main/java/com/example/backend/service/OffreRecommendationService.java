@@ -21,7 +21,8 @@ public class OffreRecommendationService {
             Long clientId, Long questionnaireId) {
 
     
-        ClientKpi kpi = kpiService.calculateKpi(clientId, questionnaireId);
+        ClientKpi kpi = kpiService.calculateGlobalKpi(clientId);
+        if (kpi == null) kpi = kpiService.calculateKpi(clientId, questionnaireId);
         if (kpi == null) throw new RuntimeException("Aucune réponse trouvée");
 
     

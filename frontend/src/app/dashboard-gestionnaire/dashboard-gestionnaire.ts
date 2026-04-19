@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import Chart from 'chart.js/auto';
-import { ViewChild, ElementRef } from '@angular/core';
 import { finalize, timeout, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -82,6 +81,7 @@ export class DashboardGestionnaire implements OnInit {
   clientsFiltres: any[] = [];
   filtre = { typeContrat: '', anneeMin: null, profession: '', primeRange: '' };
   clientChannels: { [id: number]: string } = {};
+  clientsAyantRepondu: Set<number> = new Set();
 
   notifications: any[] = [];
   unreadNotifCount = 0;
@@ -93,7 +93,6 @@ export class DashboardGestionnaire implements OnInit {
   private platformId = inject(PLATFORM_ID);
   private iaDebounceTimer: any = null;
   private iaEnsembleTimer: any = null;
-  private iaQuestDoublonTimer: any = null;
   private iaReorderTimer: any = null;
   private iaActiveCalls = 0;
 
@@ -468,19 +467,6 @@ renderReponsesChart() {
   buildChart(this.allReponses);
 }
 
-  private loadTotalReponses(questionnaireIds: number[]) {
-    if (!questionnaireIds.length) { this.totalReponses = 0; this.cdr.detectChanges(); return; }
-    this.http.get<any[]>(this.apiUrl + '/reponses').subscribe({
-      next: (all) => {
-        const idSet = new Set(questionnaireIds);
-        const relevant = all.filter(r => idSet.has(r.questionnaire?.id));
-        const unique = new Set(relevant.map(r => `${r.client?.id}-${r.questionnaire?.id}`));
-        this.countUp(unique.size, v => { this.totalReponses = v; this.cdr.detectChanges(); });
-      },
-      error: () => {}
-    });
-  }
-
   loadQuestionnaires() {
     const url = this.canManageAll()
       ? this.apiUrl + '/questionnaires'
@@ -765,7 +751,7 @@ renderReponsesChart() {
     this.reponsesParQuestionChart = new Chart(canvas, {
       type: 'bar',
       data: {
-        labels: ['Total clients', 'Ont répondu'],
+        labels: ['Envoyés', 'Ont répondu'],
         datasets: [{
           data: [sent, repondu],
           backgroundColor: ['#1a56db', '#27ae60'],
@@ -819,7 +805,7 @@ renderReponsesChart() {
         } else {
           this.http.get<any>(this.apiUrl + '/envoi/stats?questionnaireId=' + this.selectedQuestionnaireId).subscribe({
             next: (stats) => setTimeout(() => this.renderReponsesParQuestion(stats['sent'], stats['repondu']), 150),
-            error: ()    => setTimeout(() => this.renderReponsesParQuestion(this.allClients.length, clients), 150)
+            error: ()    => setTimeout(() => this.renderReponsesParQuestion(clients, clients), 150)
           });
         }
       },
@@ -885,182 +871,257 @@ renderReponsesChart() {
     this.showToastMessage('Export CSV téléchargé');
   }
 
-  private buildOffreSelectHtml(preselectedId?: number): string {
+  private buildOffreSelectHtml(preselectedId?: number, clientKpiScore?: number | null): string {
     if (!this.offres.length) return '<p style="color:#e74c3c">Aucune offre disponible.</p>';
-    let opts = this.offres.map(o =>
-      `<option value="${o.id}" ${preselectedId === o.id ? 'selected' : ''}>${o.title}</option>`
+    const eligible = clientKpiScore != null
+      ? this.offres.filter((o: any) => clientKpiScore >= (o.scoreMin ?? 0) && clientKpiScore <= (o.scoreMax ?? 100))
+      : this.offres;
+    const blocked = clientKpiScore != null
+      ? this.offres.filter((o: any) => clientKpiScore < (o.scoreMin ?? 0) || clientKpiScore > (o.scoreMax ?? 100))
+      : [];
+    if (!eligible.length) {
+      return `<div style="background:#fdf0f0;border:1px solid #e74c3c;border-radius:8px;padding:12px;color:#a93226;font-size:13px;margin-top:8px;">
+        <b>🚫 Aucune offre disponible</b><br>Le score KPI de ce client (${clientKpiScore}/100) ne correspond à aucune offre active.
+      </div>`;
+    }
+    let opts = eligible.map(o =>
+      `<option value="${o.id}" ${preselectedId === o.id ? 'selected' : ''}>${o.title} (KPI ${o.scoreMin}–${o.scoreMax})</option>`
     ).join('');
+    const blockedNote = blocked.length
+      ? `<p style="font-size:11px;color:#e67e22;margin-top:6px;">🔒 ${blocked.length} offre(s) non disponible(s) — score KPI insuffisant ou trop élevé.</p>`
+      : '';
     return `<select id="swal-offre-select" class="swal2-input" style="margin-top:8px">
               <option value="">-- Choisir une offre --</option>${opts}
-            </select>`;
+            </select>${blockedNote}`;
   }
 
   envoyerOffreClient(client: any) {
     if (!this.offres.length) {
-      Swal.fire({ icon: 'warning', title: 'Aucune offre', text: 'Créez d\'abord des offres dans l\'espace admin.', confirmButtonColor: '#27ae60' });
+      Swal.fire({ icon: 'warning', title: 'Aucune offre', text: 'Créez d\'abord des offres.', confirmButtonColor: '#27ae60' });
       return;
     }
 
-    const rec = this.recommendations.find((r: any) =>
-      r.clientKpi?.client?.id === client.id
-    );
-
-    const sentimentEmoji = rec ? this.getSentimentEmoji(rec.clientKpi?.sentiment) : '';
+    const rec = this.recommendations.find((r: any) => r.clientKpi?.client?.id === client.id);
     const aiOffre = rec ? (rec.finalOffre || rec.aiRecommendedOffre) : null;
     const score = rec?.clientKpi?.score ?? null;
+    const sentimentEmoji = rec ? this.getSentimentEmoji(rec.clientKpi?.sentiment) : '';
 
     const recHtml = rec ? `
-      <div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:left;">
-        <div style="font-weight:700;color:#1a3d2b;margin-bottom:6px;">Suggestion IA</div>
-        <div style="font-size:13px;color:#555;margin-bottom:4px;">
-          Score : <b style="color:#27ae60">${score}/100</b> &nbsp; ${sentimentEmoji} <b>${rec.clientKpi?.sentiment || ''}</b>
-        </div>
-        <div style="font-size:13px;color:#555;">
-          Offre recommandée : <b style="color:#2980b9">${aiOffre?.title || '—'}</b>
-        </div>
+      <div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:10px 14px;margin-bottom:12px;text-align:left;">
+        <div style="font-weight:700;color:#1a3d2b;margin-bottom:4px;">Suggestion IA</div>
+        <div style="font-size:12px;color:#555;">Score : <b style="color:#27ae60">${score}/100</b> &nbsp;${sentimentEmoji} <b>${rec.clientKpi?.sentiment || ''}</b></div>
+        <div style="font-size:12px;color:#555;">Offre recommandée : <b style="color:#2980b9">${aiOffre?.title || '—'}</b></div>
         ${aiOffre ? `<button type="button" id="swal-use-ai-btn"
-          onclick="document.getElementById('swal-offre-select').value='${aiOffre.id}';this.style.background='#27ae60';this.textContent='Sélectionnée'"
-          style="margin-top:10px;background:#2ecc71;color:white;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">
-          Utiliser cette offre
-        </button>` : ''}
+          onclick="document.getElementById('swal-offre-select').value='${aiOffre.id}';this.style.background='#27ae60';this.textContent='✓ Sélectionnée'"
+          style="margin-top:8px;background:#2ecc71;color:white;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">
+          Utiliser cette offre</button>` : ''}
       </div>` : '';
 
+    // Step 1: pick offer
     Swal.fire({
       title: `Envoyer une offre à ${client.fullName || 'ce client'}`,
-      html: recHtml + this.buildOffreSelectHtml(aiOffre?.id),
+      html: recHtml + this.buildOffreSelectHtml(aiOffre?.id, score),
       showCancelButton: true,
-      confirmButtonText: 'Envoyer par email',
+      confirmButtonText: 'Suivant →',
       cancelButtonText: 'Annuler',
-      confirmButtonColor: '#27ae60',
+      confirmButtonColor: '#4a6fa5',
       cancelButtonColor: '#95a5a6',
       reverseButtons: true,
       preConfirm: () => {
         const sel = document.getElementById('swal-offre-select') as HTMLSelectElement;
-        if (!sel || !sel.value) { Swal.showValidationMessage('Veuillez sélectionner une offre.'); return false; }
+        if (!sel?.value) { Swal.showValidationMessage('Veuillez sélectionner une offre.'); return false; }
         return sel.value;
       }
     }).then(result => {
       if (!result.isConfirmed || !result.value) return;
       const offreId = Number(result.value);
+      const offre = this.offres.find((o: any) => o.id === offreId);
+      this.envoyerOffreStep2(client, offre, rec, aiOffre);
+    });
+  }
 
-      const sendOffer = () => this.api.envoyerOffre(offreId, [client.id]).subscribe({
-        next: () => Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Offre envoyée !', showConfirmButton: false, timer: 2500, timerProgressBar: true }),
-        error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer l\'offre.', confirmButtonColor: '#27ae60' })
-      });
-
-      if (rec) {
-        if (aiOffre && offreId === aiOffre.id) {
-          this.http.put(this.apiUrl + '/recommendations/' + rec.id + '/accept', {}).subscribe({ next: () => sendOffer(), error: () => sendOffer() });
-        } else {
-          this.http.put(this.apiUrl + '/recommendations/' + rec.id + '/override/' + offreId, {}).subscribe({ next: () => sendOffer(), error: () => sendOffer() });
-        }
-      } else {
-        sendOffer();
+  private envoyerOffreStep2(client: any, offre: any, rec: any, aiOffre: any) {
+    // Step 2: choose channel + AI generates text
+    Swal.fire({
+      title: 'Choisir le canal d\'envoi',
+      html: `
+        <p style="color:#555;font-size:13px;margin-bottom:16px;">Comment envoyer <b>${offre?.title}</b> à <b>${client.fullName}</b> ?</p>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <button id="swal-btn-email" style="flex:1;padding:14px;background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">
+            ✉️ Email
+          </button>
+          <button id="swal-btn-sms" style="flex:1;padding:14px;background:linear-gradient(135deg,#27ae60,#1a6e3c);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">
+            📱 SMS
+          </button>
+        </div>`,
+      showConfirmButton: false,
+      showCancelButton: true,
+      cancelButtonText: '← Retour',
+      cancelButtonColor: '#95a5a6',
+      didOpen: () => {
+        document.getElementById('swal-btn-email')?.addEventListener('click', () => {
+          Swal.close();
+          this.envoyerOffreAvecIA(client, offre, rec, aiOffre, 'email');
+        });
+        document.getElementById('swal-btn-sms')?.addEventListener('click', () => {
+          Swal.close();
+          this.envoyerOffreAvecIA(client, offre, rec, aiOffre, 'sms');
+        });
       }
     });
   }
 
-  envoyerOffreTous() {
-    if (!this.offres.length) {
-      Swal.fire({ icon: 'warning', title: 'Aucune offre', text: 'Créez d\'abord des offres dans l\'espace admin.', confirmButtonColor: '#27ae60' });
-      return;
+  private envoyerOffreAvecIA(client: any, offre: any, rec: any, aiOffre: any, channel: string) {
+    // Step 3: AI generates text → preview → send
+    Swal.fire({
+      title: 'Génération IA en cours…',
+      html: '<p style="color:#555;font-size:13px;">L\'IA rédige le message personnalisé…</p>',
+      allowOutsideClick: false, allowEscapeKey: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.http.post<any>(this.apiUrl + '/ia/generer-message', {
+      type: 'offre', channel,
+      titre: offre?.title,
+      description: offre?.description
+    }).subscribe({
+      next: (msg) => {
+        const sujet = msg.sujet || '';
+        const corps = (msg.corps || '').replace('{NOM_CLIENT}', client.fullName || 'client');
+        const isEmail = channel === 'email';
+        const channelLabel = isEmail ? '✉️ Email' : '📱 SMS';
+        const channelColor = isEmail ? '#1a56db' : '#27ae60';
+
+        Swal.fire({
+          title: `${channelLabel} — Aperçu IA`,
+          html: `
+            ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
+              <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
+            </div>` : ''}
+            <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;">${corps}</div>
+            <p style="font-size:11px;color:#999;margin-top:8px;">Vous pouvez envoyer ce message ou revenir en arrière.</p>`,
+          showCancelButton: true,
+          confirmButtonText: `Envoyer par ${isEmail ? 'email' : 'SMS'}`,
+          cancelButtonText: '← Retour',
+          confirmButtonColor: channelColor,
+          cancelButtonColor: '#95a5a6',
+          reverseButtons: true
+        }).then(r2 => {
+          if (!r2.isConfirmed) { this.envoyerOffreStep2(client, offre, rec, aiOffre); return; }
+          this.doEnvoyerOffre(client, offre, rec, aiOffre, channel, sujet, corps);
+        });
+      },
+      error: () => {
+        // AI failed — send with default text
+        const corps = `Bonjour ${client.fullName},\n\n${offre?.title}\n${offre?.description}\n\nCordialement,\nSTAR Assurances`;
+        this.doEnvoyerOffre(client, offre, rec, aiOffre, channel, offre?.title, corps);
+      }
+    });
+  }
+
+  private doEnvoyerOffre(client: any, offre: any, rec: any, aiOffre: any, channel: string, sujet: string, corps: string) {
+    Swal.fire({ title: 'Envoi en cours…', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+
+    const send = () => this.http.post<any>(this.apiUrl + '/offres/envoyer', {
+      offreId: offre.id, clientIds: [client.id], channel, sujet, corps
+    }).subscribe({
+      next: () => Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Offre envoyée !', showConfirmButton: false, timer: 2500, timerProgressBar: true }),
+      error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer l\'offre.', confirmButtonColor: '#27ae60' })
+    });
+
+    if (rec) {
+      const url = aiOffre && offre.id === aiOffre.id
+        ? this.apiUrl + '/recommendations/' + rec.id + '/accept'
+        : this.apiUrl + '/recommendations/' + rec.id + '/override/' + offre.id;
+      const method = aiOffre && offre.id === aiOffre.id ? 'put' : 'put';
+      this.http[method](url, {}).subscribe({ next: () => send(), error: () => send() });
+    } else {
+      send();
     }
+  }
+
+  voirRecommandationsIA() {
     const count = this.clientsReponses.length;
-    const clientIds = this.clientsReponses.map(e => e.client?.id).filter(Boolean);
     const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'ce questionnaire';
 
-    
-    const offreCountMap = new Map<number, { offre: any; clients: number }>();
+    const offreCountMap = new Map<number, { offre: any; clients: number; kpiAvg: number; kpiSum: number }>();
     let noRecCount = 0;
     for (const e of this.clientsReponses) {
-      const rec = this.recommendations.find((r: any) =>
-        r.clientKpi?.client?.id === e.client?.id
-      );
+      const rec = this.recommendations.find((r: any) => r.clientKpi?.client?.id === e.client?.id);
       const aiOffre = rec ? (rec.finalOffre || rec.aiRecommendedOffre) : null;
+      const kpi = rec?.clientKpi?.score ?? 0;
       if (aiOffre) {
         const entry = offreCountMap.get(aiOffre.id);
-        if (entry) entry.clients++;
-        else offreCountMap.set(aiOffre.id, { offre: aiOffre, clients: 1 });
+        if (entry) { entry.clients++; entry.kpiSum += kpi; entry.kpiAvg = entry.kpiSum / entry.clients; }
+        else offreCountMap.set(aiOffre.id, { offre: aiOffre, clients: 1, kpiSum: kpi, kpiAvg: kpi });
       } else {
         noRecCount++;
       }
     }
 
-    // Sort by most recommended, pick the top one
-    const offreCounts = Array.from(offreCountMap.values())
-      .sort((a, b) => b.clients - a.clients);
-    const topOffre = offreCounts[0]?.offre ?? null;
-
+    const offreCounts = Array.from(offreCountMap.values()).sort((a, b) => b.clients - a.clients);
     const pieColors = ['#27ae60','#1a56db','#e67e22','#8e44ad','#e74c3c','#16a085','#f39c12','#2980b9'];
-    const noRecHtml = noRecCount > 0
-      ? `<p style="font-size:12px;color:#999;margin-top:6px;">${noRecCount} client(s) sans recommandation IA recevront aussi l'offre sélectionnée.</p>`
+
+    const rowsHtml = offreCounts.map(({ offre, clients, kpiAvg }, i) => `
+      <tr>
+        <td style="padding:6px 8px;font-weight:600;color:${pieColors[i % pieColors.length]}">${offre.title}</td>
+        <td style="padding:6px 8px;text-align:center"><b>${clients}</b></td>
+        <td style="padding:6px 8px;text-align:center">${offre.scoreMin}–${offre.scoreMax}</td>
+        <td style="padding:6px 8px;text-align:center"><b>${Math.round(kpiAvg)}</b>/100</td>
+      </tr>`).join('');
+
+    const noRecRow = noRecCount > 0
+      ? `<tr><td style="padding:6px 8px;color:#999;font-style:italic">Sans recommandation</td><td style="padding:6px 8px;text-align:center">${noRecCount}</td><td colspan="2" style="padding:6px 8px;text-align:center;color:#bbb">—</td></tr>`
       : '';
 
-    const aiSummary = offreCounts.length > 0
-      ? `<div style="background:#f0faf4;border:1px solid #a9dfbf;border-radius:10px;padding:14px;margin-bottom:14px;">
-           <div style="font-weight:700;color:#1a3d2b;margin-bottom:10px;">Analyse IA — ${count} client${count > 1 ? 's' : ''}</div>
-           <canvas id="swal-pie-chart" width="260" height="260" style="display:block;margin:0 auto;max-width:260px;max-height:260px;"></canvas>
-           ${noRecHtml}
-         </div>`
-      : `<div style="background:#fff8e1;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;color:#795548;">
-           Aucune recommandation IA disponible. Sélectionnez une offre manuellement.
-         </div>`;
+    const tableHtml = offreCounts.length > 0 ? `
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;text-align:left;">
+        <thead><tr style="background:#f5f6ff;color:#4a5568;font-size:11px;">
+          <th style="padding:6px 8px">Offre IA</th>
+          <th style="padding:6px 8px;text-align:center">Clients</th>
+          <th style="padding:6px 8px;text-align:center">KPI cible</th>
+          <th style="padding:6px 8px;text-align:center">KPI moyen</th>
+        </tr></thead>
+        <tbody>${rowsHtml}${noRecRow}</tbody>
+      </table>` : '';
+
+    const emptyHtml = offreCounts.length === 0
+      ? `<p style="color:#999;font-size:13px;margin-top:12px;">Aucune recommandation IA disponible pour ce questionnaire.</p>` : '';
 
     Swal.fire({
-      title: `Envoyer une offre à tous`,
+      title: '📊 Recommandations IA',
       html: `
-        <p style="margin-bottom:12px;color:#555;font-size:13px;">Questionnaire : <b>${titre}</b></p>
-        ${aiSummary}
-        ${this.buildOffreSelectHtml(topOffre?.id)}`,
-      showCancelButton: true,
-      confirmButtonText: `Envoyer à ${count} client${count > 1 ? 's' : ''}`,
-      cancelButtonText: 'Annuler',
-      confirmButtonColor: '#27ae60',
-      cancelButtonColor: '#95a5a6',
-      reverseButtons: true,
-      width: 560,
+        <p style="margin-bottom:10px;color:#555;font-size:13px;">Questionnaire : <b>${titre}</b> — <b>${count}</b> client(s)</p>
+        <canvas id="swal-pie-chart" width="280" height="280" style="display:block;margin:0 auto;max-width:280px;max-height:280px;"></canvas>
+        ${tableHtml}${emptyHtml}`,
+      confirmButtonText: 'Fermer',
+      confirmButtonColor: '#4a6fa5',
+      width: 540,
       didOpen: () => {
         const canvas = document.getElementById('swal-pie-chart') as HTMLCanvasElement;
         if (!canvas || offreCounts.length === 0) return;
         new Chart(canvas, {
           type: 'pie',
           data: {
-            labels: offreCounts.map(({ offre, clients }) => `${offre.title} (${clients})`),
+            labels: [
+              ...offreCounts.map(({ offre, clients }) => `${offre.title} (${clients})`),
+              ...(noRecCount > 0 ? [`Sans recommandation (${noRecCount})`] : [])
+            ],
             datasets: [{
-              data: offreCounts.map(e => e.clients),
-              backgroundColor: offreCounts.map((_, i) => pieColors[i % pieColors.length]),
+              data: [...offreCounts.map(e => e.clients), ...(noRecCount > 0 ? [noRecCount] : [])],
+              backgroundColor: [...offreCounts.map((_, i) => pieColors[i % pieColors.length]), '#bdc3c7'],
               borderWidth: 2,
               borderColor: '#fff'
             }]
           },
           options: {
             plugins: {
-              legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12 } },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => {
-                    const pct = Math.round((ctx.parsed / count) * 100);
-                    return ` ${ctx.label}: ${pct}%`;
-                  }
-                }
-              }
+              legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } },
+              tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${Math.round((ctx.parsed / count) * 100)}%` } }
             }
           }
         });
-      },
-      preConfirm: () => {
-        const sel = document.getElementById('swal-offre-select') as HTMLSelectElement;
-        if (!sel || !sel.value) { Swal.showValidationMessage('Veuillez sélectionner une offre.'); return false; }
-        return sel.value;
       }
-    }).then(result => {
-      if (!result.isConfirmed || !result.value) return;
-      const offreId = Number(result.value);
-      Swal.fire({ title: 'Envoi en cours...', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
-      this.api.envoyerOffre(offreId, clientIds).subscribe({
-        next: (res: any) => Swal.fire({ icon: 'success', title: 'Envoyé !', html: `L'offre a été envoyée à <b>${res.sent ?? count} client${count > 1 ? 's' : ''}</b> par email.`, confirmButtonColor: '#27ae60' }),
-        error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'envoyer les offres.', confirmButtonColor: '#27ae60' })
-      });
     });
   }
 
@@ -1172,24 +1233,66 @@ renderReponsesChart() {
 
   // ── Directeur offer catalog management ──────────
   showOffreForm = false;
-  offreForm: any = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
+  offreForm: any = { title: '', description: '', categorie: 'GENERAL' };
   editingOffre: any = null;
+  offreIaResult: any = null;
+  offreIaLoading = false;
+  offreIaChecking = false;
+  offreIaWarning: string | null = null;
+  offreIaSuggestion: any = null;
+  private offreCoherenceTimer: any = null;
 
   openAddOffre() {
     this.editingOffre = null;
-    this.offreForm = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
+    this.offreForm = { title: '', description: '', categorie: 'GENERAL' };
+    this.offreIaResult = null;
+    this.offreIaWarning = null;
+    this.offreIaSuggestion = null;
+    this.offreIaChecking = false;
+    clearTimeout(this.offreCoherenceTimer);
     this.showOffreForm = true;
   }
 
   openEditOffre(offre: any) {
     this.editingOffre = offre;
+    this.offreIaResult = null;
+    this.offreIaWarning = null;
+    this.offreIaSuggestion = null;
+    this.offreIaChecking = false;
+    clearTimeout(this.offreCoherenceTimer);
     this.offreForm = {
       title: offre.title, description: offre.description,
-      categorie: offre.categorie || 'general',
+      categorie: offre.categorie || 'GENERAL',
       scoreMin: offre.scoreMin ?? 0, scoreMax: offre.scoreMax ?? 100,
       active: offre.active !== false
     };
     this.showOffreForm = true;
+  }
+
+  scheduleOffreCoherenceCheck() {
+    if (this.editingOffre) return;
+    this.offreIaResult = null;
+    this.offreIaWarning = null;
+    this.offreIaSuggestion = null;
+    clearTimeout(this.offreCoherenceTimer);
+    if (!this.offreForm.title?.trim() || !this.offreForm.description?.trim()) return;
+    this.offreIaChecking = true;
+    this.cdr.detectChanges();
+    this.offreCoherenceTimer = setTimeout(() => this.runOffreCoherenceCheck(), 1200);
+  }
+
+  private runOffreCoherenceCheck() {
+    this.http.post<any>(this.apiUrl + '/ia/evaluer-offre', {
+      titre: this.offreForm.title,
+      description: this.offreForm.description,
+      categorie: this.offreForm.categorie
+    }).subscribe({
+      next: (res) => {
+        this.offreIaChecking = false;
+        this.applyOffreIaResponse(res);
+      },
+      error: () => { this.offreIaChecking = false; this.cdr.detectChanges(); }
+    });
   }
 
   saveOffre() {
@@ -1197,16 +1300,88 @@ renderReponsesChart() {
       this.showToastMessage('Titre et description sont obligatoires', 'error'); return;
     }
     if (this.editingOffre) {
-      this.api.updateoffre(this.editingOffre.id, this.offreForm).subscribe({
+      const payload = { ...this.offreForm, active: true };
+      this.api.updateoffre(this.editingOffre.id, payload).subscribe({
         next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre modifiée'); },
         error: () => this.showToastMessage('Erreur lors de la modification', 'error')
       });
-    } else {
-      this.api.addoffre(this.offreForm).subscribe({
-        next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre ajoutée'); },
+      return;
+    }
+    if (this.offreIaResult) {
+      const payload = {
+        ...this.offreForm,
+        scoreMin: this.offreIaResult.scoreMin ?? 0,
+        scoreMax: this.offreIaResult.scoreMax ?? 100,
+        active: true
+      };
+      this.api.addoffre(payload).subscribe({
+        next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre ajoutée avec ciblage IA'); },
         error: () => this.showToastMessage('Erreur lors de l\'ajout', 'error')
       });
+      return;
     }
+    this.offreIaLoading = true;
+    this.cdr.detectChanges();
+    this.http.post<any>(this.apiUrl + '/ia/evaluer-offre', {
+      titre: this.offreForm.title,
+      description: this.offreForm.description,
+      categorie: this.offreForm.categorie
+    }).subscribe({
+      next: (res) => {
+        this.offreIaLoading = false;
+        this.applyOffreIaResponse(res);
+        if (this.offreIaWarning) return;
+        const payload = {
+          ...this.offreForm,
+          scoreMin: res.scoreMin ?? 0,
+          scoreMax: res.scoreMax ?? 100,
+          active: true
+        };
+        this.api.addoffre(payload).subscribe({
+          next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre ajoutée avec ciblage IA'); },
+          error: () => this.showToastMessage('Erreur lors de l\'ajout', 'error')
+        });
+      },
+      error: () => {
+        this.offreIaLoading = false;
+        this.cdr.detectChanges();
+        const payload = { ...this.offreForm, scoreMin: 0, scoreMax: 100, active: true };
+        this.api.addoffre(payload).subscribe({
+          next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre ajoutée (ciblage par défaut)'); },
+          error: () => this.showToastMessage('Erreur lors de l\'ajout', 'error')
+        });
+      }
+    });
+  }
+
+  private applyOffreIaResponse(res: any) {
+    if (res.coherent === false) {
+      const suggestedCat = (res.categorieSuggeree || '').toUpperCase();
+      const currentCat = (this.offreForm.categorie || '').toUpperCase();
+      const realCatSuggestion = suggestedCat && suggestedCat !== currentCat ? res.categorieSuggeree : null;
+      const hasSuggestion = res.titreSuggere || res.descriptionSugeree || realCatSuggestion;
+      this.offreIaWarning = res.coherenceMessage || 'Le titre, la description et la catégorie ne correspondent pas.';
+      this.offreIaResult = null;
+      this.offreIaSuggestion = hasSuggestion
+        ? { titre: res.titreSuggere, description: res.descriptionSugeree, categorie: realCatSuggestion }
+        : null;
+    } else {
+      this.offreIaWarning = null;
+      this.offreIaSuggestion = null;
+      this.offreIaResult = res;
+    }
+    this.cdr.detectChanges();
+  }
+
+  acceptOffreSuggestion() {
+    if (!this.offreIaSuggestion) return;
+    if (this.offreIaSuggestion.titre) this.offreForm.title = this.offreIaSuggestion.titre;
+    if (this.offreIaSuggestion.description) this.offreForm.description = this.offreIaSuggestion.description;
+    if (this.offreIaSuggestion.categorie) this.offreForm.categorie = this.offreIaSuggestion.categorie;
+    this.offreIaSuggestion = null;
+    this.offreIaWarning = null;
+    this.cdr.detectChanges();
+    this.scheduleOffreCoherenceCheck();
   }
 
   supprimerOffre(offre: any) {
@@ -1395,6 +1570,7 @@ renderReponsesChart() {
     this.selectedQuestionnaire = q;
     this.clientsFiltres = [];
     this.clientChannels = {};
+    this.clientsAyantRepondu = new Set();
     this.filtre = { typeContrat: '', anneeMin: null, profession: '', primeRange: '' };
     this.showPartageModal = true;
     this.api.getClientsFiltres({}).subscribe(data => {
@@ -1405,6 +1581,109 @@ renderReponsesChart() {
       this.professions  = [...new Set(data.map((c: any) => c.profession).filter(Boolean))];
       this.annees       = [...new Set(data.map((c: any) => c.anneeInscription).filter(Boolean))].sort((a: any, b: any) => a - b);
       this.cdr.detectChanges();
+    });
+    this.chargerReponsesQuestionnaire();
+  }
+
+  chargerReponsesQuestionnaire() {
+    if (!this.selectedQuestionnaire?.id) return;
+    this.http.get<any[]>(this.apiUrl + '/reponses/questionnaire/' + this.selectedQuestionnaire.id).subscribe({
+      next: (reponses) => {
+        this.clientsAyantRepondu = new Set(reponses.map((r: any) => r.client?.id).filter(Boolean));
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  supprimerReponseClient(clientId: number) {
+    Swal.fire({
+      title: 'Supprimer la réponse ?',
+      text: 'La réponse de ce client sera supprimée. Il pourra recevoir le questionnaire à nouveau.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e74c3c',
+      cancelButtonColor: '#95a5a6',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.http.delete(this.apiUrl + '/reponses/client/' + clientId + '/questionnaire/' + this.selectedQuestionnaire.id).subscribe({
+        next: () => {
+          this.clientsAyantRepondu.delete(clientId);
+          this.cdr.detectChanges();
+          this.showToastMessage('Réponse supprimée');
+        },
+        error: () => this.showToastMessage('Erreur lors de la suppression', 'error')
+      });
+    });
+  }
+
+  supprimerToutesReponses() {
+    const count = this.clientsAyantRepondu.size;
+    if (count === 0) { this.showToastMessage('Aucune réponse à supprimer', 'error'); return; }
+    Swal.fire({
+      title: 'Supprimer toutes les réponses ?',
+      html: `<b>${count} réponse${count > 1 ? 's' : ''}</b> seront supprimées définitivement.<br>Tous les clients pourront recevoir ce questionnaire à nouveau.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e74c3c',
+      cancelButtonColor: '#95a5a6',
+      confirmButtonText: 'Tout supprimer',
+      cancelButtonText: 'Annuler'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.http.delete(this.apiUrl + '/reponses/questionnaire/' + this.selectedQuestionnaire.id + '/all').subscribe({
+        next: () => {
+          this.clientsAyantRepondu = new Set();
+          this.cdr.detectChanges();
+          this.showToastMessage('Toutes les réponses supprimées');
+        },
+        error: () => this.showToastMessage('Erreur lors de la suppression', 'error')
+      });
+    });
+  }
+
+  supprimerReponseClientSection(clientId: number) {
+    Swal.fire({
+      title: 'Supprimer les réponses ?',
+      text: 'Les réponses de ce client seront supprimées définitivement.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e74c3c',
+      cancelButtonColor: '#95a5a6',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.http.delete(this.apiUrl + '/reponses/client/' + clientId + '/questionnaire/' + this.selectedQuestionnaireId).subscribe({
+        next: () => { this.loadReponses(); this.showToastMessage('Réponses supprimées'); },
+        error: () => this.showToastMessage('Erreur lors de la suppression', 'error')
+      });
+    });
+  }
+
+  supprimerToutesReponsesSection() {
+    const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'ce questionnaire';
+    const count = this.clientsReponses.length;
+    Swal.fire({
+      title: 'Supprimer toutes les réponses ?',
+      html: `<b>${count} réponse${count > 1 ? 's' : ''}</b> pour "<b>${titre}</b>" seront supprimées définitivement.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e74c3c',
+      cancelButtonColor: '#95a5a6',
+      confirmButtonText: 'Tout supprimer',
+      cancelButtonText: 'Annuler'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.http.delete(this.apiUrl + '/reponses/questionnaire/' + this.selectedQuestionnaireId + '/all').subscribe({
+        next: () => {
+          this.loadReponses();
+          this.showToastMessage('Toutes les réponses supprimées');
+        },
+        error: () => this.showToastMessage('Erreur lors de la suppression', 'error')
+      });
     });
   }
 
@@ -1436,37 +1715,65 @@ renderReponsesChart() {
   }
 
   // Flow B: sends email or SMS directly → client uses /fill-questionnaire
-  envoyerDirectement(client: any) {
-    const channel = this.clientChannels[client.id] || 'email';
+  envoyerDirectement(client: any, channel: string = 'email') {
+    this.clientChannels[client.id] = channel;
+    const questionnaire = this.selectedQuestionnaire;
+    const isEmail = channel === 'email';
+    const channelColor = isEmail ? '#1a56db' : '#27ae60';
+
     Swal.fire({
-      title: `Envoyer à ${client.fullName} ?`,
-      html: `<b>${channel === 'sms' ? 'SMS' : 'Email'}</b> → ${channel === 'sms' ? client.tel : client.mail}`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#27ae60',
-      cancelButtonColor: '#95a5a6',
-      confirmButtonText: 'Envoyer',
-      cancelButtonText: 'Annuler',
-      reverseButtons: true
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.http.post('/api/envoi/distribuer', {
-        questionnaireId: this.selectedQuestionnaire.id,
-        distributions: [{ clientId: client.id, channel }]
-      }).subscribe({
-        next: () => {
-          this.cdr.detectChanges();
-          Swal.fire({
-            toast: true, position: 'top-end', icon: 'success',
-            title: channel === 'sms' ? 'SMS envoyé !' : 'Email envoyé !',
-            showConfirmButton: false, timer: 2500, timerProgressBar: true
+      title: 'Génération IA en cours…',
+      html: '<p style="color:#555;font-size:13px;">L\'IA rédige le message personnalisé…</p>',
+      allowOutsideClick: false, allowEscapeKey: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.http.post<any>(this.apiUrl + '/ia/generer-message', {
+      type: 'questionnaire', channel, titre: questionnaire?.titre
+    }).subscribe({
+      next: (msg) => {
+        const sujet = msg.sujet || '';
+        const corps = (msg.corps || '').replace('{NOM_CLIENT}', client.fullName || 'client');
+        const contact = isEmail ? client.mail : client.tel;
+
+        Swal.fire({
+          title: `${isEmail ? '✉️ Email' : '📱 SMS'} — Aperçu IA`,
+          html: `
+            <p style="font-size:12px;color:#888;margin-bottom:10px;">Destinataire : <b>${client.fullName}</b> — ${contact}</p>
+            ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
+              <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
+            </div>` : ''}
+            <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:180px;overflow-y:auto;">${corps}</div>`,
+          showCancelButton: true,
+          confirmButtonText: `Envoyer`,
+          cancelButtonText: 'Annuler',
+          confirmButtonColor: channelColor,
+          cancelButtonColor: '#95a5a6',
+          reverseButtons: true
+        }).then(result => {
+          if (!result.isConfirmed) return;
+          this.http.post('/api/envoi/distribuer', {
+            questionnaireId: questionnaire.id,
+            distributions: [{ clientId: client.id, channel, sujet, corps }]
+          }).subscribe({
+            next: () => {
+              this.cdr.detectChanges();
+              Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: isEmail ? 'Email envoyé !' : 'SMS envoyé !', showConfirmButton: false, timer: 2500, timerProgressBar: true });
+            },
+            error: (err) => Swal.fire({ icon: 'error', title: 'Échec', text: err?.error?.message || 'Erreur lors de l\'envoi', confirmButtonColor: '#27ae60' })
           });
-        },
-        error: (err) => {
-          const msg = err?.error?.message || 'Erreur lors de l\'envoi';
-          Swal.fire({ icon: 'error', title: 'Échec', text: msg, confirmButtonColor: '#27ae60' });
-        }
-      });
+        });
+      },
+      error: () => {
+        // AI failed — fall back to plain send without preview
+        this.http.post('/api/envoi/distribuer', {
+          questionnaireId: questionnaire.id,
+          distributions: [{ clientId: client.id, channel }]
+        }).subscribe({
+          next: () => { this.cdr.detectChanges(); Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: isEmail ? 'Email envoyé !' : 'SMS envoyé !', showConfirmButton: false, timer: 2500, timerProgressBar: true }); },
+          error: (err) => Swal.fire({ icon: 'error', title: 'Échec', text: err?.error?.message || 'Erreur lors de l\'envoi', confirmButtonColor: '#27ae60' })
+        });
+      }
     });
   }
 
@@ -1478,55 +1785,94 @@ renderReponsesChart() {
     }
 
     Swal.fire({
-      title: 'Envoyer à tous ?',
-      html: `Vous allez envoyer le questionnaire <b>"${this.selectedQuestionnaire?.titre}"</b><br>à <b>${count} client${count > 1 ? 's' : ''}</b>.`,
-      icon: 'question',
+      title: '📢 Envoyer à tous les clients',
+      html: `
+        <p style="margin-bottom:18px;color:#555;">Questionnaire : <b>${this.selectedQuestionnaire?.titre}</b><br><span style="color:#888">${count} client${count > 1 ? 's' : ''} concerné${count > 1 ? 's' : ''}</span></p>
+        <p style="margin-bottom:10px;font-weight:600;color:#333;">Choisissez le canal d'envoi :</p>
+        <div style="display:flex;gap:14px;justify-content:center;">
+          <button id="swal-email-btn" style="
+            flex:1;padding:14px 10px;border:2px solid #2980b9;border-radius:12px;background:#eaf4fb;
+            color:#1a6fa8;font-weight:700;font-size:15px;cursor:pointer;transition:all .2s;
+            display:flex;align-items:center;justify-content:center;gap:8px;">
+            ✉️ Email
+          </button>
+          <button id="swal-sms-btn" style="
+            flex:1;padding:14px 10px;border:2px solid #27ae60;border-radius:12px;background:#eafaf1;
+            color:#1e8449;font-weight:700;font-size:15px;cursor:pointer;transition:all .2s;
+            display:flex;align-items:center;justify-content:center;gap:8px;">
+            📱 SMS
+          </button>
+        </div>`,
+      showConfirmButton: false,
       showCancelButton: true,
-      confirmButtonColor: '#27ae60',
-      cancelButtonColor: '#95a5a6',
-      confirmButtonText: 'Envoyer maintenant',
       cancelButtonText: 'Annuler',
-      reverseButtons: true
-    }).then(result => {
-      if (!result.isConfirmed) return;
+      cancelButtonColor: '#95a5a6',
+      didOpen: () => {
+        const emailBtn = document.getElementById('swal-email-btn');
+        const smsBtn   = document.getElementById('swal-sms-btn');
+        emailBtn?.addEventListener('click', () => Swal.close(), false);
+        smsBtn?.addEventListener('click',   () => Swal.close(), false);
+        emailBtn?.addEventListener('click', () => this.doEnvoyerATous('email', count));
+        smsBtn?.addEventListener('click',   () => this.doEnvoyerATous('sms', count));
+      }
+    });
+  }
 
-      Swal.fire({
-        title: 'Envoi en cours...',
-        html: `Envoi à <b>${count}</b> client${count > 1 ? 's' : ''}...`,
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => Swal.showLoading()
-      });
+  doEnvoyerATous(channel: string, count: number) {
+    Swal.fire({
+      title: 'Génération IA en cours…',
+      html: '<p style="color:#555;font-size:13px;">L\'IA rédige le message à envoyer à tous…</p>',
+      allowOutsideClick: false, allowEscapeKey: false,
+      didOpen: () => Swal.showLoading()
+    });
 
-      const distributions = this.clientsFiltres.map(c => ({
-        clientId: c.id,
-        channel: this.clientChannels[c.id] || 'email'
-      }));
+    this.http.post<any>(this.apiUrl + '/ia/generer-message', {
+      type: 'questionnaire', channel, titre: this.selectedQuestionnaire?.titre
+    }).subscribe({
+      next: (msg) => {
+        const sujet = msg.sujet || '';
+        const corps = msg.corps || '';
+        const isEmail = channel === 'email';
 
-      this.http.post('/api/envoi/distribuer', {
-        questionnaireId: this.selectedQuestionnaire.id,
-        distributions
-      }).subscribe({
-        next: () => {
-          this.showPartageModal = false;
-          this.cdr.detectChanges();
-          Swal.fire({
-            icon: 'success',
-            title: 'Envoyé !',
-            html: `Le questionnaire a été envoyé à <b>${count} client${count > 1 ? 's' : ''}</b> avec succès.`,
-            confirmButtonColor: '#27ae60',
-            confirmButtonText: 'Parfait !'
-          });
-        },
-        error: () => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Erreur d\'envoi',
-            text: 'Une erreur est survenue. Veuillez réessayer.',
-            confirmButtonColor: '#27ae60'
-          });
-        }
-      });
+        Swal.fire({
+          title: `${isEmail ? '✉️ Email' : '📱 SMS'} — Aperçu IA`,
+          html: `
+            <p style="font-size:12px;color:#888;margin-bottom:10px;"><b>${count} client${count > 1 ? 's' : ''}</b> recevront ce message</p>
+            ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
+              <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
+            </div>` : ''}
+            <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:160px;overflow-y:auto;">${corps.replace('{NOM_CLIENT}', '[Nom du client]')}</div>
+            <p style="font-size:11px;color:#999;margin-top:6px;">{NOM_CLIENT} sera remplacé par le prénom de chaque client.</p>`,
+          showCancelButton: true,
+          confirmButtonText: `Envoyer à ${count} client${count > 1 ? 's' : ''}`,
+          cancelButtonText: 'Annuler',
+          confirmButtonColor: isEmail ? '#1a56db' : '#27ae60',
+          cancelButtonColor: '#95a5a6',
+          reverseButtons: true
+        }).then(r => {
+          if (!r.isConfirmed) return;
+          this.sendATous(channel, count, sujet, corps);
+        });
+      },
+      error: () => this.sendATous(channel, count, '', '')
+    });
+  }
+
+  private sendATous(channel: string, count: number, sujet: string, corps: string) {
+    Swal.fire({ title: 'Envoi en cours...', html: `Envoi à <b>${count}</b> client${count > 1 ? 's' : ''}…`, allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+
+    const distributions = this.clientsFiltres.map((c: any) => ({ clientId: c.id, channel, sujet, corps }));
+
+    this.http.post('/api/envoi/distribuer', {
+      questionnaireId: this.selectedQuestionnaire.id,
+      distributions
+    }).subscribe({
+      next: () => {
+        this.showPartageModal = false;
+        this.cdr.detectChanges();
+        Swal.fire({ icon: 'success', title: 'Envoyé !', html: `Le questionnaire a été envoyé à <b>${count} client${count > 1 ? 's' : ''}</b> via <b>${channel === 'sms' ? 'SMS' : 'Email'}</b>.`, confirmButtonColor: '#27ae60', confirmButtonText: 'Parfait !' });
+      },
+      error: () => Swal.fire({ icon: 'error', title: 'Erreur d\'envoi', text: 'Une erreur est survenue. Veuillez réessayer.', confirmButtonColor: '#27ae60' })
     });
   }
 

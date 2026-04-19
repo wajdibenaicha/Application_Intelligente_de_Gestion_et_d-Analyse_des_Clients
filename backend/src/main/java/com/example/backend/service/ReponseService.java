@@ -55,4 +55,15 @@ public class ReponseService {
         }
         return null;
     }
+
+    public void deleteByClientAndQuestionnaire(Long clientId, Long questionnaireId) {
+        List<Reponse> reponses = reponseRepository.findByClientIdAndQuestionnaireId(clientId, questionnaireId);
+        reponseRepository.deleteAll(reponses);
+        messagingTemplate.convertAndSend("/topic/reponses", getAllReponses());
+    }
+
+    public void deleteByQuestionnaire(Long questionnaireId) {
+        reponseRepository.deleteByQuestionnaireId(questionnaireId);
+        messagingTemplate.convertAndSend("/topic/reponses", getAllReponses());
+    }
 }

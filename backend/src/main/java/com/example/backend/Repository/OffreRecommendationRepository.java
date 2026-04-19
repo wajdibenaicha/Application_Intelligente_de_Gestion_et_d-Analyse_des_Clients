@@ -8,4 +8,6 @@ public interface OffreRecommendationRepository
     extends JpaRepository<OffreRecommendation, Long> {
     List<OffreRecommendation> findByStatus(RecommendationStatus status);
     Optional<OffreRecommendation> findByClientKpiId(Long clientKpiId);
+    List<OffreRecommendation> findByAiRecommendedOffreId(Long offreId);
+    List<OffreRecommendation> findByFinalOffreId(Long offreId);
 }

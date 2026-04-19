@@ -40,6 +40,16 @@ public class ReponseController {
         reponseService.deleteReponse(id);
     }
 
+    @DeleteMapping("/client/{clientId}/questionnaire/{questionnaireId}")
+    public void deleteByClientAndQuestionnaire(@PathVariable Long clientId, @PathVariable Long questionnaireId) {
+        reponseService.deleteByClientAndQuestionnaire(clientId, questionnaireId);
+    }
+
+    @DeleteMapping("/questionnaire/{questionnaireId}/all")
+    public void deleteAllByQuestionnaire(@PathVariable Long questionnaireId) {
+        reponseService.deleteByQuestionnaire(questionnaireId);
+    }
+
     @PostMapping("/repondre")
     public ResponseEntity<?> repondre(@RequestParam String token, @RequestBody List<Map<String, Object>> reponses) {
         boolean ok = envoiService.traiterReponse(token, reponses);

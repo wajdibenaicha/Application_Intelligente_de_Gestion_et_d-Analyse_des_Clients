@@ -8,8 +8,8 @@ import java.util.List;
 @Repository
 public interface ReponseRepository extends JpaRepository<Reponse, Long> {
     List<Reponse> findByQuestionnaireId(Long questionnaireId);
-    List<Reponse> findByClientIdAndQuestionnaireId(
-    Long clientId, Long questionnaireId);
+    List<Reponse> findByClientIdAndQuestionnaireId(Long clientId, Long questionnaireId);
+    List<Reponse> findByClientId(Long clientId);
 
     void deleteByQuestionnaireId(Long questionnaireId);
 }

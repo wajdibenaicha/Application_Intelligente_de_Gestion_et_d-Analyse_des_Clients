@@ -4,7 +4,10 @@ import com.example.backend.Repository.ClientRepository;
 import com.example.backend.models.Client;
 import com.example.backend.models.Offre;
 import com.example.backend.service.OffreService;
+import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.type.PhoneNumber;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -21,6 +24,9 @@ public class OffreController {
     @Autowired private OffreService offreService;
     @Autowired private ClientRepository clientRepository;
     @Autowired private JavaMailSender mailSender;
+
+    @Value("${twilio.phone-number:}")
+    private String twilioPhone;
 
     @GetMapping
     public List<Offre> getAll() {
@@ -62,41 +68,57 @@ public class OffreController {
     }
 
     /**
-     * Send an offer by email to one or more clients.
-     * Body: { offreId: number, clientIds: number[] }
+     * Send an offer by email or SMS to one or more clients.
+     * Body: { offreId, clientIds, channel ("email"|"sms"), sujet, corps }
+     * The corps may contain {NOM_CLIENT} which is replaced per client.
      */
     @PostMapping("/envoyer")
     public ResponseEntity<?> envoyerOffre(@RequestBody Map<String, Object> body) {
-        Object offreIdObj = body.get("offreId");
+        Object offreIdObj  = body.get("offreId");
         Object clientIdsObj = body.get("clientIds");
-        if (offreIdObj == null || clientIdsObj == null) {
+        if (offreIdObj == null || clientIdsObj == null)
             return ResponseEntity.badRequest().body("offreId and clientIds are required");
-        }
 
         Long offreId = Long.valueOf(offreIdObj.toString());
-        Offre offre = offreService.getOffreById(offreId);
+        Offre offre  = offreService.getOffreById(offreId);
         if (offre == null) return ResponseEntity.notFound().build();
+
+        String channel = body.getOrDefault("channel", "email").toString();
+        String sujet   = body.getOrDefault("sujet",
+            "STAR Assurances – Offre spéciale : " + offre.getTitle()).toString();
+        String corpsTemplate = body.getOrDefault("corps",
+            "Bonjour {NOM_CLIENT},\n\nNous avons une offre exclusive pour vous :\n\n" +
+            offre.getTitle() + "\n" + offre.getDescription() +
+            "\n\nCordialement,\nL'équipe STAR Assurances").toString();
 
         @SuppressWarnings("unchecked")
         List<Integer> ids = (List<Integer>) clientIdsObj;
         int sent = 0;
+
         for (Integer clientIdInt : ids) {
             Client client = clientRepository.findById(clientIdInt.longValue()).orElse(null);
-            if (client == null || client.getMail() == null) continue;
+            if (client == null) continue;
+            String corps = corpsTemplate.replace("{NOM_CLIENT}",
+                client.getFullName() != null ? client.getFullName() : "");
             try {
-                SimpleMailMessage msg = new SimpleMailMessage();
-                msg.setTo(client.getMail());
-                msg.setSubject("STAR Assurances – Offre spéciale pour vous : " + offre.getTitle());
-                msg.setText(
-                    "Bonjour " + client.getFullName() + ",\n\n" +
-                    "Nous avons une offre exclusive pour vous :\n\n" +
-                    "🎁 " + offre.getTitle() + "\n" +
-                    offre.getDescription() + "\n\n" +
-                    "N'hésitez pas à nous contacter pour en savoir plus.\n\n" +
-                    "Cordialement,\n" +
-                    "L'équipe STAR Assurances"
-                );
-                mailSender.send(msg);
+                if ("sms".equalsIgnoreCase(channel)) {
+                    String tel = client.getTel() != null ? client.getTel().replaceAll("\\s+", "") : "";
+                    if (tel.isBlank()) continue;
+                    if (!tel.startsWith("+")) tel = "+216" + tel;
+                    if (twilioPhone == null || twilioPhone.isBlank()) continue;
+                    Message.creator(
+                        new PhoneNumber(tel),
+                        new PhoneNumber(twilioPhone.replaceAll("\\s+", "")),
+                        corps
+                    ).create();
+                } else {
+                    if (client.getMail() == null || client.getMail().isBlank()) continue;
+                    SimpleMailMessage msg = new SimpleMailMessage();
+                    msg.setTo(client.getMail());
+                    msg.setSubject(sujet);
+                    msg.setText(corps);
+                    mailSender.send(msg);
+                }
                 sent++;
             } catch (Exception ignored) {}
         }
