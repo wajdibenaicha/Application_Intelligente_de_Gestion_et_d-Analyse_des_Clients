@@ -135,6 +135,13 @@
               <div class="stat-label">Offres</div>
             </div>
           </div>
+          <div class="stat-card" style="cursor:pointer" (click)="setTab('teams')">
+            <div class="stat-icon stat-icon-blue"><i class="bi bi-people-fill"></i></div>
+            <div>
+              <div class="stat-value">{{ displayTeamsCount }}</div>
+              <div class="stat-label">Équipes</div>
+            </div>
+          </div>
         </div>
 
         <!-- Quick actions -->
@@ -149,13 +156,17 @@
               <div class="admin-action-icon"><i class="bi bi-clipboard-check"></i></div>
               <span>Voir questionnaires</span>
             </button>
-            <button class="admin-action-card" (click)="setTab('offres'); openaddoffre()">
+            <button class="admin-action-card" (click)="setTab('offres')">
               <div class="admin-action-icon"><i class="bi bi-gift"></i></div>
-              <span>Ajouter une offre</span>
+              <span>Voir les offres</span>
             </button>
             <button class="admin-action-card" (click)="setTab('roles')">
               <div class="admin-action-icon"><i class="bi bi-key"></i></div>
               <span>Gérer les rôles</span>
+            </button>
+            <button class="admin-action-card" (click)="setTab('teams')">
+              <div class="admin-action-icon"><i class="bi bi-people-fill"></i></div>
+              <span>Gérer les équipes</span>
             </button>
           </div>
         </div>
@@ -332,8 +343,8 @@
               <option value="">-- Choisir un questionnaire --</option>
               <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
             </select>
-            <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="adminReponses.length > 0">
-              <i class="bi bi-download"></i> Exporter CSV
+            <button class="btn-csv" (click)="exportReponsesXLS()" *ngIf="adminReponses.length > 0">
+              <i class="bi bi-file-earmark-excel"></i> Exporter Excel
             </button>
           </div>
 
@@ -399,9 +410,7 @@
         </div>
 
         <div *ngIf="activeTab === 'offres'" class="tab-panel">
-          <div class="section-toolbar" style="margin-bottom: 18px;">
-            <button class="btn-primary" (click)="openaddoffre()"><i class="bi bi-plus-lg"></i> Ajouter une offre</button>
-          </div>
+          <div class="section-toolbar" style="margin-bottom: 18px;"></div>
           <div class="offres-catalog-grid">
             <div class="offre-catalog-card" *ngFor="let o of offres">
               <div class="offre-catalog-body">
@@ -550,7 +559,7 @@
 <div class="modal-overlay" *ngIf="showoffreform" (click)="showoffreform=false">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ editingoffre ? 'Modifier Offre' : 'Ajouter Offre' }}</h2>
+      <h2>Modifier Offre</h2>
       <button class="btn-close" (click)="showoffreform=false">✕</button>
     </div>
     <label>Titre <span style="color:red">*</span></label>
@@ -566,23 +575,9 @@
       <option value="VIE">Vie</option>
       <option value="VOYAGE">Voyage</option>
     </select>
-    <div style="display:flex;gap:12px;">
-      <div style="flex:1;">
-        <label>Score min (0-100)</label>
-        <input type="number" [(ngModel)]="offreform.scoreMin" min="0" max="100" />
-      </div>
-      <div style="flex:1;">
-        <label>Score max (0-100)</label>
-        <input type="number" [(ngModel)]="offreform.scoreMax" min="0" max="100" />
-      </div>
-    </div>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;">
-      <input type="checkbox" [(ngModel)]="offreform.active" style="width:15px;height:15px;accent-color:#27ae60;" />
-      <span style="font-size:13px;">Offre active (utilisée pour les recommandations IA)</span>
-    </label>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showoffreform=false">Annuler</button>
-      <button class="btn-save" (click)="saveoffre()">{{ editingoffre ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="saveoffre()">Modifier</button>
     </div>
   </div>
 </div>
@@ -669,10 +664,6 @@
       <option [ngValue]="null">— Sélectionner une offre —</option>
       <option *ngFor="let o of offres" [ngValue]="o.id">{{ o.title }} — {{ o.description }}</option>
     </select>
-    <div class="or-divider">— ou —</div>
-    <button class="btn-new-q" (click)="showsendoffreform=false; activeTab='offres'; openaddoffre()">
-      + Créer une nouvelle offre
-    </button>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showsendoffreform=false">Annuler</button>
       <button class="btn-save" [disabled]="!selectedoffreid" (click)="sendoffre()"><i class="bi bi-send"></i> Envoyer</button>

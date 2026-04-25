@@ -305,8 +305,8 @@
           <option value="">-- Choisir un questionnaire --</option>
           <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
         </select>
-        <button class="btn-csv" (click)="exportReponsesCSV()" *ngIf="reponses.length > 0">
-          <i class="bi bi-download"></i> Exporter CSV
+        <button class="btn-csv" (click)="exportReponsesXLS()" *ngIf="reponses.length > 0">
+          <i class="bi bi-file-earmark-excel"></i> Exporter Excel
         </button>
         <button class="btn-offre-tous" (click)="voirRecommandationsIA()" *ngIf="reponses.length > 0">
           <i class="bi bi-pie-chart-fill"></i> Recommandations IA

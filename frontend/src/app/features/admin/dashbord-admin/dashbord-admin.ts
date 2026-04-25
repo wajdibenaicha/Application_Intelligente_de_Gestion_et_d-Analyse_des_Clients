@@ -74,7 +74,8 @@ export class DashbordAdmin implements OnInit {
 
     showoffreform = false;
     editingoffre: any = null;
-    offreform: any = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
+    offreform: any = { title: '', description: '', categorie: 'GENERAL' };
+    private apiUrl = 'http://localhost:8081/api';
 
     showdetailsform = false;
     detailsquest: any = null;
@@ -425,17 +426,11 @@ export class DashbordAdmin implements OnInit {
         }
     }
 
-    openaddoffre() {
-        this.editingoffre = null;
-        this.offreform = { title: '', description: '', categorie: 'general', scoreMin: 0, scoreMax: 100, active: true };
-        this.showoffreform = true;
-    }
-
     openeditoffre(offre: any) {
         this.editingoffre = offre;
         this.offreform = {
             title: offre.title, description: offre.description,
-            categorie: offre.categorie || 'general',
+            categorie: offre.categorie || 'GENERAL',
             scoreMin: offre.scoreMin ?? 0, scoreMax: offre.scoreMax ?? 100,
             active: offre.active !== false
         };
@@ -443,22 +438,15 @@ export class DashbordAdmin implements OnInit {
     }
 
     saveoffre() {
-        this.showoffreform = false;
-        if (this.editingoffre) {
-            this.api.updateoffre(this.editingoffre.id, this.offreform).subscribe({
-                next: () => {
-                    Swal.fire({ icon: 'success', title: 'Offre modifiée', timer: 1500, showConfirmButton: false });
-                },
-                error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier l\'offre.' })
-            });
-        } else {
-            this.api.addoffre(this.offreform).subscribe({
-                next: () => {
-                    Swal.fire({ icon: 'success', title: 'Offre ajoutée', timer: 1500, showConfirmButton: false });
-                },
-                error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'ajouter l\'offre.' })
-            });
+        if (!this.offreform.title?.trim() || !this.offreform.description?.trim()) {
+            Swal.fire({ icon: 'warning', title: 'Champs obligatoires', text: 'Titre et description sont requis.' });
+            return;
         }
+        this.showoffreform = false;
+        this.api.updateoffre(this.editingoffre.id, this.offreform).subscribe({
+            next: () => Swal.fire({ icon: 'success', title: 'Offre modifiée', timer: 1500, showConfirmButton: false }),
+            error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier l\'offre.' })
+        });
     }
 
     async deleteoffre(id: number) {
@@ -555,7 +543,7 @@ export class DashbordAdmin implements OnInit {
         this.participationChart = new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: ['Total envois', 'Ont répondu'],
+                labels: ['Envoyés', 'Ont répondu'],
                 datasets: [{ data: [sent, repondu],
                     backgroundColor: ['#1a56db', '#27ae60'], borderRadius: 8, barThickness: 40 }]
             },
@@ -629,28 +617,31 @@ export class DashbordAdmin implements OnInit {
         this.cdr.detectChanges();
     }
 
-    exportReponsesCSV() {
+    exportReponsesXLS() {
         if (this.adminReponses.length === 0) return;
         const titre = this.questionnaires.find(q => q.id == this.selectedQuestionnaireId)?.titre || 'questionnaire';
         const nomFichier = titre.replace(/ /g, '_');
         const d = new Date();
         const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
-        let lignes = 'Client;Email;Téléphone;Question;Type;Réponse\r\n';
+        const esc = (v: string) => (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        let rows = `<tr><th>Client</th><th>Email</th><th>Téléphone</th><th>Question</th><th>Type</th><th>Réponse</th></tr>`;
         for (const entry of this.clientsReponses) {
             for (const r of entry.reponses) {
-                const esc = (v: string) => '"' + (v || '').replace(/"/g, '""') + '"';
-                lignes += [esc(entry.client?.fullName || ''), esc(entry.client?.mail || ''), esc(entry.client?.tel || ''), esc(r.question?.titre || ''), esc(r.question?.type || ''), esc(r.reponse || '')].join(';') + '\r\n';
+                rows += `<tr><td>${esc(entry.client?.fullName||'')}</td><td>${esc(entry.client?.mail||'')}</td><td>${esc(entry.client?.tel||'')}</td><td>${esc(r.question?.titre||'')}</td><td>${esc(r.question?.type||'')}</td><td>${esc(r.reponse||'')}</td></tr>`;
             }
-            lignes += '\r\n';
+            rows += `<tr><td colspan="6"></td></tr>`;
         }
-        const blob = new Blob(['\uFEFF' + lignes], { type: 'text/csv;charset=utf-8;' });
+        const xlsHeader = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        const xlsMeta = '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>R\u00e9ponses</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
+        const html = xlsHeader + xlsMeta + `<body><table>${rows}</table></body></html>`;
+        const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `reponses_${nomFichier}_${dateStr}.csv`;
+        a.href = url; a.download = `reponses_${nomFichier}_${dateStr}.xls`;
         a.click(); URL.revokeObjectURL(url);
     }
 
-    openaddrole() {
+        openaddrole() {
         this.editingrole = null;
         this.roleform = { name: '', permission: null };
         this.showroleform = true;

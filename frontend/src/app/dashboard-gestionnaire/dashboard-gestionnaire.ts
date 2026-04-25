@@ -838,40 +838,33 @@ renderReponsesChart() {
     this.cdr.detectChanges();
   }
 
-  exportReponsesCSV() {
+  exportReponsesXLS() {
     if (this.reponses.length === 0) { this.showToastMessage('Aucune réponse à exporter', 'error'); return; }
     const titre = this.questionnaires.find((q: any) => q.id == this.selectedQuestionnaireId)?.titre || 'questionnaire';
     const nomFichier = titre.replace(/ /g, '_');
     const d = new Date();
     const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
-
-    
-    let lignes = 'Client;Email;Téléphone;Question;Type;Réponse\r\n';
+    const esc = (v: string) => (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let rows = `<tr><th>Client</th><th>Email</th><th>Téléphone</th><th>Question</th><th>Type</th><th>Réponse</th></tr>`;
     for (const entry of this.clientsReponses) {
       for (const r of entry.reponses) {
-        const esc = (v: string) => '"' + (v || '').replace(/"/g, '""') + '"';
-        lignes += [
-          esc(entry.client?.fullName || ''),
-          esc(entry.client?.mail || ''),
-          esc(entry.client?.tel || ''),
-          esc(r.question?.titre || ''),
-          esc(r.question?.type || ''),
-          esc(r.reponse || '')
-        ].join(';') + '\r\n';
+        rows += `<tr><td>${esc(entry.client?.fullName||'')}</td><td>${esc(entry.client?.mail||'')}</td><td>${esc(entry.client?.tel||'')}</td><td>${esc(r.question?.titre||'')}</td><td>${esc(r.question?.type||'')}</td><td>${esc(r.reponse||'')}</td></tr>`;
       }
-      lignes += '\r\n'; 
+      rows += `<tr><td colspan="6"></td></tr>`;
     }
-
-    const blob = new Blob(['\uFEFF' + lignes], { type: 'text/csv;charset=utf-8;' });
+    const xlsHeader = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+    const xlsMeta = '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Réponses</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
+    const html = xlsHeader + xlsMeta + `<body><table>${rows}</table></body></html>`;
+    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `reponses_${nomFichier}_${dateStr}.csv`;
+    a.href = url; a.download = `reponses_${nomFichier}_${dateStr}.xls`;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
-    this.showToastMessage('Export CSV téléchargé');
+    this.showToastMessage('Export Excel téléchargé');
   }
 
-  private buildOffreSelectHtml(preselectedId?: number, clientKpiScore?: number | null): string {
+    private buildOffreSelectHtml(preselectedId?: number, clientKpiScore?: number | null): string {
     if (!this.offres.length) return '<p style="color:#e74c3c">Aucune offre disponible.</p>';
     const eligible = clientKpiScore != null
       ? this.offres.filter((o: any) => clientKpiScore >= (o.scoreMin ?? 0) && clientKpiScore <= (o.scoreMax ?? 100))
