@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(./mvnw compile *)",
-      "Bash(npx tsc *)",
-      "Bash(node -e \"const crypto=require\\('crypto'\\); console.log\\(crypto.createHash\\('sha256'\\).update\\('admin123'\\).digest\\('hex'\\)\\)\")"
-    ]
-  }
-}
