@@ -1,0 +1,92 @@
+<div class="modal-overlay" (click)="cancelled.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ offreToEdit ? 'Modifier l\'offre' : 'Nouvelle offre' }}</h2>
+      <button class="btn-close" (click)="cancelled.emit()">✕</button>
+    </div>
+    <label>Titre <span style="color:red">*</span></label>
+    <input [(ngModel)]="offreForm.title" placeholder="Titre de l'offre" (ngModelChange)="scheduleOffreCoherenceCheck()" />
+    <label>Description <span style="color:red">*</span></label>
+    <textarea [(ngModel)]="offreForm.description" placeholder="Description de l'offre..." rows="3" (ngModelChange)="scheduleOffreCoherenceCheck()"></textarea>
+    <label>Catégorie</label>
+    <select [(ngModel)]="offreForm.categorie" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;" (ngModelChange)="scheduleOffreCoherenceCheck()">
+      <option value="GENERAL">Général</option>
+      <option value="SANTE">Santé</option>
+      <option value="AUTO">Auto</option>
+      <option value="HABITATION">Habitation</option>
+      <option value="VIE">Vie</option>
+      <option value="VOYAGE">Voyage</option>
+    </select>
+
+    <!-- AI coherence warning -->
+    <div *ngIf="offreIaWarning" class="offre-ia-warning">
+      <div class="offre-ia-warning-header">
+        <span>⚠️</span> Incohérence détectée
+        <button class="offre-ia-warning-dismiss" (click)="offreIaWarning=null; offreIaSuggestion=null">✕</button>
+      </div>
+      <div class="offre-ia-warning-body">
+        <p class="offre-ia-warning-msg">{{ offreIaWarning }}</p>
+        <div *ngIf="offreIaSuggestion?.categorie" class="offre-ia-categorie-suggest">
+          <span>Catégorie idéale :</span>
+          <strong>{{ offreIaSuggestion.categorie }}</strong>
+        </div>
+        <p class="offre-ia-warning-hint">Veuillez corriger le titre, la description ou la catégorie avant de continuer.</p>
+      </div>
+    </div>
+
+    <!-- AI suggestion card -->
+    <div *ngIf="offreIaSuggestion" class="ia-suggestion-card">
+      <div class="ia-suggestion-card-header">
+        <i class="bi bi-stars"></i> Suggestion IA
+        <span class="ia-model-badge">Llama 3.3</span>
+      </div>
+      <div class="ia-suggestion-card-body">
+        <span *ngIf="offreIaSuggestion.titre" class="ia-suggestion-label">Titre proposé :</span>
+        <span *ngIf="offreIaSuggestion.titre" class="ia-suggestion-text">{{ offreIaSuggestion.titre }}</span>
+        <span *ngIf="offreIaSuggestion.description" class="ia-suggestion-label" style="margin-top:6px">Description proposée :</span>
+        <span *ngIf="offreIaSuggestion.description" class="ia-suggestion-text" style="font-size:11px;line-height:1.5">{{ offreIaSuggestion.description }}</span>
+        <span *ngIf="offreIaSuggestion.categorie" class="ia-suggestion-label" style="margin-top:6px">Catégorie proposée :</span>
+        <span *ngIf="offreIaSuggestion.categorie" class="ia-suggestion-text">{{ offreIaSuggestion.categorie }}</span>
+      </div>
+      <div class="ia-suggestion-actions">
+        <button class="btn-ia-apply" (click)="acceptOffreSuggestion()">
+          <i class="bi bi-check-lg"></i> Appliquer
+        </button>
+        <button class="btn-ia-dismiss" (click)="offreIaSuggestion=null">
+          <i class="bi bi-x"></i> Ignorer
+        </button>
+      </div>
+    </div>
+
+    <!-- AI score preview -->
+    <div *ngIf="offreIaResult" class="offre-ia-result">
+      <div class="offre-ia-result-header">
+        <span>🎯</span> Ciblage IA
+        <span class="offre-ia-score-badge">KPI analysé</span>
+      </div>
+      <div class="offre-ia-result-body">
+        <div class="offre-ia-scores">
+          <span class="offre-ia-score-chip chip-min">Score min : {{ offreIaResult.scoreMin }}</span>
+          <span class="offre-ia-score-chip chip-max">Score max : {{ offreIaResult.scoreMax }}</span>
+        </div>
+        <p class="offre-ia-explication">{{ offreIaResult.explication }}</p>
+      </div>
+    </div>
+    <div *ngIf="offreIaChecking" class="offre-ia-loading">
+      <div class="offre-ia-dots"><span></span><span></span><span></span></div>
+      Vérification IA en cours…
+    </div>
+    <div *ngIf="offreIaLoading" class="offre-ia-loading">
+      <div class="offre-ia-dots"><span></span><span></span><span></span></div>
+      Analyse IA du ciblage en cours…
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+      <button class="btn-save" (click)="saveOffre()" [disabled]="offreIaLoading || offreIaChecking || !!offreIaWarning">
+        <i class="bi bi-stars" *ngIf="!offreToEdit"></i>
+        {{ offreToEdit ? 'Modifier' : (offreIaResult ? 'Créer l\'offre' : 'Analyser et ajouter') }}
+      </button>
+    </div>
+  </div>
+</div>

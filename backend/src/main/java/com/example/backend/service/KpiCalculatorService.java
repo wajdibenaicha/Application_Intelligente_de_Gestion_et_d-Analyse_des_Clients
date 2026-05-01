@@ -16,7 +16,7 @@ public class KpiCalculatorService {
     @Autowired private ClientKpiRepository clientKpiRepository;
     @Autowired private com.example.backend.Repository.ClientRepository clientRepository;
 
-    // ── Weights ────────────────────────────────────────────────────
+    
     private static final double W_SURVEY     = 0.50;
     private static final double W_SENIORITY  = 0.20;
     private static final double W_PREMIUM    = 0.15;
@@ -41,7 +41,7 @@ public class KpiCalculatorService {
 
         Client client = responses.get(0).getClient();
 
-        // ── 1. Survey score (50%) ──────────────────────────────────
+        
         double surveyTotal = 0;
         List<Map<String, Object>> breakdown = new ArrayList<>();
         for (Reponse r : responses) {
@@ -55,19 +55,19 @@ public class KpiCalculatorService {
         }
         double surveyScore = responses.isEmpty() ? 50 : surveyTotal / responses.size();
 
-        // ── 2. Seniority score (20%) ───────────────────────────────
+        
         double seniorityScore = scoreSeniority(client.getAnneeInscription());
 
-        // ── 3. Annual premium score (15%) ──────────────────────────
+    
         double premiumScore = scorePremium(client.getPrimeAnnuelle());
 
-        // ── 4. Age score (10%) ────────────────────────────────────
+        
         double ageScore = scoreAge(client.getDateNaissance());
 
-        // ── 5. Contract type score (5%) ───────────────────────────
+
         double contractScore = scoreContract(client.getTypeContrat());
 
-        // ── Final weighted score ──────────────────────────────────
+        
         double finalScore =
             surveyScore    * W_SURVEY    +
             seniorityScore * W_SENIORITY +
@@ -154,7 +154,6 @@ public class KpiCalculatorService {
         return clientKpiRepository.save(kpi);
     }
 
-    // ── Seniority: years since anneeInscription ──────────────────
     private double scoreSeniority(Integer anneeInscription) {
         if (anneeInscription == null) return 50;
         int years = Year.now().getValue() - anneeInscription;
@@ -165,7 +164,7 @@ public class KpiCalculatorService {
         return 100;
     }
 
-    // ── Annual premium ───────────────────────────────────────────
+
     private double scorePremium(Double prime) {
         if (prime == null) return 40;
         if (prime < 300)  return 10;
@@ -175,7 +174,6 @@ public class KpiCalculatorService {
         return 100;
     }
 
-    // ── Age from dateNaissance ───────────────────────────────────
     private double scoreAge(LocalDate dateNaissance) {
         if (dateNaissance == null) return 60;
         int age = LocalDate.now().getYear() - dateNaissance.getYear();
@@ -186,7 +184,7 @@ public class KpiCalculatorService {
         return 70;
     }
 
-    // ── Contract type ────────────────────────────────────────────
+    
     private double scoreContract(String typeContrat) {
         if (typeContrat == null) return 30;
         return switch (typeContrat.trim().toUpperCase()) {
@@ -199,7 +197,7 @@ public class KpiCalculatorService {
         };
     }
 
-    // ── Survey response scoring ──────────────────────────────────
+    
     private double scoreResponse(Reponse r) {
         String value = r.getReponse().trim().toLowerCase();
 

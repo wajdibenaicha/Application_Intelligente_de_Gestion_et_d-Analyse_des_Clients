@@ -1,0 +1,25 @@
+<div class="modal-overlay" (click)="cancelled.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="bi bi-people-fill"></i> Nouvelle équipe</h2>
+      <button class="btn-close" (click)="cancelled.emit()">✕</button>
+    </div>
+    <label>Nom de l'équipe <span style="color:red">*</span></label>
+    <input [(ngModel)]="form.name" placeholder="Ex: Équipe Marketing" />
+    <label>Directeur <span style="color:red">*</span></label>
+    <select [(ngModel)]="form.directeurId">
+      <option [ngValue]="null" disabled>— Choisir un directeur —</option>
+      <option *ngFor="let g of directeurs" [ngValue]="g.id">{{ g.fullName }}</option>
+    </select>
+    <p class="form-hint" *ngIf="directeurs.length === 0">
+      <i class="bi bi-exclamation-triangle"></i>
+      Aucun gestionnaire avec le rôle DIRECTEUR trouvé.
+    </p>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+      <button class="btn-save" (click)="saved.emit(form)" [disabled]="!form.name || !form.directeurId">
+        Créer l'équipe
+      </button>
+    </div>
+  </div>
+</div>

@@ -49,11 +49,12 @@ export class Login {
       fullName: this.full_name,
       password: this.password
     }).subscribe({
-      next: (admin) => {
+      next: (res) => {
         this.ngZone.run(() => {
           this.isLoading = false;
-          sessionStorage.setItem('user', JSON.stringify(admin));
-          sessionStorage.setItem('role', 'administrateur');
+          localStorage.setItem('token', res.token);
+          localStorage.setItem('user', JSON.stringify(res));
+          localStorage.setItem('role', 'administrateur');
           this.router.navigate(['/dashbord-admin']);
         });
       },
@@ -62,11 +63,12 @@ export class Login {
           fullName: this.full_name,
           password: this.password
         }).subscribe({
-          next: (gest) => {
+          next: (res) => {
             this.ngZone.run(() => {
               this.isLoading = false;
-              sessionStorage.setItem('user', JSON.stringify(gest));
-              sessionStorage.setItem('role', 'gestionnaire');
+              localStorage.setItem('token', res.token);
+              localStorage.setItem('user', JSON.stringify(res));
+              localStorage.setItem('role', 'gestionnaire');
               this.router.navigate(['/dashboard-gestionnaire']);
             });
           },

@@ -1,0 +1,29 @@
+<div class="modal-overlay" (click)="closed.emit()">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="bi bi-eye"></i> {{ questionnaire?.titre }}</h2>
+      <button class="btn-close" (click)="closed.emit()">✕</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <span class="badge" [ngClass]="getBadgeClass()">{{ getStatutLabel() }}</span>
+      <span style="margin-left:12px; color:#666">
+        Gestionnaire: {{ questionnaire?.gestionnaire?.fullName || 'Admin' }}
+      </span>
+    </div>
+    <div *ngIf="(questionnaire?.statut || '').toUpperCase() === 'REJETE' && questionnaire?.raisonRejet"
+      style="margin-bottom:12px; color:#e74c3c; font-size:13px">
+      <i class="bi bi-exclamation-triangle"></i> Raison du rejet : {{ questionnaire.raisonRejet }}
+    </div>
+    <div *ngIf="questionnaire?.description" style="margin-bottom:12px; color:#555">{{ questionnaire.description }}</div>
+    <div class="section-title">Questions</div>
+    <div *ngFor="let q of questionnaire?.questions; let i=index" class="selected-chip" style="margin-bottom:6px">
+      <span class="q-num">{{ i+1 }}</span>
+      <span class="q-type-badge">{{ q.type }}</span>
+      {{ q.titre }}
+    </div>
+    <div *ngIf="!questionnaire?.questions?.length" class="empty-drop">Aucune question</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="closed.emit()">Fermer</button>
+    </div>
+  </div>
+</div>

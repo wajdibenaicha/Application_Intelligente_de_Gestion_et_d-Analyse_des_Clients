@@ -1832,18 +1832,16 @@
 }
 
 .chart-card-body {
+  position: relative;
   padding: 16px 20px 20px;
-  flex: 1;
-  min-height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  height: 280px;
+  overflow: hidden;
 }
 
 .chart-card-body canvas {
-  max-width: 100%;
-  max-height: 280px;
   width: 100% !important;
+  height: 100% !important;
+  display: block;
 }
 
 .chart-card-empty {

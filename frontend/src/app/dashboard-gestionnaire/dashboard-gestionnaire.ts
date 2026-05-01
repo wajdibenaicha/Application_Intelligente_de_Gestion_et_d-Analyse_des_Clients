@@ -107,8 +107,8 @@ export class DashboardGestionnaire implements OnInit {
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    const user = sessionStorage.getItem('user');
-    const role = sessionStorage.getItem('role');
+    const user = localStorage.getItem('user');
+    const role = localStorage.getItem('role');
 
     if (!user || role !== 'gestionnaire') {
       this.router.navigate(['/login']);
@@ -116,7 +116,7 @@ export class DashboardGestionnaire implements OnInit {
     }
 
     this.gestionnaire = JSON.parse(user);
-    this.permission = this.gestionnaire?.role?.permission?.description || '';
+    this.permission = this.gestionnaire?.gestionnairePermission || '';
 
     this.wsService.connect();
 
@@ -220,7 +220,8 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   logout() {
-    if (isPlatformBrowser(this.platformId)) sessionStorage.clear();
+    localStorage.clear();
+    sessionStorage.clear();
     this.router.navigate(['/login']);
   }
 
@@ -301,7 +302,7 @@ export class DashboardGestionnaire implements OnInit {
           borderWidth: 2
         }]
       },
-      options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
     });
   }
 
@@ -330,14 +331,16 @@ export class DashboardGestionnaire implements OnInit {
       }]
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-           legend: { display: false }  
+           legend: { display: false }
       },
       scales: {
         y: {
-          min: 0,           
-          max: 100,         
-          ticks: { stepSize: 20 } 
+          min: 0,
+          max: 100,
+          ticks: { stepSize: 20 }
         },
          x: {
           ticks: { font: { size: 11 } }
@@ -386,6 +389,7 @@ export class DashboardGestionnaire implements OnInit {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { position: 'bottom' }
       }
@@ -446,8 +450,9 @@ renderReponsesChart() {
           }]
         },
         options: {
-          indexAxis: 'y',  
+          indexAxis: 'y',
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: { display: false }
           },

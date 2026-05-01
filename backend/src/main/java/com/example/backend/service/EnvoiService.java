@@ -1,5 +1,13 @@
 package com.example.backend.service;
 
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.backend.Repository.ClientRepository;
 import com.example.backend.Repository.EnvoiQuestionnaireRepository;
 import com.example.backend.Repository.QuestionRepository;
@@ -10,12 +18,6 @@ import com.example.backend.models.EnvoiQuestionnaire;
 import com.example.backend.models.Question;
 import com.example.backend.models.Questionnaire;
 import com.example.backend.models.Reponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class EnvoiService {
@@ -92,7 +94,7 @@ public class EnvoiService {
         envoi.setRepondu(true);
         envoiRepository.save(envoi);
 
-        // Check if all clients who received this questionnaire have now responded
+        
         long totalSent = envoiRepository.findByQuestionnaireId(questionnaireId).size();
         boolean allAnswered = totalSent > 0 && !envoiRepository.existsByQuestionnaireIdAndReponduFalse(questionnaireId);
         if (allAnswered) {

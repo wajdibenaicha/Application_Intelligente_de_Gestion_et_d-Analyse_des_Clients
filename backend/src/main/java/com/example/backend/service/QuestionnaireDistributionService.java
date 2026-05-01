@@ -1,17 +1,23 @@
 package com.example.backend.service;
 
-import com.example.backend.models.*;
-import com.example.backend.Repository.*;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
-import java.util.List;
+
+import com.example.backend.Repository.ClientRepository;
+import com.example.backend.Repository.EnvoiQuestionnaireRepository;
+import com.example.backend.Repository.QuestionnaireRepository;
+import com.example.backend.models.Client;
+import com.example.backend.models.EnvoiQuestionnaire;
+import com.example.backend.models.Questionnaire;
+import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.type.PhoneNumber;
 
 @Service
 public class QuestionnaireDistributionService {
@@ -37,7 +43,7 @@ public class QuestionnaireDistributionService {
             Client client = clientRepo.findById(d.getClientId()).orElseThrow();
             String token = tokenService.encrypt(questionnaireId + ":" + d.getClientId());
 
-            // Resolve effective channel: fallback if client is missing the preferred contact
+        
             boolean hasEmail = client.getMail() != null && !client.getMail().isBlank();
             boolean hasTel   = client.getTel()  != null && !client.getTel().isBlank();
             String effectiveChannel;
@@ -47,7 +53,7 @@ public class QuestionnaireDistributionService {
                 effectiveChannel = hasEmail ? "email" : (hasTel ? "sms" : null);
             }
 
-            if (effectiveChannel == null) continue; // no contact info at all, skip
+            if (effectiveChannel == null) continue;
 
             EnvoiQuestionnaire envoi = new EnvoiQuestionnaire();
             envoi.setQuestionnaireId(questionnaireId);

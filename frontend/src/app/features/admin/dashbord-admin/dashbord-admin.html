@@ -30,6 +30,10 @@
         <span class="nav-icon"><i class="bi bi-people"></i></span>
         <span class="nav-label">Gestionnaires</span>
       </button>
+      <button class="nav-item" [class.active]="activeTab === 'teams'" (click)="setTab('teams')">
+        <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
+        <span class="nav-label">Équipes</span>
+      </button>
       <button class="nav-item" [class.active]="activeTab === 'questionnaires'" (click)="setTab('questionnaires')">
         <span class="nav-icon"><i class="bi bi-clipboard-check"></i></span>
         <span class="nav-label">Questionnaires</span>
@@ -49,10 +53,6 @@
       <button class="nav-item" [class.active]="activeTab === 'permissions'" (click)="setTab('permissions')">
         <span class="nav-icon"><i class="bi bi-shield-check"></i></span>
         <span class="nav-label">Permissions</span>
-      </button>
-      <button class="nav-item" [class.active]="activeTab === 'teams'" (click)="setTab('teams')">
-        <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
-        <span class="nav-label">Équipes</span>
       </button>
     </nav>
 
@@ -114,6 +114,13 @@
               <div class="stat-label">Gestionnaires</div>
             </div>
           </div>
+          <div class="stat-card" style="cursor:pointer" (click)="setTab('teams')">
+            <div class="stat-icon stat-icon-blue"><i class="bi bi-people-fill"></i></div>
+            <div>
+              <div class="stat-value">{{ displayTeamsCount }}</div>
+              <div class="stat-label">Équipes</div>
+            </div>
+          </div>
           <div class="stat-card">
             <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
             <div>
@@ -133,13 +140,6 @@
             <div>
               <div class="stat-value">{{ displayOffresCount }}</div>
               <div class="stat-label">Offres</div>
-            </div>
-          </div>
-          <div class="stat-card" style="cursor:pointer" (click)="setTab('teams')">
-            <div class="stat-icon stat-icon-blue"><i class="bi bi-people-fill"></i></div>
-            <div>
-              <div class="stat-value">{{ displayTeamsCount }}</div>
-              <div class="stat-label">Équipes</div>
             </div>
           </div>
         </div>
@@ -258,6 +258,13 @@
             <div>
               <div class="stat-value">{{ gestionnaire.length }}</div>
               <div class="stat-label">Gestionnaires</div>
+            </div>
+          </div>
+          <div class="stat-card" style="cursor:pointer" (click)="setTab('teams')">
+            <div class="stat-icon stat-icon-blue"><i class="bi bi-people-fill"></i></div>
+            <div>
+              <div class="stat-value">{{ teams.length }}</div>
+              <div class="stat-label">Équipes</div>
             </div>
           </div>
           <div class="stat-card">
@@ -671,32 +678,6 @@
   </div>
 </div>
 
-<!-- ── CREATE TEAM MODAL ── -->
-<div class="modal-overlay" *ngIf="showteamform" (click)="showteamform=false">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2><i class="bi bi-people-fill"></i> Nouvelle équipe</h2>
-      <button class="btn-close" (click)="showteamform=false">✕</button>
-    </div>
-    <label>Nom de l'équipe <span style="color:red">*</span></label>
-    <input [(ngModel)]="teamform.name" placeholder="Ex: Équipe Marketing" />
-    <label>Directeur <span style="color:red">*</span></label>
-    <select [(ngModel)]="teamform.directeurId">
-      <option [ngValue]="null" disabled>— Choisir un directeur —</option>
-      <option *ngFor="let g of directeurs" [ngValue]="g.id">{{ g.fullName }}</option>
-    </select>
-    <p class="form-hint" *ngIf="directeurs.length === 0">
-      <i class="bi bi-exclamation-triangle"></i>
-      Aucun gestionnaire avec le rôle DIRECTEUR trouvé.
-    </p>
-    <div class="modal-actions">
-      <button class="btn-cancel" (click)="showteamform=false">Annuler</button>
-      <button class="btn-save" (click)="saveteam()" [disabled]="!teamform.name || !teamform.directeurId">
-        Créer l'équipe
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- ── MANAGE TEAM MEMBERS MODAL ── -->
 <div class="modal-overlay" *ngIf="showteammembersmodal" (click)="showteammembersmodal=false">

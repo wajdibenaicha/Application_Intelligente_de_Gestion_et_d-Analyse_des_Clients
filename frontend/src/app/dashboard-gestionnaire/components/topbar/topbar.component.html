@@ -1,0 +1,10 @@
+<header class="topbar">
+  <h2 class="section-title">{{ getSectionTitle() }}</h2>
+  <div class="topbar-right">
+    <div class="notif-icon" (click)="notifToggled.emit()">
+      <i class="bi bi-bell-fill"></i>
+      <span class="notif-badge" *ngIf="unreadNotifCount > 0">{{ unreadNotifCount }}</span>
+    </div>
+    <span class="date-badge">{{ today | date:'dd MMM yyyy' }}</span>
+  </div>
+</header>

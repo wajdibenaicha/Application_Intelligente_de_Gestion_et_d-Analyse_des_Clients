@@ -1,0 +1,59 @@
+<div class="content-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-value">{{ gestionnaire.length }}</div>
+        <div class="stat-label">Gestionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
+      <div>
+        <div class="stat-value">{{ questionnaires.length }}</div>
+        <div class="stat-label">Questionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+      <div>
+        <div class="stat-value">{{ totalReponsesCount }}</div>
+        <div class="stat-label">Réponses</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
+      <div>
+        <div class="stat-value">{{ offres.length }}</div>
+        <div class="stat-label">Offres</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrapper tab-panel">
+    <table class="data-table">
+      <thead>
+        <tr><th>Titre</th><th>Gestionnaire</th><th>Questions</th><th>Statut</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let q of questionnaires">
+          <td>{{ q.titre }}</td>
+          <td>{{ q.gestionnaire?.fullName || 'Admin' }}</td>
+          <td>{{ q.questions?.length || 0 }}</td>
+          <td>
+            <span class="badge" [ngClass]="getBadgeClass(q)">{{ getStatutLabel(q) }}</span>
+            <span *ngIf="(q.statut || '').toUpperCase() === 'REJETE' && q.raisonRejet" class="rejet-reason" title="{{ q.raisonRejet }}">
+              <i class="bi bi-exclamation-triangle"></i> {{ q.raisonRejet.length > 20 ? (q.raisonRejet | slice:0:20) + '...' : q.raisonRejet }}
+            </span>
+          </td>
+          <td class="actions-cell">
+            <button class="btn-icon btn-view" (click)="viewDetails.emit(q)" title="Voir"><i class="bi bi-eye"></i></button>
+          </td>
+        </tr>
+        <tr *ngIf="questionnaires.length === 0">
+          <td colspan="5" class="empty-row">Aucun questionnaire</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

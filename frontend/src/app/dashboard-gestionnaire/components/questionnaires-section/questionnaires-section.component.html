@@ -1,0 +1,86 @@
+<section class="content-section">
+
+  <div class="section-toolbar">
+    <button class="btn-primary" (click)="openWizard.emit()"><i class="bi bi-plus-lg"></i> Nouveau questionnaire</button>
+    <button class="btn-delegate" *ngIf="canManageAll && allTeamMembers.length > 0" (click)="openDelegate.emit()">
+      <i class="bi bi-person-plus"></i> Déléguer la création
+    </button>
+  </div>
+
+  <!-- Tabs for directeur: mine + one per team -->
+  <div class="quest-tabs" *ngIf="canManageAll && myTeams.length > 0">
+    <button class="quest-tab" [class.active]="questTab === 'mine'" (click)="questTabChange.emit('mine')">
+      <i class="bi bi-person"></i> Mes questionnaires
+      <span class="tab-count">{{ myOwnQuestionnaires.length }}</span>
+    </button>
+    <button class="quest-tab" *ngFor="let team of myTeams"
+      [class.active]="questTab === team.id.toString()"
+      (click)="questTabChange.emit(team.id.toString())">
+      <i class="bi bi-people"></i> {{ team.name }}
+      <span class="tab-count">{{ questionnairesForTeam(team).length }}</span>
+    </button>
+  </div>
+
+  <!-- Directeur — my own questionnaires tab -->
+  <div class="table-wrapper" *ngIf="canManageAll && myTeams.length > 0 && questTab === 'mine'">
+    <ng-container *ngTemplateOutlet="questTable; context: { list: myOwnQuestionnaires, showGest: false }"></ng-container>
+  </div>
+
+  <!-- Directeur — per-team tabs -->
+  <ng-container *ngIf="canManageAll && myTeams.length > 0">
+    <ng-container *ngFor="let team of myTeams">
+      <div class="table-wrapper" *ngIf="questTab === team.id.toString()">
+        <ng-container *ngTemplateOutlet="questTable; context: { list: questionnairesForTeam(team), showGest: true }"></ng-container>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <!-- Regular gestionnaire OR directeur without teams -->
+  <div class="table-wrapper" *ngIf="!(canManageAll && myTeams.length > 0)">
+    <ng-container *ngTemplateOutlet="questTable; context: { list: questionnaires, showGest: false }"></ng-container>
+  </div>
+
+  <!-- Shared table template -->
+  <ng-template #questTable let-list="list" let-showGest="showGest">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Description</th>
+          <th *ngIf="showGest">Gestionnaire</th>
+          <th>Questions</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let q of list">
+          <td><strong>{{ q.titre }}</strong></td>
+          <td class="td-desc">{{ q.description || '—' }}</td>
+          <td *ngIf="showGest">{{ q.gestionnaire?.fullName || '—' }}</td>
+          <td>{{ q.questions?.length || 0 }}</td>
+          <td>
+            <span class="badge" [ngClass]="getBadgeClass(q.statut)">{{ getStatutLabel(q.statut) }}</span>
+            <span *ngIf="(q.statut || '').toUpperCase() === 'REJETE' && q.raisonRejet" class="rejet-reason" title="{{ q.raisonRejet }}">
+              <i class="bi bi-exclamation-triangle"></i> {{ q.raisonRejet.length > 30 ? (q.raisonRejet | slice:0:30) + '...' : q.raisonRejet }}
+            </span>
+          </td>
+          <td class="actions-cell">
+            <button class="btn-icon btn-view" title="Voir" (click)="viewQuestions.emit(q)"><i class="bi bi-eye"></i></button>
+            <button class="btn-icon btn-edit" title="Modifier" (click)="editQuest.emit(q)" *ngIf="canEdit(q)"><i class="bi bi-pencil"></i></button>
+            <button class="btn-icon btn-send" title="Demander publication" (click)="demanderPub.emit(q)" *ngIf="canRequestPublication(q)"><i class="bi bi-send"></i></button>
+            <button class="btn-icon btn-warning" title="Retirer la demande" (click)="retirerDemande.emit(q)" *ngIf="canWithdraw(q)"><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button class="btn-icon btn-confirm" title="Approuver" (click)="approuver.emit(q.id)" *ngIf="canApprove(q)"><i class="bi bi-check2-circle"></i></button>
+            <button class="btn-icon btn-reject" title="Rejeter" (click)="rejeter.emit(q.id)" *ngIf="canReject(q)"><i class="bi bi-x-circle"></i></button>
+            <button class="btn-icon btn-success" title="Partager" (click)="partager.emit(q)" *ngIf="canShare(q)"><i class="bi bi-share"></i></button>
+            <button class="btn-icon btn-delete" title="Supprimer" (click)="delete.emit(q.id)" *ngIf="canDelete(q)"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+        <tr *ngIf="!list.length">
+          <td [attr.colspan]="showGest ? 6 : 5" class="empty-row">Aucun questionnaire</td>
+        </tr>
+      </tbody>
+    </table>
+  </ng-template>
+
+</section>

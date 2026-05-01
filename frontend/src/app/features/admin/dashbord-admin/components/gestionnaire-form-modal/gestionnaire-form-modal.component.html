@@ -1,0 +1,26 @@
+<div class="modal-overlay" (click)="cancelled.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ gestToEdit ? 'Modifier Gestionnaire' : 'Ajouter Gestionnaire' }}</h2>
+      <button class="btn-close" (click)="cancelled.emit()">✕</button>
+    </div>
+    <label>Nom Complet <span style="color:red">*</span></label>
+    <input [(ngModel)]="form.fullName" placeholder="Nom complet"
+      [readonly]="!!gestToEdit" [style.background]="gestToEdit ? '#f0f0f0' : ''" />
+    <label>Email <span style="color:red">*</span></label>
+    <input [(ngModel)]="form.email" placeholder="Email" type="email" />
+    <label>Mot de passe <span *ngIf="!gestToEdit" style="color:red">*</span></label>
+    <input [(ngModel)]="form.password" placeholder="Mot de passe" type="password" />
+    <label>Rôle</label>
+    <select [(ngModel)]="form.role">
+      <option [ngValue]="null">— Aucun rôle —</option>
+      <option *ngFor="let r of roles" [ngValue]="r">{{ r.name }}</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+      <button class="btn-save" [disabled]="!canSave" (click)="saved.emit(form)">
+        {{ gestToEdit ? 'Modifier' : 'Ajouter' }}
+      </button>
+    </div>
+  </div>
+</div>

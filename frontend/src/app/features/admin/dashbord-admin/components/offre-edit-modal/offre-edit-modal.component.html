@@ -1,0 +1,25 @@
+<div class="modal-overlay" (click)="cancelled.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Modifier Offre</h2>
+      <button class="btn-close" (click)="cancelled.emit()">✕</button>
+    </div>
+    <label>Titre <span style="color:red">*</span></label>
+    <input [(ngModel)]="form.title" placeholder="Titre de l'offre" />
+    <label>Description <span style="color:red">*</span></label>
+    <textarea [(ngModel)]="form.description" placeholder="Description de l'offre..." rows="3"></textarea>
+    <label>Catégorie</label>
+    <select [(ngModel)]="form.categorie" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;margin-bottom:8px;">
+      <option value="GENERAL">Général</option>
+      <option value="SANTE">Santé</option>
+      <option value="AUTO">Auto</option>
+      <option value="HABITATION">Habitation</option>
+      <option value="VIE">Vie</option>
+      <option value="VOYAGE">Voyage</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+      <button class="btn-save" [disabled]="!form.title?.trim() || !form.description?.trim()" (click)="saved.emit(form)">Modifier</button>
+    </div>
+  </div>
+</div>

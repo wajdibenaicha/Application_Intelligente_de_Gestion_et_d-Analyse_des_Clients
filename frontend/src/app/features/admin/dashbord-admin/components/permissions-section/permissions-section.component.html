@@ -1,0 +1,56 @@
+<div class="content-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-value">{{ gestionnaire.length }}</div>
+        <div class="stat-label">Gestionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
+      <div>
+        <div class="stat-value">{{ questionnaires.length }}</div>
+        <div class="stat-label">Questionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+      <div>
+        <div class="stat-value">{{ totalReponsesCount }}</div>
+        <div class="stat-label">Réponses</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
+      <div>
+        <div class="stat-value">{{ offres.length }}</div>
+        <div class="stat-label">Offres</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrapper tab-panel">
+    <div class="section-toolbar" style="margin-bottom: 16px;">
+      <button class="btn-primary" (click)="openAdd.emit()"><i class="bi bi-plus-lg"></i> Ajouter permission</button>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>Nom</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of permissions">
+          <td>{{ p.id }}</td>
+          <td>{{ p.description }}</td>
+          <td class="actions-cell">
+            <button class="btn-icon btn-edit" (click)="openEdit.emit(p)"><i class="bi bi-pencil"></i></button>
+            <button class="btn-icon btn-delete" (click)="delete.emit(p.id)"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+        <tr *ngIf="permissions.length === 0">
+          <td colspan="3" class="empty-row">Aucune permission</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

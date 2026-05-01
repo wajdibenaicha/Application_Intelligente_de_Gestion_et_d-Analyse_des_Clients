@@ -22,13 +22,10 @@ public class TeamService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
-    // ── broadcast helpers ────────────────────────────────────────────────────
-
     private void broadcastTeams() {
         messagingTemplate.convertAndSend("/topic/teams", teamRepository.findAll());
     }
 
-    // ── CRUD ─────────────────────────────────────────────────────────────────
 
     public List<Team> getTeams() {
         return teamRepository.findAll();
@@ -62,7 +59,7 @@ public class TeamService {
     }
 
     public void deleteTeam(Long id) {
-        // Clear team reference from all members first to avoid FK constraint
+        
         List<Gestionnaire> members = gestionnaireRepository.findAll().stream()
                 .filter(g -> g.getTeam() != null && g.getTeam().getId().equals(id))
                 .toList();
@@ -71,7 +68,7 @@ public class TeamService {
         broadcastTeams();
     }
 
-    // ── MEMBERS ──────────────────────────────────────────────────────────────
+    
 
     public Team addMember(Long teamId, Long gestionnaireId) {
         Team team = getTeamById(teamId);
@@ -88,7 +85,7 @@ public class TeamService {
         member.setTeam(team);
         gestionnaireRepository.save(member);
 
-        // Refresh from DB to get updated members collection
+    
         Team updated = teamRepository.findById(teamId).orElse(team);
         broadcastTeams();
         return updated;
@@ -101,7 +98,7 @@ public class TeamService {
         Gestionnaire member = gestionnaireRepository.findById(gestionnaireId)
                 .orElseThrow(() -> new RuntimeException("Gestionnaire not found"));
 
-        // Clear team regardless — avoids stale-check failures
+        
         member.setTeam(null);
         gestionnaireRepository.save(member);
 
@@ -110,7 +107,6 @@ public class TeamService {
         return updated;
     }
 
-    // ── DIRECTEUR ────────────────────────────────────────────────────────────
 
     public Team changeDirecteur(Long teamId, Long gestionnaireId) {
         Team team = getTeamById(teamId);

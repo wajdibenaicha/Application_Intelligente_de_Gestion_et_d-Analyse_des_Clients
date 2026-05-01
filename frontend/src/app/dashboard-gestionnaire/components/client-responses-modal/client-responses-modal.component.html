@@ -1,0 +1,35 @@
+<div class="modal-overlay" (click)="closed.emit()">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="client-modal-title">
+        <div class="client-avatar-lg">{{ (clientData?.fullName || clientData?.mail || '?').charAt(0).toUpperCase() }}</div>
+        <div>
+          <h2>{{ clientData?.fullName || 'Client' }}</h2>
+          <div class="client-modal-meta">
+            <span *ngIf="clientData?.mail"><i class="bi bi-envelope"></i> {{ clientData.mail }}</span>
+            <span *ngIf="clientData?.tel"><i class="bi bi-telephone"></i> {{ clientData.tel }}</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-close" (click)="closed.emit()">✕</button>
+    </div>
+
+    <div class="client-reponses-body">
+      <div class="reponse-qa-card" *ngFor="let r of reponses; let i = index">
+        <div class="reponse-qa-num">{{ i + 1 }}</div>
+        <div class="reponse-qa-content">
+          <div class="reponse-qa-question">
+            {{ r.question?.titre || '—' }}
+            <span class="q-type-badge">{{ r.question?.type }}</span>
+          </div>
+          <div class="reponse-qa-answer">{{ r.reponse || '—' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-send-offre" (click)="envoyerOffre.emit(clientData)"><i class="bi bi-gift"></i> Envoyer une offre</button>
+      <button class="btn-close-modal" (click)="closed.emit()">Fermer</button>
+    </div>
+  </div>
+</div>

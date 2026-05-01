@@ -1,0 +1,83 @@
+<section class="content-section">
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <label>Questionnaire :</label>
+    <select [ngModel]="selectedQuestionnaireId" (ngModelChange)="selectQuestionnaire.emit($event)">
+      <option value="">-- Choisir un questionnaire --</option>
+      <option *ngFor="let q of questionnaires" [value]="q.id">{{ q.titre }}</option>
+    </select>
+    <button class="btn-csv" (click)="exportXLS.emit()" *ngIf="reponses.length > 0">
+      <i class="bi bi-file-earmark-excel"></i> Exporter Excel
+    </button>
+    <button class="btn-offre-tous" (click)="voirRecommandations.emit()" *ngIf="reponses.length > 0">
+      <i class="bi bi-pie-chart-fill"></i> Recommandations IA
+    </button>
+    <button class="btn-danger-sm" (click)="supprimerTous.emit()" *ngIf="reponses.length > 0">
+      <i class="bi bi-trash3-fill"></i> Supprimer tout
+    </button>
+  </div>
+
+  <!-- Dynamic content: scales in when questionnaire is selected -->
+  <div class="reponses-content" *ngIf="reponses.length > 0">
+
+    <!-- Summary bar -->
+    <div class="reponses-summary">
+      <span class="summary-chip"><i class="bi bi-people"></i> <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
+      <span class="summary-chip"><i class="bi bi-chat-dots"></i> <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
+    </div>
+
+    <!-- Participation chart -->
+    <div class="reponses-chart-card">
+      <div class="reponses-chart-header">
+        <i class="bi bi-bar-chart-line"></i>
+        <span>Participation au questionnaire</span>
+      </div>
+      <div class="reponses-chart-body">
+        <canvas id="reponsesParQuestionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Clients table -->
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Réponses</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let entry of clientsReponses">
+            <td>
+              <div class="client-cell">
+                <div class="client-avatar-sm">{{ (entry.client?.fullName || entry.client?.mail || '?').charAt(0).toUpperCase() }}</div>
+                <span>{{ entry.client?.fullName || '—' }}</span>
+              </div>
+            </td>
+            <td>{{ entry.client?.mail || '—' }}</td>
+            <td>{{ entry.client?.tel || '—' }}</td>
+            <td>
+              <span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span>
+            </td>
+            <td style="display:flex;gap:8px;align-items:center;">
+              <button class="btn-voir" (click)="voirReponsesClient.emit(entry)"><i class="bi bi-eye"></i> Voir</button>
+              <button class="btn-danger-sm" (click)="supprimerReponseClient.emit(entry.client?.id)"><i class="bi bi-trash-fill"></i> Supprimer</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /.reponses-content -->
+
+  <div class="empty-state" *ngIf="reponses.length === 0 && selectedQuestionnaireId !== ''">
+    <i class="bi bi-chat-left-dots"></i><p>Aucune réponse reçue pour ce questionnaire</p>
+  </div>
+  <div class="empty-state" *ngIf="selectedQuestionnaireId === ''">
+    <i class="bi bi-clipboard"></i><p>Sélectionnez un questionnaire pour voir les réponses</p>
+  </div>
+</section>

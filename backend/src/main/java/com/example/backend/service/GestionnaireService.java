@@ -25,8 +25,18 @@ public class GestionnaireService {
     }
 
     public Gestionnaire login(String fullName, String password) {
-        Gestionnaire gestionnaire = gestionnaireRepository.findByFullName(fullName);
-        if (gestionnaire != null && passwordEncoder.matches(password, gestionnaire.getPassword())) {
+        Gestionnaire gestionnaire = gestionnaireRepository.findByFullNameIgnoreCase(fullName);
+        if (gestionnaire == null) return null;
+        String stored = gestionnaire.getPassword();
+        boolean isBcrypt = stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$"));
+        boolean matches = isBcrypt
+            ? passwordEncoder.matches(password, stored)
+            : password.equals(stored);
+        if (matches) {
+            if (!isBcrypt) {
+                gestionnaire.setPassword(passwordEncoder.encode(password));
+                gestionnaireRepository.save(gestionnaire);
+            }
             return gestionnaire;
         }
         return null;

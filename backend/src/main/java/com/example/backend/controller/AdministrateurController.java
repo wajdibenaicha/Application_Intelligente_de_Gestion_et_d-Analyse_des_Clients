@@ -1,11 +1,13 @@
 package com.example.backend.controller;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.backend.models.Administrateur;
+import com.example.backend.security.JwtUtil;
 import com.example.backend.service.AdministrateurService;
 
 @RestController
@@ -15,6 +17,9 @@ public class AdministrateurController {
 
     @Autowired
     private AdministrateurService administrateurService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @GetMapping
     public ResponseEntity<List<Administrateur>> getAllAdministrateurs() {
@@ -37,11 +42,18 @@ public class AdministrateurController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Administrateur> login(@RequestBody Administrateur administrateur) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Administrateur administrateur) {
         Administrateur loggedIn = administrateurService.login(
                 administrateur.getFullName(), administrateur.getPassword());
         if (loggedIn != null) {
-            return ResponseEntity.ok(loggedIn);
+            String token = jwtUtil.generateToken(loggedIn.getId(), loggedIn.getFullName(), "administrateur");
+            return ResponseEntity.ok(Map.of(
+                "token", token,
+                "id", loggedIn.getId(),
+                "fullName", loggedIn.getFullName(),
+                "email", loggedIn.getEmail(),
+                "role", "administrateur"
+            ));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }

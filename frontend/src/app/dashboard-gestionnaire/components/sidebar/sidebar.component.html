@@ -1,0 +1,51 @@
+<aside class="sidebar" [class.collapsed]="collapsed">
+  <div class="sb-bubble sb-b1"></div>
+  <div class="sb-bubble sb-b2"></div>
+  <div class="sb-bubble sb-b3"></div>
+  <div class="sb-bubble sb-b4"></div>
+  <div class="sb-bubble sb-b5"></div>
+
+  <div class="sidebar-header">
+    <div class="logo-wrapper">
+      <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="sidebar-logo" *ngIf="!collapsed">
+      <span class="logo-icon" *ngIf="collapsed">S</span>
+    </div>
+    <button class="collapse-btn" (click)="toggle.emit()"><i class="bi bi-list"></i></button>
+  </div>
+
+  <div class="user-info">
+    <div class="avatar">{{ getInitials() }}</div>
+    <div class="user-details">
+      <span class="user-name">{{ gestionnaire?.fullName }}</span>
+      <span class="user-role">{{ gestionnaire?.role?.name || 'Gestionnaire' }}</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <button class="nav-item" [class.active]="activeSection === 'home'" (click)="sectionChange.emit('home')">
+      <span class="nav-icon"><i class="bi bi-house-door-fill"></i></span>
+      <span class="nav-label">Accueil</span>
+    </button>
+    <button class="nav-item" [class.active]="activeSection === 'questionnaires'" (click)="sectionChange.emit('questionnaires')">
+      <span class="nav-icon"><i class="bi bi-clipboard-check"></i></span>
+      <span class="nav-label">Questionnaires</span>
+    </button>
+    <button class="nav-item" [class.active]="activeSection === 'reponses'" (click)="sectionChange.emit('reponses')">
+      <span class="nav-icon"><i class="bi bi-chat-left-dots"></i></span>
+      <span class="nav-label">Réponses clients</span>
+    </button>
+    <button class="nav-item" [class.active]="activeSection === 'offres'" (click)="sectionChange.emit('offres')">
+      <span class="nav-icon"><i class="bi bi-gift"></i></span>
+      <span class="nav-label">Offres</span>
+    </button>
+    <button class="nav-item" *ngIf="canManageAll" [class.active]="activeSection === 'teams'" (click)="sectionChange.emit('teams')">
+      <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
+      <span class="nav-label">Mes Équipes</span>
+    </button>
+  </nav>
+
+  <button class="logout-btn" (click)="logoutEvent.emit()">
+    <span class="nav-icon"><i class="bi bi-box-arrow-right"></i></span>
+    <span class="nav-label">Déconnexion</span>
+  </button>
+</aside>

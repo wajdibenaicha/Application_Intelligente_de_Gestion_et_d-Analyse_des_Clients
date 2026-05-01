@@ -90,8 +90,7 @@ export class DashbordAdmin implements OnInit {
     selectedQuestionnaireId: string = '';
     adminReponses: any[] = [];
     teams: any[] = [];
-    showteamform = false;
-    teamform: any = { name: '', directeurId: null };
+
     selectedTeam: any = null;
     showteammembersmodal = false;
 
@@ -110,7 +109,7 @@ export class DashbordAdmin implements OnInit {
     }
 
     toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
-    logout() { this.router.navigate(['/login']); }
+    logout() { localStorage.clear(); sessionStorage.clear(); this.router.navigate(['/login']); }
 
     setTab(tab: string) {
       this.activeTab = tab;
@@ -143,7 +142,7 @@ export class DashbordAdmin implements OnInit {
           datasets: [{ data: [counts.brouillon, counts.enAttente, counts.approuve, counts.rejete],
             backgroundColor: ['#95a5a6', '#f39c12', '#27ae60', '#e74c3c'], borderWidth: 2 }]
         },
-        options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
       });
     }
 
@@ -166,7 +165,7 @@ export class DashbordAdmin implements OnInit {
         type: 'bar',
         data: { labels, datasets: [{ label: 'Clients', data: counts,
           backgroundColor: '#3498db', borderRadius: 6, borderSkipped: false }] },
-        options: { indexAxis: 'y', plugins: { legend: { display: false } },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
           scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
       });
     }
@@ -188,7 +187,7 @@ export class DashbordAdmin implements OnInit {
         data: { labels, datasets: [{ label: 'Gestionnaires', data: counts,
           backgroundColor: labels.map((_, i) => palette[i % palette.length]),
           borderRadius: 8, borderSkipped: false }] },
-        options: { plugins: { legend: { display: false } },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
           scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
       });
     }
@@ -209,7 +208,7 @@ export class DashbordAdmin implements OnInit {
         type: 'pie',
         data: { labels, datasets: [{ data: counts,
           backgroundColor: labels.map((_, i) => palette[i % palette.length]), borderWidth: 2 }] },
-        options: { plugins: { legend: { position: 'bottom' } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
       });
     }
 
@@ -782,18 +781,43 @@ export class DashbordAdmin implements OnInit {
         if (s === 'EN_ATTENTE') return 'En attente';
         return 'Brouillon';
     }
-    openaddteam() {
-  this.teamform = { name: '', directeurId: null };
-  this.showteamform = true;
-}
-saveteam() {
-  this.showteamform = false;
-  this.api.createTeam(this.teamform.name, this.teamform.directeurId).subscribe({
-    next: (t) => { this.teams.push(t); this.cdr.detectChanges();
-      Swal.fire({ icon: 'success', title: 'Équipe créée', timer: 1500, showConfirmButton: false }); },
-    error: (e) => Swal.fire({ icon: 'error', title: 'Erreur', text: e.error?.error || 'Impossible de créer l\'équipe.' })
+    async openaddteam() {
+  const directeurOptions = this.directeurs
+    .map(d => `<option value="${d.id}">${d.fullName}</option>`)
+    .join('');
+
+  if (!directeurOptions) {
+    Swal.fire({ icon: 'warning', title: 'Aucun directeur disponible', text: 'Assignez d\'abord la permission DIRECTEUR à un gestionnaire.' });
+    return;
+  }
+
+  const { value: formValues } = await Swal.fire({
+    title: '<i class="bi bi-people-fill"></i> Nouvelle équipe',
+    html: `
+      <input id="swal-team-name" class="swal2-input" placeholder="Nom de l'équipe" />
+      <select id="swal-team-dir" class="swal2-input" style="margin-top:8px">
+        <option value="">— Choisir un directeur —</option>
+        ${directeurOptions}
+      </select>`,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Créer',
+    cancelButtonText: 'Annuler',
+    confirmButtonColor: '#2ecc71',
+    preConfirm: () => {
+      const name = (document.getElementById('swal-team-name') as HTMLInputElement).value.trim();
+      const directeurId = (document.getElementById('swal-team-dir') as HTMLSelectElement).value;
+      if (!name) { Swal.showValidationMessage('Le nom de l\'équipe est obligatoire'); return false; }
+      if (!directeurId) { Swal.showValidationMessage('Veuillez choisir un directeur'); return false; }
+      return { name, directeurId: Number(directeurId) };
+    }
   });
 
+  if (!formValues) return;
+  this.api.createTeam(formValues.name, formValues.directeurId).subscribe({
+    next: () => Swal.fire({ icon: 'success', title: 'Équipe créée', timer: 1500, showConfirmButton: false }),
+    error: (e) => Swal.fire({ icon: 'error', title: 'Erreur', text: e.error?.error || 'Impossible de créer l\'équipe.' })
+  });
 }
 async deleteteam(id: number) {
   const r = await Swal.fire({ title: 'Supprimer cette équipe ?', icon: 'warning',
@@ -871,6 +895,6 @@ get availableGestionnaires(): any[] {
   );
 }
 get directeurs(): any[] {
-  return this.gestionnaire.filter(g => g.role?.name?.toUpperCase() === 'DIRECTEUR');
+  return this.gestionnaire.filter(g => g.role?.permission?.description?.toUpperCase() === 'DIRECTEUR');
 }
 }

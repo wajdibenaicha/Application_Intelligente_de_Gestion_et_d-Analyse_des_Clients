@@ -1,0 +1,14 @@
+<div class="notif-panel">
+  <div class="notif-header">
+    <span><i class="bi bi-bell-fill"></i> Notifications</span>
+    <button class="btn-close-panel" (click)="closed.emit()">✕</button>
+  </div>
+  <div *ngIf="notifications.length === 0" class="notif-empty">Aucune notification</div>
+  <div *ngFor="let n of notifications" class="notif-item" [class.vue]="n.vue">
+    <span class="notif-dot"></span>
+    <div class="notif-content">
+      <p>{{ n.message }}</p>
+      <small>{{ n.dateCreation | date:'dd MMM, HH:mm' }}</small>
+    </div>
+  </div>
+</div>

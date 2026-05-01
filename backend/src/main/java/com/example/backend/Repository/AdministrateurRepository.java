@@ -6,7 +6,7 @@ import com.example.backend.models.Administrateur;
 
 @Repository
 public interface AdministrateurRepository extends JpaRepository<Administrateur, Long> {
-        Administrateur findByFullName(String fullName);
+        Administrateur findByFullNameIgnoreCase(String fullName);
 
         Administrateur findByEmail(String email);
 }

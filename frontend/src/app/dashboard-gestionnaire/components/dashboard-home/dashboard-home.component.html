@@ -1,0 +1,127 @@
+<section class="content-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-clipboard-check"></i></div>
+      <div class="stat-info">
+        <span class="stat-value">{{ totalQuestionnaires }}</span>
+        <span class="stat-label">Questionnaires</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-orange"><i class="bi bi-hourglass-split"></i></div>
+      <div class="stat-info">
+        <span class="stat-value">{{ pendingCount }}</span>
+        <span class="stat-label">En attente</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-check2-circle"></i></div>
+      <div class="stat-info">
+        <span class="stat-value">{{ publishedCount }}</span>
+        <span class="stat-label">Approuvés</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+      <div class="stat-info">
+        <span class="stat-value">{{ totalReponses }}</span>
+        <span class="stat-label">Réponses reçues</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-actions">
+    <h3>Actions rapides</h3>
+    <div class="actions-grid">
+      <button class="action-card" (click)="openWizard.emit()">
+        <span class="action-icon"><i class="bi bi-plus-circle"></i></span>
+        <span>Nouveau questionnaire</span>
+      </button>
+      <button class="action-card" (click)="navigateTo.emit('reponses')">
+        <span class="action-icon"><i class="bi bi-eye"></i></span>
+        <span>Voir les réponses</span>
+      </button>
+      <button class="action-card" (click)="navigateTo.emit('offres')">
+        <span class="action-icon"><i class="bi bi-gift"></i></span>
+        <span>Offres</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="charts-section">
+    <div class="charts-section-header">
+      <h3 class="charts-section-title"><i class="bi bi-bar-chart-line"></i> Analyse des clients</h3>
+    </div>
+    <div class="charts-grid">
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-emoji-smile"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Sentiments clients</h4>
+            <span class="chart-card-sub">Analyse IA des réponses</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasSentimentData">
+          <canvas id="sentimentChart"></canvas>
+        </div>
+        <div class="chart-card-empty" *ngIf="!hasSentimentData">
+          <i class="bi bi-inbox"></i>
+          <p>Aucune donnée disponible</p>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-bar-chart-line"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Score par client</h4>
+            <span class="chart-card-sub">Analyse IA des profils</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasScoreData">
+          <canvas id="scoreChart"></canvas>
+        </div>
+        <div class="chart-card-empty" *ngIf="!hasScoreData">
+          <i class="bi bi-inbox"></i>
+          <p>Aucune donnée disponible</p>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-pie-chart"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Statut des questionnaires</h4>
+            <span class="chart-card-sub">Répartition par statut</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasStatutData">
+          <canvas id="statutChart"></canvas>
+        </div>
+        <div class="chart-card-empty" *ngIf="!hasStatutData">
+          <i class="bi bi-inbox"></i>
+          <p>Aucun questionnaire</p>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-chat-square-text"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Réponses par questionnaire</h4>
+            <span class="chart-card-sub">Nombre de clients ayant répondu</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasReponsesData">
+          <canvas id="reponsesChart"></canvas>
+        </div>
+        <div class="chart-card-empty" *ngIf="!hasReponsesData">
+          <i class="bi bi-inbox"></i>
+          <p>Aucune réponse</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>

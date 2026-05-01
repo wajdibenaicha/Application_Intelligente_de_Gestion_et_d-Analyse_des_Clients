@@ -1,0 +1,57 @@
+<div class="content-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-value">{{ gestionnaire.length }}</div>
+        <div class="stat-label">Gestionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
+      <div>
+        <div class="stat-value">{{ questionnaires.length }}</div>
+        <div class="stat-label">Questionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+      <div>
+        <div class="stat-value">{{ totalReponsesCount }}</div>
+        <div class="stat-label">Réponses</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
+      <div>
+        <div class="stat-value">{{ offres.length }}</div>
+        <div class="stat-label">Offres</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrapper tab-panel">
+    <div class="section-toolbar" style="margin-bottom: 16px;">
+      <button class="btn-primary" (click)="openAdd.emit()"><i class="bi bi-plus-lg"></i> Ajouter</button>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let g of gestionnaire">
+          <td>{{ g.fullName }}</td>
+          <td>{{ g.email }}</td>
+          <td><span class="role-chip">{{ g.role?.name || '—' }}</span></td>
+          <td class="actions-cell">
+            <button class="btn-icon btn-edit" title="Modifier" (click)="openEdit.emit(g)"><i class="bi bi-pencil"></i></button>
+            <button class="btn-icon btn-delete" title="Supprimer" (click)="delete.emit(g.id)"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+        <tr *ngIf="gestionnaire.length === 0">
+          <td colspan="4" class="empty-row">Aucun gestionnaire</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

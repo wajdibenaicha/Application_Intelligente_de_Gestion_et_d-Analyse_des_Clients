@@ -1,0 +1,50 @@
+<section class="content-section">
+
+  <!-- Directeur: catalog management -->
+  <div *ngIf="canManageAll">
+    <div class="section-toolbar" style="margin-bottom:18px">
+      <button class="btn-primary" (click)="addOffre.emit()"><i class="bi bi-plus-lg"></i> Ajouter une offre</button>
+    </div>
+    <div class="offres-catalog-grid">
+      <div class="offre-catalog-card" *ngFor="let o of offres">
+        <div class="offre-catalog-body">
+          <div class="offre-catalog-title"><i class="bi bi-gift"></i> {{ o.title }}</div>
+          <div class="offre-catalog-desc">{{ o.description }}</div>
+          <div class="offre-catalog-meta">
+            <span class="offre-badge-cat">{{ o.categorie || 'GENERAL' }}</span>
+            <span class="offre-badge-range">{{ o.scoreMin }}–{{ o.scoreMax }}/100</span>
+            <span class="offre-badge-active" [class.inactive]="!o.active">{{ o.active ? 'Active' : 'Inactive' }}</span>
+          </div>
+        </div>
+        <div class="offre-catalog-actions">
+          <button class="btn-icon btn-edit" title="Modifier" (click)="editOffre.emit(o)"><i class="bi bi-pencil"></i></button>
+          <button class="btn-icon btn-delete" title="Supprimer" (click)="deleteOffre.emit(o)"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="offres.length === 0">
+        <i class="bi bi-gift"></i><p>Aucune offre dans le catalogue</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regular gestionnaire: read-only catalog view -->
+  <div *ngIf="!canManageAll">
+    <div class="offres-catalog-grid">
+      <div class="offre-catalog-card" *ngFor="let o of offres">
+        <div class="offre-catalog-body">
+          <div class="offre-catalog-title"><i class="bi bi-gift"></i> {{ o.title }}</div>
+          <div class="offre-catalog-desc">{{ o.description }}</div>
+          <div class="offre-catalog-meta">
+            <span class="offre-badge-cat">{{ o.categorie || 'GENERAL' }}</span>
+            <span class="offre-badge-range">{{ o.scoreMin }}–{{ o.scoreMax }}/100</span>
+            <span class="offre-badge-active" [class.inactive]="!o.active">{{ o.active ? 'Active' : 'Inactive' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="offres.length === 0">
+        <i class="bi bi-gift"></i><p>Aucune offre disponible</p>
+      </div>
+    </div>
+  </div>
+
+</section>

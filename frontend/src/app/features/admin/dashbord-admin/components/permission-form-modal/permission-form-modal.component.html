@@ -1,0 +1,14 @@
+<div class="modal-overlay" (click)="cancelled.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ permissionToEdit ? 'Modifier Permission' : 'Ajouter Permission' }}</h2>
+      <button class="btn-close" (click)="cancelled.emit()">✕</button>
+    </div>
+    <label>Nom de la permission</label>
+    <input [(ngModel)]="form.description" placeholder="Nom de la permission" />
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+      <button class="btn-save" (click)="saved.emit(form)">{{ permissionToEdit ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,63 @@
+<aside class="sidebar" [class.collapsed]="collapsed">
+  <div class="sb-bubble sb-b1"></div>
+  <div class="sb-bubble sb-b2"></div>
+  <div class="sb-bubble sb-b3"></div>
+  <div class="sb-bubble sb-b4"></div>
+  <div class="sb-bubble sb-b5"></div>
+
+  <div class="sidebar-header">
+    <div class="logo-wrapper">
+      <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="sidebar-logo" *ngIf="!collapsed">
+      <span class="logo-icon" *ngIf="collapsed">A</span>
+    </div>
+    <button class="collapse-btn" (click)="toggle.emit()"><i class="bi bi-list"></i></button>
+  </div>
+
+  <div class="user-info">
+    <div class="avatar">AD</div>
+    <div class="user-details">
+      <span class="user-name">Administrateur</span>
+      <span class="user-role">Admin</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <button class="nav-item" [class.active]="activeTab === 'home'" (click)="tabChange.emit('home')">
+      <span class="nav-icon"><i class="bi bi-house-door-fill"></i></span>
+      <span class="nav-label">Accueil</span>
+    </button>
+    <button class="nav-item" [class.active]="activeTab === 'gestionnaires'" (click)="tabChange.emit('gestionnaires')">
+      <span class="nav-icon"><i class="bi bi-people"></i></span>
+      <span class="nav-label">Gestionnaires</span>
+    </button>
+    <button class="nav-item" [class.active]="activeTab === 'questionnaires'" (click)="tabChange.emit('questionnaires')">
+      <span class="nav-icon"><i class="bi bi-clipboard-check"></i></span>
+      <span class="nav-label">Questionnaires</span>
+    </button>
+    <button class="nav-item" [class.active]="activeTab === 'reponses'" (click)="tabChange.emit('reponses')">
+      <span class="nav-icon"><i class="bi bi-chat-left-dots"></i></span>
+      <span class="nav-label">Réponses</span>
+    </button>
+    <button class="nav-item" [class.active]="activeTab === 'offres'" (click)="tabChange.emit('offres')">
+      <span class="nav-icon"><i class="bi bi-gift"></i></span>
+      <span class="nav-label">Offres</span>
+    </button>
+    <button class="nav-item" [class.active]="activeTab === 'roles'" (click)="tabChange.emit('roles')">
+      <span class="nav-icon"><i class="bi bi-key"></i></span>
+      <span class="nav-label">Rôles</span>
+    </button>
+    <button class="nav-item" [class.active]="activeTab === 'permissions'" (click)="tabChange.emit('permissions')">
+      <span class="nav-icon"><i class="bi bi-shield-check"></i></span>
+      <span class="nav-label">Permissions</span>
+    </button>
+    <button class="nav-item" [class.active]="activeTab === 'teams'" (click)="tabChange.emit('teams')">
+      <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
+      <span class="nav-label">Équipes</span>
+    </button>
+  </nav>
+
+  <button class="logout-btn" (click)="logoutEvent.emit()">
+    <span class="nav-icon"><i class="bi bi-box-arrow-right"></i></span>
+    <span class="nav-label">Déconnexion</span>
+  </button>
+</aside>

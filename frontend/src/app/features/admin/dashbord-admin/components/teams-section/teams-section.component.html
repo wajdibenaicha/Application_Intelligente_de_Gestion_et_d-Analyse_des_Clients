@@ -1,0 +1,78 @@
+<div class="content-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-value">{{ gestionnaire.length }}</div>
+        <div class="stat-label">Gestionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
+      <div>
+        <div class="stat-value">{{ questionnaires.length }}</div>
+        <div class="stat-label">Questionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+      <div>
+        <div class="stat-value">{{ totalReponsesCount }}</div>
+        <div class="stat-label">Réponses</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
+      <div>
+        <div class="stat-value">{{ offres.length }}</div>
+        <div class="stat-label">Offres</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel">
+    <div class="section-toolbar" style="margin-bottom: 18px;">
+      <button class="btn-primary" (click)="openAdd.emit()"><i class="bi bi-plus-lg"></i> Nouvelle équipe</button>
+    </div>
+
+    <div class="teams-grid">
+      <div class="team-card" *ngFor="let team of teams">
+        <div class="team-card-top">
+          <div class="team-avatar"><i class="bi bi-people-fill"></i></div>
+          <div class="team-card-info">
+            <h3 class="team-name">{{ team.name }}</h3>
+            <span class="team-dir-label">
+              <i class="bi bi-person-badge"></i>
+              {{ team.directeur?.fullName || '—' }}
+            </span>
+          </div>
+          <button class="btn-icon btn-delete" title="Supprimer" (click)="delete.emit(team.id)">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+        <div class="team-card-body">
+          <div class="team-members-preview">
+            <span class="member-chip" *ngFor="let m of (team.members || []).slice(0,4)">
+              {{ m.fullName.charAt(0).toUpperCase() }}
+            </span>
+            <span class="member-chip more" *ngIf="(team.members || []).length > 4">
+              +{{ team.members.length - 4 }}
+            </span>
+            <span class="no-members" *ngIf="!(team.members || []).length">Aucun membre</span>
+          </div>
+          <span class="team-count">{{ (team.members || []).length }} membre(s)</span>
+        </div>
+        <div class="team-card-footer">
+          <button class="btn-manage-members" (click)="openMembers.emit(team)">
+            <i class="bi bi-gear"></i> Gérer les membres
+          </button>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="teams.length === 0">
+        <i class="bi bi-people"></i>
+        <p>Aucune équipe créée</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,27 @@
+<div class="modal-overlay" (click)="closed.emit()">
+  <div class="modal modal-gest" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="bi bi-person-plus"></i> Déléguer la création</h2>
+      <button class="btn-close" (click)="closed.emit()">✕</button>
+    </div>
+    <p class="delegate-desc">Choisissez un gestionnaire de votre équipe et envoyez-lui une demande de création de questionnaire.</p>
+
+    <label>Gestionnaire <span style="color:red">*</span></label>
+    <select [(ngModel)]="delegateform.gestionnaireId">
+      <option [ngValue]="null" disabled>— Choisir un gestionnaire —</option>
+      <optgroup *ngFor="let team of myTeams" [label]="team.name">
+        <option *ngFor="let m of team.members" [ngValue]="m.id">{{ m.fullName }}</option>
+      </optgroup>
+    </select>
+
+    <label>Sujet du questionnaire <span style="color:red">*</span></label>
+    <input [(ngModel)]="delegateform.titreHint" placeholder="Ex: Satisfaction client 2025" />
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="closed.emit()">Annuler</button>
+      <button class="btn-save" (click)="send.emit()" [disabled]="!delegateform.gestionnaireId || !delegateform.titreHint?.trim()">
+        <i class="bi bi-send"></i> Envoyer la demande
+      </button>
+    </div>
+  </div>
+</div>

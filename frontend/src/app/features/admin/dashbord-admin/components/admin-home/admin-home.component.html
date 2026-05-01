@@ -1,0 +1,128 @@
+<div class="content-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-value">{{ displayGestCount }}</div>
+        <div class="stat-label">Gestionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
+      <div>
+        <div class="stat-value">{{ displayQuestCount }}</div>
+        <div class="stat-label">Questionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+      <div>
+        <div class="stat-value">{{ displayRepCount }}</div>
+        <div class="stat-label">Réponses</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
+      <div>
+        <div class="stat-value">{{ displayOffresCount }}</div>
+        <div class="stat-label">Offres</div>
+      </div>
+    </div>
+    <div class="stat-card" style="cursor:pointer" (click)="navigateTo.emit('teams')">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ displayTeamsCount }}</div>
+        <div class="stat-label">Équipes</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-quick-actions">
+    <h3 class="admin-quick-title">Actions rapides</h3>
+    <div class="admin-actions-grid">
+      <button class="admin-action-card" (click)="navigateTo.emit('gestionnaires'); openAddGestionnaire.emit()">
+        <div class="admin-action-icon"><i class="bi bi-person-plus"></i></div>
+        <span>Ajouter un gestionnaire</span>
+      </button>
+      <button class="admin-action-card" (click)="navigateTo.emit('questionnaires')">
+        <div class="admin-action-icon"><i class="bi bi-clipboard-check"></i></div>
+        <span>Voir questionnaires</span>
+      </button>
+      <button class="admin-action-card" (click)="navigateTo.emit('offres')">
+        <div class="admin-action-icon"><i class="bi bi-gift"></i></div>
+        <span>Voir les offres</span>
+      </button>
+      <button class="admin-action-card" (click)="navigateTo.emit('roles')">
+        <div class="admin-action-icon"><i class="bi bi-key"></i></div>
+        <span>Gérer les rôles</span>
+      </button>
+      <button class="admin-action-card" (click)="navigateTo.emit('teams')">
+        <div class="admin-action-icon"><i class="bi bi-people-fill"></i></div>
+        <span>Gérer les équipes</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="charts-section">
+    <div class="charts-section-header">
+      <h3 class="charts-section-title"><i class="bi bi-bar-chart-line"></i> Analyse globale</h3>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-pie-chart"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Statut des questionnaires</h4>
+            <span class="chart-card-sub">Répartition par statut</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasStatutData"><canvas id="adminStatutChart"></canvas></div>
+        <div class="chart-card-empty" *ngIf="!hasStatutData">
+          <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-chat-left-dots"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Réponses par questionnaire</h4>
+            <span class="chart-card-sub">Nombre de clients ayant répondu</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasReponsesData"><canvas id="adminReponsesChart"></canvas></div>
+        <div class="chart-card-empty" *ngIf="!hasReponsesData">
+          <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-people"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Gestionnaires par rôle</h4>
+            <span class="chart-card-sub">Répartition des équipes</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasRolesData"><canvas id="adminRolesChart"></canvas></div>
+        <div class="chart-card-empty" *ngIf="!hasRolesData">
+          <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-icon"><i class="bi bi-gift"></i></div>
+          <div class="chart-card-meta">
+            <h4 class="chart-card-title">Offres par catégorie</h4>
+            <span class="chart-card-sub">Catalogue des offres</span>
+          </div>
+        </div>
+        <div class="chart-card-body" *ngIf="hasOffresData"><canvas id="adminOffresChart"></canvas></div>
+        <div class="chart-card-empty" *ngIf="!hasOffresData">
+          <i class="bi bi-inbox"></i><p>Aucune donnée</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

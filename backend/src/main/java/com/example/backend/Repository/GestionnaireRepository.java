@@ -6,7 +6,7 @@ import com.example.backend.models.Gestionnaire;
 
 @Repository
 public interface GestionnaireRepository extends JpaRepository<Gestionnaire, Long> {
-    Gestionnaire findByFullName(String fullName);
+    Gestionnaire findByFullNameIgnoreCase(String fullName);
 
     Gestionnaire findByEmail(String email);
 }

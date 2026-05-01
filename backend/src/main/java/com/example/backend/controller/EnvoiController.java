@@ -3,9 +3,6 @@ package com.example.backend.controller;
 import java.util.List;
 import java.util.Map;
 
-import com.example.backend.Repository.EnvoiQuestionnaireRepository;
-import com.example.backend.models.EnvoiQuestionnaire;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -16,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.backend.Repository.EnvoiQuestionnaireRepository;
 import com.example.backend.models.Client;
+import com.example.backend.models.EnvoiQuestionnaire;
 import com.example.backend.models.Questionnaire;
 import com.example.backend.service.EnvoiService;
 import com.example.backend.service.QuestionnaireDistributionService;
@@ -42,13 +41,13 @@ public class EnvoiController {
         return envoiService.filtrerClients(typeContrat, anneeMin, profession);
     }
 
-    // Flow A: generate a UUID link, copy-paste to client → /repondre?token=
+    
     @PostMapping("/generer-lien")
     public String genererLien(@RequestParam Long questionnaireId, @RequestParam Long clientId) {
         return envoiService.genererLienChiffre(questionnaireId, clientId);
     }
 
-    // Flow A: client opens /repondre?token= → fetch questionnaire
+
     @GetMapping("/questionnaire")
     public ResponseEntity<Questionnaire> getQuestionnaireByToken(@RequestParam String token) {
         Long questionnaireId = envoiService.dechiffrerToken(token);
@@ -62,7 +61,7 @@ public class EnvoiController {
         return ResponseEntity.ok(q);
     }
 
-    // Stats: how many clients were sent this questionnaire vs how many responded
+    
     @GetMapping("/stats")
     public Map<String, Long> stats(@RequestParam Long questionnaireId) {
         List<EnvoiQuestionnaire> envois = envoiRepo.findByQuestionnaireId(questionnaireId);
@@ -71,7 +70,7 @@ public class EnvoiController {
         return Map.of("sent", sent, "repondu", repondu);
     }
 
-    // Flow B: send email/SMS directly → client receives /fill-questionnaire?token=
+    
     @PostMapping("/distribuer")
     public ResponseEntity<?> distribuer(@RequestBody DistributePayload payload) {
         distributionService.distribute(payload.getQuestionnaireId(), payload.getDistributions());

@@ -1,0 +1,53 @@
+<section class="content-section">
+  <div class="section-toolbar" style="margin-bottom:18px">
+    <span class="role-info-badge">
+      <i class="bi bi-people-fill"></i> {{ myTeams.length }} équipe(s) sous votre direction
+    </span>
+    <button class="btn-delegate" *ngIf="allTeamMembers.length > 0" (click)="openDelegate.emit()">
+      <i class="bi bi-person-plus"></i> Déléguer la création d'un questionnaire
+    </button>
+  </div>
+
+  <div class="teams-grid" *ngIf="myTeams.length > 0">
+    <div class="team-card" *ngFor="let team of myTeams">
+      <div class="team-card-top">
+        <div class="team-avatar"><i class="bi bi-people-fill"></i></div>
+        <div class="team-card-info">
+          <h3 class="team-name">{{ team.name }}</h3>
+          <span class="team-dir-label">
+            <i class="bi bi-person-badge"></i> Vous êtes directeur
+          </span>
+        </div>
+      </div>
+      <div class="team-card-body">
+        <div class="team-members-preview">
+          <span class="member-chip" *ngFor="let m of (team.members || []).slice(0,5)">
+            {{ m.fullName.charAt(0).toUpperCase() }}
+          </span>
+          <span class="member-chip more" *ngIf="(team.members || []).length > 5">
+            +{{ team.members.length - 5 }}
+          </span>
+          <span class="no-members" *ngIf="!(team.members || []).length">Aucun membre</span>
+        </div>
+        <span class="team-count">{{ (team.members || []).length }} membre(s)</span>
+      </div>
+      <div class="team-members-list">
+        <div class="team-member-row" *ngFor="let m of team.members">
+          <div class="member-avatar-sm">{{ m.fullName.charAt(0).toUpperCase() }}</div>
+          <span class="member-name">{{ m.fullName }}</span>
+          <span class="role-chip">{{ m.role?.name || '—' }}</span>
+          <span class="quest-mini-count">
+            <i class="bi bi-clipboard-check"></i>
+            {{ questionnairesForTeam({ members: [m] }).length }}
+          </span>
+        </div>
+        <p class="empty-hint" *ngIf="!(team.members || []).length">Aucun membre dans cette équipe.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="myTeams.length === 0">
+    <i class="bi bi-people"></i>
+    <p>Vous ne dirigez aucune équipe pour le moment.</p>
+  </div>
+</section>

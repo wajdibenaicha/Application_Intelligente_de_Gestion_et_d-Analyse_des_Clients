@@ -1,0 +1,57 @@
+<div class="content-section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-value">{{ gestionnaire.length }}</div>
+        <div class="stat-label">Gestionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-clipboard-check"></i></div>
+      <div>
+        <div class="stat-value">{{ questionnaires.length }}</div>
+        <div class="stat-label">Questionnaires</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple"><i class="bi bi-chat-dots"></i></div>
+      <div>
+        <div class="stat-value">{{ totalReponsesCount }}</div>
+        <div class="stat-label">Réponses</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-gift"></i></div>
+      <div>
+        <div class="stat-value">{{ offres.length }}</div>
+        <div class="stat-label">Offres</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrapper tab-panel">
+    <div class="section-toolbar" style="margin-bottom: 16px;">
+      <button class="btn-primary" (click)="openAdd.emit()"><i class="bi bi-plus-lg"></i> Ajouter rôle</button>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of roles">
+          <td>{{ r.id }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.permission?.description || r.permissions?.description || '—' }}</td>
+          <td class="actions-cell">
+            <button class="btn-icon btn-edit" (click)="openEdit.emit(r)"><i class="bi bi-pencil"></i></button>
+            <button class="btn-icon btn-delete" (click)="delete.emit(r.id)"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+        <tr *ngIf="roles.length === 0">
+          <td colspan="4" class="empty-row">Aucun rôle</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

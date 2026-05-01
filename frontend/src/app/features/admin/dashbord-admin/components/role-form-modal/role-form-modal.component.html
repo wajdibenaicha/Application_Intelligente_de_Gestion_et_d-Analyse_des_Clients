@@ -1,0 +1,19 @@
+<div class="modal-overlay" (click)="cancelled.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ roleToEdit ? 'Modifier Rôle' : 'Ajouter Rôle' }}</h2>
+      <button class="btn-close" (click)="cancelled.emit()">✕</button>
+    </div>
+    <label>Nom du rôle</label>
+    <input [(ngModel)]="form.name" placeholder="Nom du rôle" />
+    <label>Permission associée</label>
+    <select [(ngModel)]="form.permission">
+      <option [ngValue]="null">— Aucune permission —</option>
+      <option *ngFor="let p of permissions" [ngValue]="p">{{ p.description }}</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+      <button class="btn-save" (click)="saved.emit(form)">{{ roleToEdit ? 'Modifier' : 'Ajouter' }}</button>
+    </div>
+  </div>
+</div>

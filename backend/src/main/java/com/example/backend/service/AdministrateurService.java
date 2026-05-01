@@ -53,8 +53,18 @@ public class AdministrateurService {
     }
 
     public Administrateur login(String fullName, String password) {
-        Administrateur admin = administrateurRepository.findByFullName(fullName);
-        if (admin != null && passwordEncoder.matches(password, admin.getPassword())) {
+        Administrateur admin = administrateurRepository.findByFullNameIgnoreCase(fullName);
+        if (admin == null) return null;
+        String stored = admin.getPassword();
+        boolean isBcrypt = stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$"));
+        boolean matches = isBcrypt
+            ? passwordEncoder.matches(password, stored)
+            : password.equals(stored);
+        if (matches) {
+            if (!isBcrypt) {
+                admin.setPassword(passwordEncoder.encode(password));
+                administrateurRepository.save(admin);
+            }
             return admin;
         }
         return null;

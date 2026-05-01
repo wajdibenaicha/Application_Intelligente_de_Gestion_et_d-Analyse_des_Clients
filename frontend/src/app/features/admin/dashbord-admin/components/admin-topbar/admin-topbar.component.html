@@ -1,0 +1,21 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <h2 class="section-title">
+      <span *ngIf="activeTab === 'home'">Tableau de bord</span>
+      <span *ngIf="activeTab === 'gestionnaires'">Gestionnaires</span>
+      <span *ngIf="activeTab === 'questionnaires'">Questionnaires</span>
+      <span *ngIf="activeTab === 'reponses'">Réponses Clients</span>
+      <span *ngIf="activeTab === 'offres'">Offres</span>
+      <span *ngIf="activeTab === 'roles'">Rôles</span>
+      <span *ngIf="activeTab === 'permissions'">Permissions</span>
+      <span *ngIf="activeTab === 'teams'">Équipes</span>
+    </h2>
+  </div>
+  <div class="topbar-right">
+    <div class="notif-icon" (click)="notifToggled.emit()">
+      <i class="bi bi-bell-fill"></i>
+      <span class="notif-badge" *ngIf="unreadNotifCount > 0">{{ unreadNotifCount }}</span>
+    </div>
+    <span class="date-badge">{{ today | date:'dd MMM yyyy' }}</span>
+  </div>
+</header>

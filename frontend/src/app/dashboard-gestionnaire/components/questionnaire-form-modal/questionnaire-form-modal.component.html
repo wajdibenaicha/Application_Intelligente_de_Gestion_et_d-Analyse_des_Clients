@@ -1,0 +1,309 @@
+<div class="modal-overlay" (click)="cancelled.emit()">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-stars"></i>
+        {{ editingquest ? 'Modifier Questionnaire' : 'Nouveau Questionnaire' }}
+      </h2>
+      <button class="btn-close" (click)="cancelled.emit()">✕</button>
+    </div>
+
+    <!-- ═══ MODE ÉDITION ═══ -->
+    <ng-container *ngIf="editingquest">
+      <label>Titre</label>
+      <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
+      <label>Description</label>
+      <input [(ngModel)]="questform.description" placeholder="Description" />
+      <div class="questions-section">
+        <div class="questions-pool">
+          <div class="section-title">Questions existantes</div>
+          <div class="search-hint">Cliquez pour ajouter / retirer</div>
+          <div class="q-search-wrap">
+            <input class="q-search-input" [(ngModel)]="questionSearchText" placeholder="Rechercher une question..." (click)="$event.stopPropagation()" />
+            <span class="q-search-icon"><i class="bi bi-search"></i></span>
+          </div>
+          <div class="questions-list">
+            <div *ngFor="let q of filteredQuestions" class="q-chip" [class.selected]="isselectedquestion(q.id)" (click)="changequestion(q.id)">
+              <div class="q-chip-top">
+                <span class="q-type-badge">{{ typeLabel(q.type) }}</span>
+                <span class="q-check" *ngIf="isselectedquestion(q.id)"><i class="bi bi-check-circle-fill"></i></span>
+              </div>
+              <div class="q-chip-text">{{ q.titre || q.title }}</div>
+            </div>
+            <div *ngIf="filteredQuestions.length===0" class="empty-pool">
+              {{ availableQuestions.length === 0 ? 'Aucune question disponible' : 'Aucun résultat' }}
+            </div>
+          </div>
+          <button class="btn-new-q" (click)="showaddquestion=!showaddquestion; iaAutoSuggestion=null; iaDoublonWarning=null; iaOptionsSuggestion=[]">+ Créer nouvelle question</button>
+          <ng-container *ngIf="showaddquestion">
+            <ng-container *ngTemplateOutlet="newQuestionForm"></ng-container>
+          </ng-container>
+        </div>
+        <div class="questions-selected">
+          <div class="section-title">
+            Questions sélectionnées
+            <span *ngIf="selectedquestion.length > 0" class="text-pct-badge" [class.text-pct-warn]="currentTextPct > 15">
+              Texte libre : {{ currentTextPct }}%
+            </span>
+          </div>
+          <div *ngIf="currentTextPct > 15" class="text-limit-warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Limite atteinte : les questions à texte libre représentent <strong>{{ currentTextPct }}%</strong> du questionnaire (max 15%). Vous ne pouvez plus en ajouter.</span>
+          </div>
+          <div class="search-hint">
+            <span *ngIf="iaReordering" class="ia-reorder-hint"><i class="bi bi-arrow-repeat ia-spin"></i> Réorganisation IA…</span>
+            <span *ngIf="!iaReordering">Organisé automatiquement par l'IA · Glissez pour réajuster</span>
+          </div>
+          <ng-container *ngTemplateOutlet="selectedList"></ng-container>
+        </div>
+      </div>
+      <ng-container *ngIf="iaEnsembleWarning">
+        <ng-container *ngTemplateOutlet="ensembleWarning"></ng-container>
+      </ng-container>
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+        <button class="btn-save" (click)="savequestionnaire()">Modifier</button>
+      </div>
+    </ng-container>
+
+    <!-- ═══ MODE CRÉATION ═══ -->
+    <ng-container *ngIf="!editingquest">
+      <label>Titre <span style="color:red">*</span></label>
+      <input [(ngModel)]="questform.titre" placeholder="Titre du questionnaire" />
+      <label>Description</label>
+      <input [(ngModel)]="questform.description" placeholder="Description (optionnel)" />
+      <div class="questions-section">
+        <div class="questions-pool">
+          <div class="section-title">Questions disponibles</div>
+          <div class="search-hint">Cliquez pour ajouter / retirer</div>
+          <div class="q-search-wrap">
+            <input class="q-search-input" [(ngModel)]="questionSearchText" placeholder="Rechercher une question..." (click)="$event.stopPropagation()" />
+            <span class="q-search-icon"><i class="bi bi-search"></i></span>
+          </div>
+          <div class="questions-list">
+            <div *ngFor="let q of filteredQuestions" class="q-chip" [class.selected]="isselectedquestion(q.id)" (click)="changequestion(q.id)">
+              <div class="q-chip-top">
+                <span class="q-type-badge">{{ typeLabel(q.type) }}</span>
+                <span class="q-check" *ngIf="isselectedquestion(q.id)"><i class="bi bi-check-circle-fill"></i></span>
+              </div>
+              <div class="q-chip-text">{{ q.titre || q.title }}</div>
+            </div>
+            <div *ngIf="filteredQuestions.length===0" class="empty-pool">
+              {{ availableQuestions.length === 0 ? 'Aucune question disponible' : 'Aucun résultat' }}
+            </div>
+          </div>
+          <button class="btn-new-q" (click)="showaddquestion=!showaddquestion; iaAutoSuggestion=null; iaDoublonWarning=null; iaOptionsSuggestion=[]">+ Créer nouvelle question</button>
+          <ng-container *ngIf="showaddquestion">
+            <ng-container *ngTemplateOutlet="newQuestionForm"></ng-container>
+          </ng-container>
+        </div>
+        <div class="questions-selected">
+          <div class="section-title">
+            Questions sélectionnées
+            <span *ngIf="selectedquestion.length > 0" class="text-pct-badge" [class.text-pct-warn]="currentTextPct > 15">
+              Texte libre : {{ currentTextPct }}%
+            </span>
+          </div>
+          <div *ngIf="currentTextPct > 15" class="text-limit-warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Limite atteinte : les questions à texte libre représentent <strong>{{ currentTextPct }}%</strong> du questionnaire (max 15%). Vous ne pouvez plus en ajouter.</span>
+          </div>
+          <div class="search-hint">
+            <span *ngIf="iaReordering" class="ia-reorder-hint"><i class="bi bi-arrow-repeat ia-spin"></i> Réorganisation IA…</span>
+            <span *ngIf="!iaReordering">Organisé automatiquement par l'IA · Glissez pour réajuster</span>
+          </div>
+          <ng-container *ngTemplateOutlet="selectedList"></ng-container>
+        </div>
+      </div>
+      <ng-container *ngIf="iaEnsembleWarning">
+        <ng-container *ngTemplateOutlet="ensembleWarning"></ng-container>
+      </ng-container>
+      <!-- Question overlap doublon warning -->
+      <div *ngIf="iaQuestDoublonWarning" class="ia-quest-doublon-card">
+        <div class="ia-quest-doublon-header">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span>Questions trop similaires à un questionnaire existant</span>
+          <span class="ia-quest-doublon-pct">{{ (iaQuestDoublonWarning.similarite * 100) | number:'1.0-0' }}% en commun</span>
+        </div>
+        <div class="ia-quest-doublon-body">
+          <p class="ia-quest-doublon-msg">{{ iaQuestDoublonWarning.message }}</p>
+          <div class="ia-quest-doublon-match" *ngIf="iaQuestDoublonWarning.questionnaireSimilaire">
+            <i class="bi bi-file-earmark-text"></i>
+            <span>"{{ iaQuestDoublonWarning.questionnaireSimilaire }}"</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
+        <button class="btn-save" (click)="saveCreateQuestionnaire()" [disabled]="!questform.titre || !!iaQuestDoublonWarning">
+          <i class="bi bi-check2-circle"></i> Créer le questionnaire
+        </button>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<!-- Shared new question form template -->
+<ng-template #newQuestionForm>
+  <div class="new-q-form">
+    <input [(ngModel)]="newquest.titre" (ngModelChange)="onTitreChange()" placeholder="Titre de la question" [class.input-doublon]="!!iaDoublonWarning" />
+    <!-- Semantic duplicate warning -->
+    <div *ngIf="iaDoublonWarning" class="ia-doublon-card">
+      <div class="ia-doublon-card-header">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>Doublon sémantique détecté</span>
+        <span class="ia-doublon-pct" *ngIf="iaDoublonWarning.questionSimilaire?.similarite">
+          {{ iaDoublonWarning.questionSimilaire.similarite * 100 | number:'1.0-0' }}% similaire
+        </span>
+      </div>
+      <div class="ia-doublon-card-body">
+        <p class="ia-doublon-msg">{{ iaDoublonWarning.message }}</p>
+        <div *ngIf="iaDoublonWarning.questionSimilaire?.titre" class="ia-doublon-match">
+          <i class="bi bi-arrow-right-short"></i>
+          <span class="ia-doublon-match-text">"{{ iaDoublonWarning.questionSimilaire.titre }}"</span>
+        </div>
+        <span class="ia-doublon-hint"><i class="bi bi-pencil"></i> Reformulez votre question pour continuer.</span>
+      </div>
+    </div>
+    <!-- AI reformulation suggestion -->
+    <div *ngIf="iaAutoSuggestion && !iaDoublonWarning && !iaCoherenceWarning" class="ia-suggestion-card">
+      <div class="ia-suggestion-card-header">
+        <i class="bi bi-stars"></i> Suggestion IA
+        <span class="ia-model-badge">Llama 3.3</span>
+      </div>
+      <div class="ia-suggestion-card-body">
+        <span class="ia-suggestion-label">Reformulation proposée :</span>
+        <span class="ia-suggestion-text">{{ iaAutoSuggestion.titreReformule }}</span>
+        <span class="ia-suggestion-reason"><i class="bi bi-info-circle"></i> {{ iaAutoSuggestion.explication }}</span>
+      </div>
+      <div class="ia-suggestion-actions">
+        <button class="btn-ia-apply" (click)="acceptAutoSuggestion()"><i class="bi bi-check-lg"></i> Appliquer</button>
+        <button class="btn-ia-dismiss" (click)="iaAutoSuggestion=null"><i class="bi bi-x"></i> Ignorer</button>
+      </div>
+    </div>
+    <select [(ngModel)]="newquest.type" (change)="onTypeChange()">
+      <option value="text">Texte libre</option>
+      <option value="radio">Choix unique</option>
+      <option value="checkbox">Choix multiple</option>
+      <option value="scale">Échelle</option>
+      <option value="select">Liste déroulante</option>
+    </select>
+    <!-- Type incompatibility warning -->
+    <div *ngIf="iaTypeWarning" class="ia-type-card">
+      <div class="ia-type-card-header">
+        <i class="bi bi-tag-fill"></i>
+        <span>Type incompatible</span>
+      </div>
+      <div class="ia-type-card-body">
+        <p class="ia-type-msg">{{ iaTypeWarning.message }}</p>
+        <span class="ia-type-conseil" *ngIf="iaTypeWarning.typeRecommande">
+          <i class="bi bi-arrow-right-short"></i> Type recommandé : <strong>{{ typeLabel(iaTypeWarning.typeRecommande) }}</strong>
+        </span>
+      </div>
+    </div>
+    <div *ngIf="newquest.type!=='text'" class="options-input-wrapper">
+      <input [(ngModel)]="newquest.options" placeholder="Options séparées par virgule" [class.input-error]="newquest.type!=='text' && !newquest.options?.trim()" />
+      <span class="options-hint">* Obligatoire pour ce type</span>
+    </div>
+    <!-- AI options suggestion -->
+    <div *ngIf="iaOptionsSuggestion.length > 0" class="ia-suggestion-card">
+      <div class="ia-suggestion-card-header">
+        <i class="bi bi-stars"></i> Choix suggérés par l'IA
+        <span class="ia-model-badge">Llama 3.3</span>
+      </div>
+      <div class="ia-options-chips">
+        <span *ngFor="let opt of iaOptionsSuggestion" class="q-option-chip">{{ opt }}</span>
+      </div>
+      <div class="ia-suggestion-actions">
+        <button class="btn-ia-apply" (click)="acceptOptionsSuggestion()"><i class="bi bi-check-lg"></i> Utiliser ces choix</button>
+        <button class="btn-ia-dismiss" (click)="iaOptionsSuggestion=[]"><i class="bi bi-x"></i> Ignorer</button>
+      </div>
+    </div>
+    <!-- Coherence / text-limit warning -->
+    <div *ngIf="iaCoherenceWarning" class="ia-coherence-card">
+      <div class="ia-coherence-card-header">
+        <i class="bi bi-exclamation-circle-fill"></i>
+        <span>Question hors contexte</span>
+      </div>
+      <div class="ia-coherence-card-body">
+        <p class="ia-coherence-msg">{{ iaCoherenceWarning.message }}</p>
+        <span class="ia-coherence-conseil" *ngIf="iaCoherenceWarning.conseil">
+          <i class="bi bi-lightbulb"></i> {{ iaCoherenceWarning.conseil }}
+        </span>
+      </div>
+    </div>
+    <!-- AI loading indicator -->
+    <div *ngIf="iaLoading" class="ia-loading-bar">
+      <span class="ia-loading-dot"></span>
+      <span class="ia-loading-dot"></span>
+      <span class="ia-loading-dot"></span>
+      <span class="ia-loading-text">Analyse IA en cours…</span>
+    </div>
+    <label class="required-toggle">
+      <input type="checkbox" [(ngModel)]="newquest.required" />
+      <span>Question obligatoire</span>
+    </label>
+    <button class="btn-save-q" [disabled]="!canAddQuestion || iaLoading" [class.btn-save-q-blocked]="!canAddQuestion" (click)="createaddquestion()">
+      <i class="bi" [ngClass]="iaDoublonWarning ? 'bi-lock-fill' : (isTextLimitReached ? 'bi-slash-circle' : (!newquest.titre?.trim() ? 'bi-pencil' : 'bi-check-lg'))"></i>
+      {{ iaDoublonWarning ? 'Doublon détecté' : (isTextLimitReached ? 'Limite texte 15% atteinte' : (!newquest.titre?.trim() ? 'Saisissez une question' : 'Ajouter la question')) }}
+    </button>
+  </div>
+</ng-template>
+
+<!-- Shared selected questions list template -->
+<ng-template #selectedList>
+  <div class="drop-zone">
+    <div *ngFor="let q of selectedquestion; let i=index"
+         class="selected-chip-block"
+         draggable="true"
+         [class.drag-over]="dragoverIndex===i"
+         (dragstart)="dragStart(i,$event)"
+         (dragover)="dragover(i,$event)"
+         (drop)="drop(i,$event)">
+      <div class="q-card-header">
+        <span class="drag-handle">⠿</span>
+        <span class="q-num">{{ i+1 }}</span>
+        <span class="q-type-badge">{{ typeLabel(q.type) }}</span>
+        <span *ngIf="q.required" class="badge-req" title="Obligatoire">*</span>
+        <div class="q-card-actions">
+          <button *ngIf="q.type !== 'text'" class="btn-edit-opts" (click)="$event.stopPropagation(); toggleOptionsEdit(q.id)" title="Modifier les choix"><i class="bi bi-pencil"></i></button>
+          <button class="remove-q" (click)="removeselectedquestion(q.id)"><i class="bi bi-x-lg"></i></button>
+        </div>
+      </div>
+      <div class="q-card-text">{{ q.titre || q.title }}</div>
+      <div *ngIf="q.type !== 'text' && editingOptionsId !== q.id" class="q-options-chips">
+        <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+        <span *ngIf="!q.options || q.options.trim() === ''" class="q-options-empty"><i class="bi bi-exclamation-circle"></i> Aucun choix défini</span>
+      </div>
+      <div *ngIf="q.type !== 'text' && editingOptionsId === q.id" class="q-options-edit">
+        <input [(ngModel)]="q.options" placeholder="Choix séparés par virgule" class="options-edit-input" />
+        <div class="q-options-chips" *ngIf="q.options?.trim()">
+          <span *ngFor="let opt of getOptionsArray(q.options)" class="q-option-chip">{{ opt }}</span>
+        </div>
+        <button class="btn-save-opts" (click)="toggleOptionsEdit(q.id)"><i class="bi bi-check-lg"></i> Valider</button>
+      </div>
+    </div>
+    <div *ngIf="selectedquestion.length===0" class="empty-drop">← Sélectionnez des questions</div>
+  </div>
+</ng-template>
+
+<!-- Shared ensemble warning template -->
+<ng-template #ensembleWarning>
+  <div class="ia-ensemble-card">
+    <div class="ia-ensemble-card-header">
+      <i class="bi bi-exclamation-diamond-fill"></i>
+      <span>Questions incompatibles</span>
+    </div>
+    <div class="ia-ensemble-card-body">
+      <p class="ia-ensemble-msg">{{ iaEnsembleWarning.message }}</p>
+      <div *ngIf="iaEnsembleWarning.groupes?.length" class="ia-ensemble-groupes">
+        <span *ngFor="let g of iaEnsembleWarning.groupes" class="ia-ensemble-theme">
+          <strong>{{ g.theme }}</strong>
+        </span>
+      </div>
+    </div>
+    <button class="btn-dismiss-ensemble" (click)="iaEnsembleWarning=null">
+      <i class="bi bi-x-lg"></i> Ignorer et continuer
+    </button>
+  </div>
+</ng-template>

@@ -1,0 +1,62 @@
+<div class="modal-overlay" (click)="closed.emit()">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="bi bi-share"></i> Partager "{{ questionnaire?.titre }}"</h2>
+      <button class="btn-close" (click)="closed.emit()">✕</button>
+    </div>
+    <div class="partage-filters">
+      <select [(ngModel)]="filtre.typeContrat" (ngModelChange)="filtreChange.emit()">
+        <option value="">Tous les types de contrat</option>
+        <option *ngFor="let t of typeContrats" [value]="t">{{ t }}</option>
+      </select>
+      <select [(ngModel)]="filtre.anneeMin" (ngModelChange)="filtreChange.emit()">
+        <option [ngValue]="null">Toutes les années</option>
+        <option *ngFor="let a of annees" [ngValue]="a">≥ {{ a }}</option>
+      </select>
+      <select [(ngModel)]="filtre.profession" (ngModelChange)="filtreChange.emit()">
+        <option value="">Toutes les professions</option>
+        <option *ngFor="let p of professions" [value]="p">{{ p }}</option>
+      </select>
+      <select [(ngModel)]="filtre.primeRange" (ngModelChange)="filtreChange.emit()">
+        <option value="">Toutes les primes</option>
+        <option value="lt1000">&lt; 1 000 DT/an</option>
+        <option value="1000-1500">1 000 – 1 500 DT/an</option>
+        <option value="gt1500">&gt; 1 500 DT/an</option>
+      </select>
+    </div>
+    <div class="partage-count">
+      <strong>{{ clientsFiltres.length }}</strong> client{{ clientsFiltres.length !== 1 ? 's' : '' }} trouvé{{ clientsFiltres.length !== 1 ? 's' : '' }}
+      <span *ngIf="clientsAyantRepondu.size > 0" class="partage-repondu-badge">
+        <i class="bi bi-check-circle-fill"></i> {{ clientsAyantRepondu.size }} ont déjà répondu
+      </span>
+    </div>
+    <div class="partage-client-list">
+      <div *ngFor="let c of clientsFiltres" class="partage-client-row" [class.partage-row-repondu]="clientsAyantRepondu.has(c.id)">
+        <div class="partage-avatar" [class.partage-avatar-repondu]="clientsAyantRepondu.has(c.id)">{{ (c.fullName || '?').charAt(0) }}</div>
+        <div class="partage-client-info">
+          <span class="partage-client-name">{{ c.fullName }}</span>
+          <span class="partage-client-meta">{{ c.mail }} · {{ c.typeContrat }}<span *ngIf="c.primeAnnuelle"> · {{ c.primeAnnuelle | number:'1.0-0' }} DT/an</span></span>
+          <span *ngIf="clientsAyantRepondu.has(c.id)" class="partage-repondu-label"><i class="bi bi-check2-circle"></i> A déjà répondu</span>
+        </div>
+        <div class="partage-send-btns">
+          <ng-container *ngIf="!clientsAyantRepondu.has(c.id)">
+            <button class="partage-btn-email" (click)="envoyerDirectement.emit({ client: c, channel: 'email' })">
+              <i class="bi bi-envelope-fill"></i> Email
+            </button>
+            <button class="partage-btn-sms" [disabled]="!c.tel" (click)="envoyerDirectement.emit({ client: c, channel: 'sms' })">
+              <i class="bi bi-phone-fill"></i> SMS
+            </button>
+          </ng-container>
+        </div>
+      </div>
+      <div *ngIf="clientsFiltres.length === 0" class="partage-empty">
+        <i class="bi bi-people partage-empty-icon"></i>
+        <p>Aucun client ne correspond aux filtres</p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" (click)="envoyerATous.emit()"><i class="bi bi-megaphone"></i> Envoyer à tous</button>
+      <button class="btn-cancel" (click)="closed.emit()">Fermer</button>
+    </div>
+  </div>
+</div>

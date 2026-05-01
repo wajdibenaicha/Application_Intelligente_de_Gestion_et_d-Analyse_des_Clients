@@ -83,10 +83,10 @@ public class IAQuestionnaireService {
             throw new RuntimeException("URL API non configurée — renseignez ai.api-url dans application.properties");
     }
 
-    // ── Extract first JSON object or array from raw AI text ──
+
     private String extractJson(String raw) {
         if (raw == null) throw new RuntimeException("Réponse vide de l'IA");
-        // Remove markdown fences
+        
         String cleaned = raw.replaceAll("(?s)```json|```", "").trim();
         // Find first { or [
         int start = -1;
@@ -106,7 +106,7 @@ public class IAQuestionnaireService {
         throw new RuntimeException("JSON mal formé dans la réponse IA");
     }
 
-    // ── Main call to Groq (OpenAI-compatible) API ──
+    
     public String callAI(String userMessage) throws Exception {
         validateConfig();
         try {

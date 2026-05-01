@@ -1,0 +1,50 @@
+<div class="modal-overlay" (click)="closed.emit()">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="bi bi-people"></i> {{ team?.name }}</h2>
+      <button class="btn-close" (click)="closed.emit()">✕</button>
+    </div>
+
+    <div class="team-modal-dir">
+      <i class="bi bi-person-badge"></i>
+      Directeur : <strong>{{ team?.directeur?.fullName || '—' }}</strong>
+      <button class="btn-change-dir" (click)="changeDirecteur.emit()">
+        <i class="bi bi-arrow-repeat"></i> Changer
+      </button>
+    </div>
+
+    <div class="team-modal-section">
+      <h4 class="team-modal-subtitle"><i class="bi bi-people"></i> Membres actuels</h4>
+      <div class="team-member-list">
+        <div class="team-member-row" *ngFor="let m of team?.members">
+          <div class="member-avatar-sm">{{ m.fullName.charAt(0).toUpperCase() }}</div>
+          <span class="member-name">{{ m.fullName }}</span>
+          <span class="role-chip">{{ m.role?.name || '—' }}</span>
+          <button class="btn-icon btn-delete" title="Retirer" (click)="removeMember.emit(m.id)">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <p class="empty-hint" *ngIf="!team?.members?.length">Aucun membre dans cette équipe.</p>
+      </div>
+    </div>
+
+    <div class="team-modal-section">
+      <h4 class="team-modal-subtitle"><i class="bi bi-person-plus"></i> Ajouter un membre</h4>
+      <div class="team-member-list">
+        <div class="team-member-row" *ngFor="let g of availableGestionnaires">
+          <div class="member-avatar-sm">{{ g.fullName.charAt(0).toUpperCase() }}</div>
+          <span class="member-name">{{ g.fullName }}</span>
+          <span class="role-chip">{{ g.role?.name || '—' }}</span>
+          <button class="btn-icon btn-add" title="Ajouter" (click)="addMember.emit(g.id)">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+        <p class="empty-hint" *ngIf="!availableGestionnaires.length">Tous les gestionnaires sont déjà dans une équipe.</p>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="closed.emit()">Fermer</button>
+    </div>
+  </div>
+</div>
