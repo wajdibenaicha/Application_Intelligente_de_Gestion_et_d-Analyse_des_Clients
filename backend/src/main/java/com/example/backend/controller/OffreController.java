@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.*;
-import java.util.StringBuffer;
 
 @RestController
 @RequestMapping("/api/offres")
