@@ -17,7 +17,6 @@ import com.example.backend.service.QuestionnaireService;
 
 @RestController
 @RequestMapping("/api/questionnaires")
-@CrossOrigin(origins = "http://localhost:4200")
 public class QuestionnaireController {
 
     @Autowired

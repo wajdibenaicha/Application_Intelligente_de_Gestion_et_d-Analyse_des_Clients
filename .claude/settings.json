@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8081/api/ia/toggle)",
+      "Read(//c/Users/lapto/Downloads/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\lapto\\Downloads"
+    ]
+  }
+}

@@ -15,13 +15,26 @@ export class RoleFormModalComponent implements OnChanges {
   @Output() saved = new EventEmitter<any>();
   @Output() cancelled = new EventEmitter<void>();
 
-  form: any = { name: '', permission: null };
+  form: any = { name: '', permissions: [] };
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['roleToEdit']) {
       this.form = this.roleToEdit
-        ? { name: this.roleToEdit.name, permission: this.roleToEdit.permission }
-        : { name: '', permission: null };
+        ? { name: this.roleToEdit.name, permissions: [...(this.roleToEdit.permissions || [])] }
+        : { name: '', permissions: [] };
+    }
+  }
+
+  isSelected(p: any): boolean {
+    return this.form.permissions.some((perm: any) => perm.id === p.id);
+  }
+
+  toggle(p: any) {
+    const idx = this.form.permissions.findIndex((perm: any) => perm.id === p.id);
+    if (idx >= 0) {
+      this.form.permissions.splice(idx, 1);
+    } else {
+      this.form.permissions.push(p);
     }
   }
 }

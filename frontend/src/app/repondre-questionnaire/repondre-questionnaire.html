@@ -1,38 +1,145 @@
-<div *ngIf="chargement" class="loading">
-  <p>Chargement du questionnaire...</p>
+<div class="bg-animated">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
 </div>
 
-<div *ngIf="!chargement && questionnaire && !erreur" class="questionnaire-container">
-  <div class="brand-header">
-    <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR Assurances" class="brand-logo">
-    <span class="brand-name">STAR Assurances</span>
+<!-- CHARGEMENT -->
+<div class="page-center" *ngIf="chargement">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p>Chargement du questionnaire...</p>
   </div>
-  <h2>{{ questionnaire.titre }}</h2>
-  <p *ngIf="questionnaire.description">{{ questionnaire.description }}</p>
-  <form (ngSubmit)="soumettre()">
-    <div *ngFor="let q of questionnaire.questions; let i = index" class="question-block">
-      <label class="question-label">{{ i+1 }}. {{ q.titre }}</label>
-      <div [ngSwitch]="q.type">
-        <input *ngSwitchCase="'text'" type="text" [(ngModel)]="reponses[i]" [name]="'q'+i">
-        <div *ngSwitchCase="'radio'">
-          <label *ngFor="let opt of q.options.split(',')" class="radio-label">
-            <input type="radio" [name]="'q'+i" [value]="opt.trim()" [(ngModel)]="reponses[i]"> {{ opt.trim() }}
-          </label>
+</div>
+
+<!-- ERREUR -->
+<div class="page-center" *ngIf="!chargement && erreur">
+  <div class="status-card">
+    <div class="status-icon error-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <h2>Lien invalide</h2>
+    <p>Ce questionnaire est introuvable, a déjà été complété, ou le lien a expiré.</p>
+  </div>
+</div>
+
+<!-- SOUMIS -->
+<div class="page-center" *ngIf="soumis">
+  <div class="status-card">
+    <div class="status-icon success-icon"><i class="bi bi-check-circle-fill"></i></div>
+    <h2>Merci !</h2>
+    <p>Vos réponses ont bien été enregistrées.<br>Votre avis est précieux pour nous.</p>
+    <div class="star-badge">STAR Assurances</div>
+  </div>
+</div>
+
+<!-- QUESTIONNAIRE -->
+<div class="page-wrapper" *ngIf="!chargement && !erreur && !soumis && questionnaire">
+
+  <!-- Header -->
+  <header class="q-header">
+    <div class="q-header-inner">
+      <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="q-logo">
+      <span class="q-brand">STAR Assurances</span>
+    </div>
+  </header>
+
+  <div class="q-container">
+
+    <!-- Titre carte -->
+    <div class="q-title-card">
+      <div class="q-title-accent"></div>
+      <div class="q-title-content">
+        <h1>{{ questionnaire.titre }}</h1>
+        <p *ngIf="questionnaire.description">{{ questionnaire.description }}</p>
+        <div class="q-meta">
+          <span class="q-count"><i class="bi bi-list-check"></i> {{ questionnaire.questions.length }} question{{ questionnaire.questions.length > 1 ? 's' : '' }}</span>
+          <span class="q-time"><i class="bi bi-clock"></i> ~{{ Math.ceil(questionnaire.questions.length * 0.5) }} min</span>
         </div>
-        <div *ngSwitchCase="'checkbox'">
-          <label *ngFor="let opt of q.options.split(',')" class="checkbox-label">
-            <input type="checkbox" [value]="opt.trim()" (change)="toggleCheckbox(i, opt.trim())"> {{ opt.trim() }}
-          </label>
-        </div>
-        <select *ngSwitchCase="'select'" [(ngModel)]="reponses[i]" [name]="'q'+i">
-          <option *ngFor="let opt of q.options.split(',')" [value]="opt.trim()">{{ opt.trim() }}</option>
-        </select>
       </div>
     </div>
-    <button type="submit">Envoyer mes réponses</button>
-  </form>
-</div>
 
-<div *ngIf="!chargement && erreur" class="error-message">
-  <p>Questionnaire invalide ou lien expiré.</p>
+    <!-- Barre de progression -->
+    <div class="q-progress-wrapper">
+      <div class="q-progress-bar">
+        <div class="q-progress-fill" [style.width.%]="progression"></div>
+      </div>
+      <span class="q-progress-label">{{ progression }}% complété</span>
+    </div>
+
+    <!-- Questions -->
+    <form (ngSubmit)="soumettre()">
+      <div class="q-card" *ngFor="let q of questionnaire.questions; let i = index">
+        <div class="q-number">{{ i + 1 }}</div>
+        <div class="q-body">
+          <p class="q-label">
+            {{ q.titre }}
+            <span class="q-required" *ngIf="q.required">*</span>
+          </p>
+
+          <!-- TEXT -->
+          <textarea *ngIf="q.type === 'text'"
+            class="q-textarea"
+            [(ngModel)]="reponses[i]"
+            [name]="'q'+i"
+            placeholder="Votre réponse..."
+            rows="3">
+          </textarea>
+
+          <!-- RADIO -->
+          <div *ngIf="q.type === 'radio'" class="q-options">
+            <label *ngFor="let opt of getOptions(q)" class="q-option-item" [class.selected]="reponses[i] === opt">
+              <input type="radio" [name]="'q'+i" [value]="opt" [(ngModel)]="reponses[i]" hidden>
+              <span class="q-radio-dot"></span>
+              <span class="q-option-text">{{ opt }}</span>
+            </label>
+          </div>
+
+          <!-- CHECKBOX -->
+          <div *ngIf="q.type === 'checkbox'" class="q-options">
+            <label *ngFor="let opt of getOptions(q)" class="q-option-item" [class.selected]="isChecked(i, opt)" (click)="toggleCheckbox(i, opt)">
+              <span class="q-checkbox-box" [class.checked]="isChecked(i, opt)">
+                <i class="bi bi-check" *ngIf="isChecked(i, opt)"></i>
+              </span>
+              <span class="q-option-text">{{ opt }}</span>
+            </label>
+          </div>
+
+          <!-- SELECT -->
+          <div *ngIf="q.type === 'select'" class="q-select-wrapper">
+            <select class="q-select" [(ngModel)]="reponses[i]" [name]="'q'+i">
+              <option [ngValue]="null" disabled>— Choisissez une option —</option>
+              <option *ngFor="let opt of getOptions(q)" [value]="opt">{{ opt }}</option>
+            </select>
+          </div>
+
+          <!-- SCALE -->
+          <div *ngIf="q.type === 'scale'" class="q-scale">
+            <div class="q-scale-labels">
+              <span>{{ getOptions(q)[0] || 'Pas du tout' }}</span>
+              <span>{{ getOptions(q)[getOptions(q).length - 1] || 'Tout à fait' }}</span>
+            </div>
+            <div class="q-scale-buttons">
+              <button type="button" *ngFor="let opt of getOptions(q)"
+                class="q-scale-btn" [class.active]="reponses[i] === opt"
+                (click)="reponses[i] = opt">
+                {{ opt }}
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Bouton soumettre -->
+      <div class="q-submit-row">
+        <button type="submit" class="q-submit-btn" [disabled]="envoi">
+          <span *ngIf="!envoi"><i class="bi bi-send-fill"></i> Envoyer mes réponses</span>
+          <span *ngIf="envoi"><i class="bi bi-arrow-repeat spin"></i> Envoi en cours...</span>
+        </button>
+        <p class="q-required-note">Les champs marqués <span>*</span> sont obligatoires.</p>
+      </div>
+
+    </form>
+  </div>
+
+  <footer class="q-footer">© 2026 STAR Assurances — Tous droits réservés</footer>
 </div>

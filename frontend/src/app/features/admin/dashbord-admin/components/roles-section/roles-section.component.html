@@ -36,13 +36,16 @@
     </div>
     <table class="data-table">
       <thead>
-        <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th></tr>
+        <tr><th>ID</th><th>Nom</th><th>Permissions</th><th>Actions</th></tr>
       </thead>
       <tbody>
         <tr *ngFor="let r of roles">
           <td>{{ r.id }}</td>
           <td>{{ r.name }}</td>
-          <td>{{ r.permission?.description || r.permissions?.description || '—' }}</td>
+          <td>
+            <span *ngFor="let p of r.permissions" class="permission-badge">{{ p.description }}</span>
+            <span *ngIf="!r.permissions || r.permissions.length === 0">—</span>
+          </td>
           <td class="actions-cell">
             <button class="btn-icon btn-edit" (click)="openEdit.emit(r)"><i class="bi bi-pencil"></i></button>
             <button class="btn-icon btn-delete" (click)="delete.emit(r.id)"><i class="bi bi-trash"></i></button>

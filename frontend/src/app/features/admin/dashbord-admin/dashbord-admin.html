@@ -144,6 +144,23 @@
           </div>
         </div>
 
+        <!-- AI Toggle -->
+        <div class="ai-toggle-card">
+          <div class="ai-toggle-left">
+            <div class="ai-toggle-icon" [class.ai-on]="aiEnabled"><i class="bi bi-robot"></i></div>
+            <div class="ai-toggle-info">
+              <span class="ai-toggle-title">Intelligence Artificielle</span>
+              <span class="ai-toggle-status" [class.on]="aiEnabled">{{ aiEnabled ? 'Activée' : 'Désactivée' }}</span>
+            </div>
+          </div>
+          <button class="ai-toggle-btn" [class.active]="aiEnabled" (click)="toggleAi()" [disabled]="aiToggling">
+            <span class="ai-toggle-track">
+              <span class="ai-toggle-thumb"></span>
+            </span>
+            <span class="ai-toggle-label">{{ aiEnabled ? 'ON' : 'OFF' }}</span>
+          </button>
+        </div>
+
         <!-- Quick actions -->
         <div class="admin-quick-actions">
           <h3 class="admin-quick-title">Actions rapides</h3>
@@ -446,7 +463,13 @@
               <tr *ngFor="let r of roles">
                 <td>{{ r.id }}</td>
                 <td>{{ r.name }}</td>
-                <td>{{ r.permission?.description || r.permissions?.description || '—' }}</td>
+                <td>
+                  <span *ngFor="let p of (r.permissions || []); let last = last"
+                    style="display:inline-block;background:#f0f9ff;color:#0369a1;border-radius:12px;padding:2px 8px;font-size:12px;margin:2px;">
+                    {{ p.description }}
+                  </span>
+                  <span *ngIf="!(r.permissions?.length)">—</span>
+                </td>
                 <td class="actions-cell">
                   <button class="btn-icon btn-edit" (click)="openeditrole(r)"><i class="bi bi-pencil"></i></button>
                   <button class="btn-icon btn-delete" (click)="deleterole(r.id)"><i class="bi bi-trash"></i></button>
@@ -547,7 +570,8 @@
     <input [(ngModel)]="gestform.email" placeholder="Email" type="email" required #emailField="ngModel" />
     <span style="color:red; font-size:12px" *ngIf="emailField.invalid && emailField.touched">L'email est obligatoire</span>
     <label>Mot de passe <span *ngIf="!editinggest" style="color:red">*</span></label>
-    <input [(ngModel)]="gestform.password" placeholder="Mot de passe" type="password" />
+    <input [(ngModel)]="gestform.password" placeholder="Mot de passe (min. 6 caractères)" type="password" minlength="6" #pwdField="ngModel" />
+    <span style="color:red; font-size:12px" *ngIf="!editinggest && pwdField.touched && gestform.password && gestform.password.length < 6">Le mot de passe doit contenir au moins 6 caractères</span>
     <label>Rôle</label>
     <select [(ngModel)]="gestform.role">
       <option [ngValue]="null">— Aucun rôle —</option>
@@ -556,7 +580,7 @@
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showgestform=false">Annuler</button>
       <button class="btn-save" (click)="savegestionnaire()"
-        [disabled]="!gestform.fullName || !gestform.email || (!editinggest && !gestform.password)">
+        [disabled]="!gestform.fullName || !gestform.email || (!editinggest && (!gestform.password || gestform.password.length < 6))">
         {{ editinggest ? 'Modifier' : 'Ajouter' }}
       </button>
     </div>
@@ -595,16 +619,24 @@
       <h2>{{ editingrole ? 'Modifier Rôle' : 'Ajouter Rôle' }}</h2>
       <button class="btn-close" (click)="showroleform=false">✕</button>
     </div>
-    <label>Nom du rôle</label>
+    <label>Nom du rôle <span style="color:red">*</span></label>
     <input [(ngModel)]="roleform.name" placeholder="Nom du rôle" />
-    <label>Permission associée</label>
-    <select [(ngModel)]="roleform.permission">
-      <option [ngValue]="null">— Aucune permission —</option>
-      <option *ngFor="let p of permissions" [ngValue]="p">{{ p.description }}</option>
-    </select>
+    <label style="margin-top:12px;display:block;">Permissions</label>
+    <div style="border:1px solid #e0e0e0;border-radius:8px;padding:10px;max-height:200px;overflow-y:auto;margin-bottom:12px;">
+      <div *ngIf="permissions.length === 0" style="color:#999;font-size:13px;text-align:center;padding:8px;">
+        Aucune permission disponible
+      </div>
+      <label *ngFor="let p of permissions"
+        style="display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:6px;cursor:pointer;"
+        [style.background]="hasPermission(p) ? '#f0f9ff' : 'transparent'">
+        <input type="checkbox" [checked]="hasPermission(p)" (change)="togglePermission(p)"
+          style="width:16px;height:16px;accent-color:#bbd003;cursor:pointer;" />
+        <span style="font-size:14px;">{{ p.description }}</span>
+      </label>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showroleform=false">Annuler</button>
-      <button class="btn-save" (click)="saverole()">{{ editingrole ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="saverole()" [disabled]="!roleform.name?.trim()">{{ editingrole ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>
@@ -619,7 +651,7 @@
     <input [(ngModel)]="permissionform.description" placeholder="Nom de la permission" />
     <div class="modal-actions">
       <button class="btn-cancel" (click)="showpermissionform=false">Annuler</button>
-      <button class="btn-save" (click)="savepermission()">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
+      <button class="btn-save" (click)="savepermission()" [disabled]="!permissionform.description?.trim()">{{ editingpermission ? 'Modifier' : 'Ajouter' }}</button>
     </div>
   </div>
 </div>

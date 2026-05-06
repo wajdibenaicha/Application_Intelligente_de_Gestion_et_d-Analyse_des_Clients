@@ -4,7 +4,7 @@ import com.example.backend.Repository.QuestionRepository;
 import com.example.backend.Repository.QuestionnaireRepository;
 import com.example.backend.models.Question;
 import com.example.backend.models.Questionnaire;
-
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/questions")
-@CrossOrigin(origins = "http://localhost:4200")
 public class QuestionController {
 
     @Autowired
@@ -27,7 +26,7 @@ public class QuestionController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Question question) {
+    public ResponseEntity<?> create(@Valid @RequestBody Question question) {
         if (!"text".equals(question.getType()) &&
                 (question.getOptions() == null || question.getOptions().isBlank())) {
             return ResponseEntity.badRequest()
@@ -37,7 +36,7 @@ public class QuestionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Question question) {
+    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody Question question) {
         if (!"text".equals(question.getType()) &&
                 (question.getOptions() == null || question.getOptions().isBlank())) {
             return ResponseEntity.badRequest()

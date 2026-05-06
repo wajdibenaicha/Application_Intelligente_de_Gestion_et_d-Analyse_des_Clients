@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-questionnaire-form-modal',
@@ -44,7 +45,7 @@ export class QuestionnaireFormModalComponent implements OnChanges {
   private iaEnsembleTimer: any = null;
   private iaReorderTimer: any = null;
   private iaActiveCalls = 0;
-  private readonly apiUrl = 'http://localhost:8081/api';
+  private readonly apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 

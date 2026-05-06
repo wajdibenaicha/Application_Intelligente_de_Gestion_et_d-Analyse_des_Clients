@@ -3,6 +3,7 @@ package com.example.backend.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -12,10 +13,14 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET = "StarOfAstora2026SecretKeyForJWT!XYZ";
-    private static final long EXPIRATION_MS = 86400000L; // 24h
+    @Value("${jwt.secret:StarOfAstora2026SecretKeyForJWT!XYZ_CHANGE_ME_IN_PROD}")
+    private String secret;
 
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private static final long EXPIRATION_MS = 86400000L;
+
+    private SecretKey key() {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
 
     public String generateToken(Long id, String fullName, String role) {
         return Jwts.builder()
@@ -24,13 +29,13 @@ public class JwtUtil {
                 .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
-                .signWith(key)
+                .signWith(key())
                 .compact();
     }
 
     public Claims extractClaims(String token) {
         return Jwts.parser()
-                .verifyWith(key)
+                .verifyWith(key())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import Chart from 'chart.js/auto';
 import { Api } from '../../../services/api';
 import { WebSocketService } from '../../../services/websocket.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-dashbord-admin',
@@ -64,7 +65,7 @@ export class DashbordAdmin implements OnInit {
 
     showroleform = false;
     editingrole: any = null;
-    roleform: any = { name: '', permission: null };
+    roleform: any = { name: '', permissions: [] };
 
     showpermissionform = false;
     editingpermission: any = null;
@@ -75,7 +76,7 @@ export class DashbordAdmin implements OnInit {
     showoffreform = false;
     editingoffre: any = null;
     offreform: any = { title: '', description: '', categorie: 'GENERAL' };
-    private apiUrl = 'http://localhost:8081/api';
+    private apiUrl = environment.apiUrl;
 
     showdetailsform = false;
     detailsquest: any = null;
@@ -94,7 +95,26 @@ export class DashbordAdmin implements OnInit {
     selectedTeam: any = null;
     showteammembersmodal = false;
 
+    aiEnabled: boolean = false;
+    aiToggling: boolean = false;
+
     constructor(private api: Api, private router: Router, private wsService: WebSocketService, private ngZone: NgZone, private cdr: ChangeDetectorRef, private http: HttpClient) {}
+
+    loadAiStatus() {
+        this.http.get<any>(`${this.apiUrl}/ia/status`).subscribe({
+            next: (res) => { this.aiEnabled = res.enabled; this.cdr.detectChanges(); },
+            error: () => {}
+        });
+    }
+
+    toggleAi() {
+        if (this.aiToggling) return;
+        this.aiToggling = true;
+        this.http.post<any>(`${this.apiUrl}/ia/toggle`, {}).subscribe({
+            next: (res) => { this.aiEnabled = res.enabled; this.aiToggling = false; this.cdr.detectChanges(); },
+            error: () => { this.aiToggling = false; }
+        });
+    }
 
     private countUp(target: number, setter: (v: number) => void, duration = 1100) {
         const startTime = performance.now();
@@ -239,7 +259,8 @@ export class DashbordAdmin implements OnInit {
 
         this.loadInitialData();
         this.loadNotifications();
-        this.http.get<any[]>('http://localhost:8081/api/clients').subscribe({ next: (c) => this.totalClientsCount = c.length, error: () => {} });
+        this.loadAiStatus();
+        this.http.get<any[]>(`${environment.apiUrl}/clients`).subscribe({ next: (c) => this.totalClientsCount = c.length, error: () => {} });
     }
 
     private loadInitialData(): void {
@@ -562,7 +583,7 @@ export class DashbordAdmin implements OnInit {
     loadAdminReponses() {
         if (!this.selectedQuestionnaireId) { this.adminReponses = []; return; }
         const titre = this.questionnaires.find(q => q.id == this.selectedQuestionnaireId)?.titre || 'Questionnaire';
-        this.http.get<any[]>(`http://localhost:8081/api/reponses/questionnaire/${this.selectedQuestionnaireId}`).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/reponses/questionnaire/${this.selectedQuestionnaireId}`).subscribe({
             next: (data) => {
                 this.adminReponses = data;
                 this.cdr.detectChanges();
@@ -578,7 +599,7 @@ export class DashbordAdmin implements OnInit {
                         showConfirmButton: true
                     });
                 } else {
-                    this.http.get<any>(`http://localhost:8081/api/envoi/stats?questionnaireId=${this.selectedQuestionnaireId}`).subscribe({
+                    this.http.get<any>(`${environment.apiUrl}/envoi/stats?questionnaireId=${this.selectedQuestionnaireId}`).subscribe({
                         next: (stats) => setTimeout(() => this.renderAdminParticipationChart(stats['sent'], stats['repondu']), 150),
                         error: ()    => setTimeout(() => this.renderAdminParticipationChart(data.length, new Set(data.map((r: any) => r.client?.id)).size), 150)
                     });
@@ -640,23 +661,36 @@ export class DashbordAdmin implements OnInit {
         a.click(); URL.revokeObjectURL(url);
     }
 
+    hasPermission(p: any): boolean {
+        return (this.roleform.permissions || []).some((rp: any) => rp.id === p.id);
+    }
+
+    togglePermission(p: any) {
+        const list: any[] = this.roleform.permissions || [];
+        const idx = list.findIndex((rp: any) => rp.id === p.id);
+        if (idx >= 0) list.splice(idx, 1);
+        else list.push(p);
+        this.roleform.permissions = [...list];
+    }
+
         openaddrole() {
         this.editingrole = null;
-        this.roleform = { name: '', permission: null };
+        this.roleform = { name: '', permissions: [] };
         this.showroleform = true;
     }
 
     openeditrole(role: any) {
         this.editingrole = role;
-        this.roleform = { name: role.name, permission: role.permission };
+        this.roleform = { name: role.name, permissions: role.permissions || [] };
         this.showroleform = true;
     }
 
     saverole() {
-        this.showroleform = false;
+        if (!this.roleform.name?.trim()) return;
         if (this.editingrole) {
             this.api.updaterole(this.editingrole.id, this.roleform).subscribe({
                 next: () => {
+                    this.showroleform = false;
                     Swal.fire({ icon: 'success', title: 'Rôle modifié', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier le rôle.' })
@@ -664,6 +698,7 @@ export class DashbordAdmin implements OnInit {
         } else {
             this.api.addrole(this.roleform).subscribe({
                 next: () => {
+                    this.showroleform = false;
                     Swal.fire({ icon: 'success', title: 'Rôle ajouté', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'ajouter le rôle.' })
@@ -707,10 +742,11 @@ export class DashbordAdmin implements OnInit {
     }
 
     savepermission() {
-        this.showpermissionform = false;
+        if (!this.permissionform.description?.trim()) return;
         if (this.editingpermission) {
             this.api.updatepermission(this.editingpermission.id, this.permissionform).subscribe({
                 next: () => {
+                    this.showpermissionform = false;
                     Swal.fire({ icon: 'success', title: 'Permission modifiée', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de modifier la permission.' })
@@ -718,6 +754,7 @@ export class DashbordAdmin implements OnInit {
         } else {
             this.api.addpermission(this.permissionform).subscribe({
                 next: () => {
+                    this.showpermissionform = false;
                     Swal.fire({ icon: 'success', title: 'Permission ajoutée', timer: 1500, showConfirmButton: false });
                 },
                 error: () => Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible d\'ajouter la permission.' })
@@ -895,6 +932,6 @@ get availableGestionnaires(): any[] {
   );
 }
 get directeurs(): any[] {
-  return this.gestionnaire.filter(g => g.role?.permission?.description?.toUpperCase() === 'DIRECTEUR');
+  return this.gestionnaire.filter(g => g.role?.name?.toUpperCase() === 'DIRECTEUR');
 }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Api } from '../../../services/api';
+import { environment } from '../../../../environments/environment';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -24,7 +25,7 @@ export class OfferFormModalComponent implements OnChanges {
   offreIaWarning: string | null = null;
   offreIaSuggestion: any = null;
   private offreCoherenceTimer: any = null;
-  private readonly apiUrl = 'http://localhost:8081/api';
+  private readonly apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient, private api: Api, private cdr: ChangeDetectorRef) {}
 

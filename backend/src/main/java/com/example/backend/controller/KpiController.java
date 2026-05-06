@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/kpi")
-@CrossOrigin(origins = "http://localhost:4200")
 public class KpiController {
 
     @Autowired private KpiCalculatorService kpiService;

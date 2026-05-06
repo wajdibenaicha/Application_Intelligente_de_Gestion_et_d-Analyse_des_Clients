@@ -14,7 +14,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/public")
-@CrossOrigin(origins = "http://localhost:4200")
 public class PublicQuestionnaireController {
 
     @Autowired private TokenEncryptionService tokenService;

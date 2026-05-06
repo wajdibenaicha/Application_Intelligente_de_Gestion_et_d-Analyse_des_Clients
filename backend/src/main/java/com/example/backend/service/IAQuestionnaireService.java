@@ -33,6 +33,9 @@ public class IAQuestionnaireService {
     @Value("${ai.enabled:false}")
     private boolean aiEnabled;
 
+    public boolean isAiEnabled() { return aiEnabled; }
+    public void setAiEnabled(boolean enabled) { this.aiEnabled = enabled; }
+
     private static final String SYSTEM_PROMPT = """
         Tu es un expert senior en conception de questionnaires de satisfaction client pour une compagnie d'assurance.
 

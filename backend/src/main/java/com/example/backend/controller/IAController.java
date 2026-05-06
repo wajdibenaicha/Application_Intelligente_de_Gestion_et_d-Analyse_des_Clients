@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ia")
-@CrossOrigin(origins = "http://localhost:4200")
 public class IAController {
 
     private final IAQuestionnaireService iaService;
@@ -142,5 +141,16 @@ public class IAController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(Map.of("error", true, "message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getAiStatus() {
+        return ResponseEntity.ok(Map.of("enabled", iaService.isAiEnabled()));
+    }
+
+    @PostMapping("/toggle")
+    public ResponseEntity<Map<String, Object>> toggleAi() {
+        iaService.setAiEnabled(!iaService.isAiEnabled());
+        return ResponseEntity.ok(Map.of("enabled", iaService.isAiEnabled()));
     }
 }

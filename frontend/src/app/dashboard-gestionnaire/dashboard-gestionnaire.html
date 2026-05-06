@@ -11,6 +11,7 @@
         <img src="images/LOGO-STAR-Assurances_page-0001.jpg" alt="STAR" class="sidebar-logo" *ngIf="!sidebarCollapsed">
         <span class="logo-icon" *ngIf="sidebarCollapsed">S</span>
       </div>
+      
       <button class="collapse-btn" (click)="toggleSidebar()"><i class="bi bi-list"></i></button>
     </div>
 
@@ -27,15 +28,15 @@
         <span class="nav-icon"><i class="bi bi-house-door-fill"></i></span>
         <span class="nav-label">Accueil</span>
       </button>
-      <button class="nav-item" [class.active]="activeSection === 'questionnaires'" (click)="setSection('questionnaires')">
+      <button class="nav-item" *ngIf="canAccessQuestionnaires()" [class.active]="activeSection === 'questionnaires'" (click)="setSection('questionnaires')">
         <span class="nav-icon"><i class="bi bi-clipboard-check"></i></span>
         <span class="nav-label">Questionnaires</span>
       </button>
-      <button class="nav-item" [class.active]="activeSection === 'reponses'" (click)="setSection('reponses')">
+      <button class="nav-item" *ngIf="canAccessReponses()" [class.active]="activeSection === 'reponses'" (click)="setSection('reponses')">
         <span class="nav-icon"><i class="bi bi-chat-left-dots"></i></span>
         <span class="nav-label">Réponses clients</span>
       </button>
-      <button class="nav-item" [class.active]="activeSection === 'offres'" (click)="setSection('offres')">
+      <button class="nav-item" *ngIf="canAccessOffres()" [class.active]="activeSection === 'offres'" (click)="setSection('offres')">
         <span class="nav-icon"><i class="bi bi-gift"></i></span>
         <span class="nav-label">Offres</span>
       </button>
@@ -210,7 +211,7 @@
     <section *ngIf="activeSection === 'questionnaires'" class="content-section">
 
       <div class="section-toolbar">
-        <button class="btn-primary" (click)="openWizard()"><i class="bi bi-plus-lg"></i> Nouveau questionnaire</button>
+        <button class="btn-primary" *ngIf="hasPermission('Ajouter un questionnaire')" (click)="openWizard()"><i class="bi bi-plus-lg"></i> Nouveau questionnaire</button>
         <button class="btn-delegate" *ngIf="canManageAll() && allTeamMembers.length > 0" (click)="openDelegateModal()">
           <i class="bi bi-person-plus"></i> Déléguer la création
         </button>
@@ -382,50 +383,30 @@
 
     <section *ngIf="activeSection === 'offres'" class="content-section">
 
-      <!-- Directeur: catalog management -->
-      <div *ngIf="canManageAll()">
-        <div class="section-toolbar" style="margin-bottom:18px">
-          <button class="btn-primary" (click)="openAddOffre()"><i class="bi bi-plus-lg"></i> Ajouter une offre</button>
-        </div>
-        <div class="offres-catalog-grid">
-          <div class="offre-catalog-card" *ngFor="let o of offres">
-            <div class="offre-catalog-body">
-              <div class="offre-catalog-title"><i class="bi bi-gift"></i> {{ o.title }}</div>
-              <div class="offre-catalog-desc">{{ o.description }}</div>
-              <div class="offre-catalog-meta">
-                <span class="offre-badge-cat">{{ o.categorie || 'GENERAL' }}</span>
-                <span class="offre-badge-range">{{ o.scoreMin }}–{{ o.scoreMax }}/100</span>
-                <span class="offre-badge-active" [class.inactive]="!o.active">{{ o.active ? 'Active' : 'Inactive' }}</span>
-              </div>
-            </div>
-            <div class="offre-catalog-actions">
-              <button class="btn-icon btn-edit" title="Modifier" (click)="openEditOffre(o)"><i class="bi bi-pencil"></i></button>
-              <button class="btn-icon btn-delete" title="Supprimer" (click)="supprimerOffre(o)"><i class="bi bi-trash"></i></button>
-            </div>
-          </div>
-          <div class="empty-state" *ngIf="offres.length === 0">
-            <i class="bi bi-gift"></i><p>Aucune offre dans le catalogue</p>
-          </div>
-        </div>
+      <!-- Toolbar: visible si peut créer des offres -->
+      <div class="section-toolbar" style="margin-bottom:18px" *ngIf="hasPermission('Créer une offre')">
+        <button class="btn-primary" (click)="openAddOffre()"><i class="bi bi-plus-lg"></i> Ajouter une offre</button>
       </div>
 
-      <!-- Regular gestionnaire: read-only catalog view -->
-      <div *ngIf="!canManageAll()">
-        <div class="offres-catalog-grid">
-          <div class="offre-catalog-card" *ngFor="let o of offres">
-            <div class="offre-catalog-body">
-              <div class="offre-catalog-title"><i class="bi bi-gift"></i> {{ o.title }}</div>
-              <div class="offre-catalog-desc">{{ o.description }}</div>
-              <div class="offre-catalog-meta">
-                <span class="offre-badge-cat">{{ o.categorie || 'GENERAL' }}</span>
-                <span class="offre-badge-range">{{ o.scoreMin }}–{{ o.scoreMax }}/100</span>
-                <span class="offre-badge-active" [class.inactive]="!o.active">{{ o.active ? 'Active' : 'Inactive' }}</span>
-              </div>
+      <!-- Catalogue d'offres (visible à tous ayant accès à la section) -->
+      <div class="offres-catalog-grid">
+        <div class="offre-catalog-card" *ngFor="let o of offres">
+          <div class="offre-catalog-body">
+            <div class="offre-catalog-title"><i class="bi bi-gift"></i> {{ o.title }}</div>
+            <div class="offre-catalog-desc">{{ o.description }}</div>
+            <div class="offre-catalog-meta">
+              <span class="offre-badge-cat">{{ o.categorie || 'GENERAL' }}</span>
+              <span class="offre-badge-range">{{ o.scoreMin }}–{{ o.scoreMax }}/100</span>
+              <span class="offre-badge-active" [class.inactive]="!o.active">{{ o.active ? 'Active' : 'Inactive' }}</span>
             </div>
           </div>
-          <div class="empty-state" *ngIf="offres.length === 0">
-            <i class="bi bi-gift"></i><p>Aucune offre disponible</p>
+          <div class="offre-catalog-actions" *ngIf="hasPermission('Modifier une offre') || hasPermission('Supprimer une offre')">
+            <button class="btn-icon btn-edit" title="Modifier" *ngIf="hasPermission('Modifier une offre')" (click)="openEditOffre(o)"><i class="bi bi-pencil"></i></button>
+            <button class="btn-icon btn-delete" title="Supprimer" *ngIf="hasPermission('Supprimer une offre')" (click)="supprimerOffre(o)"><i class="bi bi-trash"></i></button>
           </div>
+        </div>
+        <div class="empty-state" *ngIf="offres.length === 0">
+          <i class="bi bi-gift"></i><p>Aucune offre disponible</p>
         </div>
       </div>
 

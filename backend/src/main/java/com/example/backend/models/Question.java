@@ -1,6 +1,7 @@
 package com.example.backend.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "question", uniqueConstraints = @UniqueConstraint(columnNames = { "titre", "type" }))
@@ -10,9 +11,11 @@ public class Question {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Le titre de la question est obligatoire")
     @Column(nullable = false)
     private String titre;
 
+    @NotBlank(message = "Le type de la question est obligatoire")
     @Column(nullable = false)
     private String type;
 
@@ -22,43 +25,14 @@ public class Question {
     @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean required = false;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTitre() {
-        return titre;
-    }
-
-    public void setTitre(String titre) {
-        this.titre = titre;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getOptions() {
-        return options;
-    }
-
-    public void setOptions(String options) {
-        this.options = options;
-    }
-
-    public boolean isRequired() {
-        return required;
-    }
-
-    public void setRequired(boolean required) {
-        this.required = required;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getTitre() { return titre; }
+    public void setTitre(String titre) { this.titre = titre; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public String getOptions() { return options; }
+    public void setOptions(String options) { this.options = options; }
+    public boolean isRequired() { return required; }
+    public void setRequired(boolean required) { this.required = required; }
 }

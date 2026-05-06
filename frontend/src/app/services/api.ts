@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Api {
-  private base = 'http://localhost:8081/api';
+  private base = environment.apiUrl;
   constructor(private http: HttpClient) {}
 
   getGestionnaires(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/gestionnaires`);}
@@ -81,22 +82,22 @@ export class Api {
   }
 
   getTeams() {
-    return this.http.get<any[]>('http://localhost:8081/api/teams');
+    return this.http.get<any[]>(`${environment.apiUrl}/teams`);
   }
 createTeam(name: string, directeurId: number) {
-  return this.http.post<any>('http://localhost:8081/api/teams', { name, directeurId });
+  return this.http.post<any>(`${environment.apiUrl}/teams`, { name, directeurId });
 }
 deleteTeam(id: number) { 
-  return this.http.delete(`http://localhost:8081/api/teams/${id}`);
+  return this.http.delete(`${environment.apiUrl}/teams/${id}`);
  }
 changeDirecteur(teamId: number, gestionnaireId: number) {
-  return this.http.put<any>(`http://localhost:8081/api/teams/${teamId}/directeur/${gestionnaireId}`, {});
+  return this.http.put<any>(`${environment.apiUrl}/teams/${teamId}/directeur/${gestionnaireId}`, {});
 }
 addMember(teamId: number, gestionnaireId: number) {
-  return this.http.post<any>(`http://localhost:8081/api/teams/${teamId}/members/${gestionnaireId}`, {});
+  return this.http.post<any>(`${environment.apiUrl}/teams/${teamId}/members/${gestionnaireId}`, {});
 }
 removeMember(teamId: number, gestionnaireId: number) {
-  return this.http.delete<any>(`http://localhost:8081/api/teams/${teamId}/members/${gestionnaireId}`);
+  return this.http.delete<any>(`${environment.apiUrl}/teams/${teamId}/members/${gestionnaireId}`);
 }
 
 }

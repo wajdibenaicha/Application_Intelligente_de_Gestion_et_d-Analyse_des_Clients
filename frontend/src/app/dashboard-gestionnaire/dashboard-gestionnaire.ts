@@ -10,6 +10,8 @@ import { of } from 'rxjs';
 import { WebSocketService } from '../services/websocket.service';
 import { Api } from '../services/api';
 import Swal from 'sweetalert2';
+import { environment } from '../../environments/environment';
+import { PERMISSIONS } from '../shared/permissions.constants';
 
 @Component({
   selector: 'app-dashboard-gestionnaire',
@@ -19,7 +21,7 @@ import Swal from 'sweetalert2';
   styleUrl: './dashboard-gestionnaire.css'
 })
 export class DashboardGestionnaire implements OnInit {
-  private apiUrl = 'http://localhost:8081/api';
+  private apiUrl = environment.apiUrl;
 
   activeSection = 'home';
   sidebarCollapsed = false;
@@ -32,7 +34,8 @@ export class DashboardGestionnaire implements OnInit {
   today = new Date();
 
   gestionnaire: any = null;
-  permission = '';
+  roleName = '';
+  permissions: string[] = [];
 
   questionnaires: any[] = [];
   showQuestionsView = false;
@@ -116,7 +119,8 @@ export class DashboardGestionnaire implements OnInit {
     }
 
     this.gestionnaire = JSON.parse(user);
-    this.permission = this.gestionnaire?.gestionnairePermission || '';
+    this.roleName = this.gestionnaire?.gestionnaireRole || '';
+    this.permissions = this.gestionnaire?.gestionnairePermissions || [];
 
     this.wsService.connect();
 
@@ -172,7 +176,37 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   canManageAll(): boolean {
-    return this.permission?.toUpperCase() === 'DIRECTEUR';
+    return this.roleName?.toUpperCase() === 'DIRECTEUR';
+  }
+
+  hasPermission(action: string): boolean {
+    return this.canManageAll() || this.permissions.includes(action);
+  }
+
+  canAccessQuestionnaires(): boolean {
+    return this.canManageAll() || this.hasPermission(PERMISSIONS.VOIR_QUESTIONNAIRES) ||
+      this.hasPermission(PERMISSIONS.AJOUTER_QUESTIONNAIRE) || this.hasPermission(PERMISSIONS.MODIFIER_QUESTIONNAIRE) ||
+      this.hasPermission(PERMISSIONS.SUPPRIMER_QUESTIONNAIRE) || this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE);
+  }
+
+  canAccessOffres(): boolean {
+    return this.canManageAll() || this.hasPermission(PERMISSIONS.CREER_OFFRE) ||
+      this.hasPermission(PERMISSIONS.MODIFIER_OFFRE) || this.hasPermission(PERMISSIONS.SUPPRIMER_OFFRE) ||
+      this.hasPermission(PERMISSIONS.ENVOYER_OFFRE);
+  }
+
+  canAccessReponses(): boolean {
+    return this.canManageAll() || this.hasPermission(PERMISSIONS.VOIR_QUESTIONNAIRES) ||
+      this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE);
+  }
+
+  canAccessClients(): boolean {
+    return this.canManageAll() || this.hasPermission(PERMISSIONS.VOIR_CLIENTS) ||
+      this.hasPermission(PERMISSIONS.GERER_CLIENTS);
+  }
+
+  canAccessHome(): boolean {
+    return true;
   }
 
   setSection(section: string) {
@@ -707,7 +741,7 @@ renderReponsesChart() {
   }
 
   canEdit(q: any): boolean {
-    return this.canManageAll() || this.isMyQuestionnaire(q);
+    return this.canManageAll() || (this.isMyQuestionnaire(q) && this.hasPermission(PERMISSIONS.MODIFIER_QUESTIONNAIRE));
   }
 
   private statut(q: any): string {
@@ -715,27 +749,30 @@ renderReponsesChart() {
   }
 
   canDelete(q: any): boolean {
-    return this.canManageAll() || this.isMyQuestionnaire(q);
+    return this.canManageAll() || (this.isMyQuestionnaire(q) && this.hasPermission(PERMISSIONS.SUPPRIMER_QUESTIONNAIRE));
   }
 
   canRequestPublication(q: any): boolean {
     const s = this.statut(q);
     return !this.canManageAll() && this.isMyQuestionnaire(q) &&
+      this.hasPermission(PERMISSIONS.AJOUTER_QUESTIONNAIRE) &&
       (s === 'BROUILLON' || s === 'REJETE');
   }
 
   canWithdraw(q: any): boolean {
-    return !this.canManageAll() && this.isMyQuestionnaire(q) && this.statut(q) === 'EN_ATTENTE';
+    return !this.canManageAll() && this.isMyQuestionnaire(q) &&
+      this.hasPermission(PERMISSIONS.AJOUTER_QUESTIONNAIRE) &&
+      this.statut(q) === 'EN_ATTENTE';
   }
 
   canApprove(q: any): boolean {
-    return this.canManageAll() && this.statut(q) === 'EN_ATTENTE';
+    return this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE) && this.statut(q) === 'EN_ATTENTE';
   }
 
   canReject(q: any): boolean {
     const s = this.statut(q);
     const isDirecteurQuestionnaire = q?.gestionnaire?.role?.name?.toUpperCase() === 'DIRECTEUR';
-    return this.canManageAll() && !isDirecteurQuestionnaire &&
+    return this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE) && !isDirecteurQuestionnaire &&
       (s === 'EN_ATTENTE' || s === 'PUBLIE' || s === 'APPROUVE');
   }
 
@@ -849,18 +886,47 @@ renderReponsesChart() {
     const nomFichier = titre.replace(/ /g, '_');
     const d = new Date();
     const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
-    const esc = (v: string) => (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    let rows = `<tr><th>Client</th><th>Email</th><th>Téléphone</th><th>Question</th><th>Type</th><th>Réponse</th></tr>`;
+    const esc = (v: any) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Collect all unique question titles (preserving order of first appearance)
+    const questionTitles: string[] = [];
     for (const entry of this.clientsReponses) {
-      for (const r of entry.reponses) {
-        rows += `<tr><td>${esc(entry.client?.fullName||'')}</td><td>${esc(entry.client?.mail||'')}</td><td>${esc(entry.client?.tel||'')}</td><td>${esc(r.question?.titre||'')}</td><td>${esc(r.question?.type||'')}</td><td>${esc(r.reponse||'')}</td></tr>`;
+      for (const r of (entry.reponses || [])) {
+        const t = r.question?.titre || '';
+        if (t && !questionTitles.includes(t)) questionTitles.push(t);
       }
-      rows += `<tr><td colspan="6"></td></tr>`;
     }
+
+    const thStyle = 'background:#1a3c6e;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #0d2a54;';
+    const tdStyle = 'padding:7px 11px;border:1px solid #d0d7e3;';
+    const tdAltStyle = 'padding:7px 11px;border:1px solid #d0d7e3;background:#f4f7fc;';
+
+    const th = (t: string) => `<th style="${thStyle}">${esc(t)}</th>`;
+    const td = (t: any, alt: boolean) => `<td style="${alt ? tdAltStyle : tdStyle}">${esc(t)}</td>`;
+
+    // Header: Nom, Email, Téléphone + une colonne par question
+    let rows = `<tr>${th('Nom complet')}${th('Email')}${th('Téléphone')}${questionTitles.map(q => th(q)).join('')}</tr>`;
+
+    // One row per client
+    this.clientsReponses.forEach((entry: any, idx: number) => {
+      const alt = idx % 2 !== 0;
+      const answerMap: Record<string, string> = {};
+      for (const r of (entry.reponses || [])) {
+        const t = r.question?.titre || '';
+        if (t) answerMap[t] = r.reponse || '';
+      }
+      rows += `<tr>
+        ${td(entry.client?.fullName || '', alt)}
+        ${td(entry.client?.mail || '', alt)}
+        ${td(entry.client?.tel || '', alt)}
+        ${questionTitles.map(q => td(answerMap[q] ?? '', alt)).join('')}
+      </tr>`;
+    });
+
     const xlsHeader = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
     const xlsMeta = '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Réponses</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
-    const html = xlsHeader + xlsMeta + `<body><table>${rows}</table></body></html>`;
-    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const html = xlsHeader + xlsMeta + `<body><table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">${rows}</table></body></html>`;
+    const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `reponses_${nomFichier}_${dateStr}.xls`;

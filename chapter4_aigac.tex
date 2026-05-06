@@ -1,0 +1,282 @@
+% filepath: chapter4/chapter4.tex
+\chapter{Réalisation} \label{sec:realisation}
+
+\section{Introduction}
+Suite à l'achèvement de la phase de conception, ce chapitre présente la phase de réalisation, qui constitue le volet final de ce rapport. Son objectif principal est de mettre en valeur le travail accompli. À cet effet, nous commençons par présenter l'environnement logiciel utilisé, suivi d'une description détaillée de la mise en œuvre fonctionnelle, illustrée par des captures d'écran des fonctionnalités clés du système AIGAC.
+
+\section{Environnement de développement}
+Cette section présente les technologies et outils utilisés tout au long du développement de l'application AIGAC (Application Intelligente de Gestion et d'Analyse des Clients). La stack technique choisie a été sélectionnée pour sa robustesse, sa scalabilité et son adéquation avec le développement d'applications web intelligentes.
+
+\subsection{Technologies Frontend}
+La couche frontend est responsable de la fourniture d'interfaces utilisateur réactives et interactives. Les technologies suivantes constituent les composants clés de l'architecture côté client :
+
+\begin{itemize}
+\item\textbf{Angular 21} : Angular est un framework TypeScript open-source développé par Google, basé sur une architecture orientée composants standalone. Il offre un système de routage avancé, une gestion réactive des données via RxJS, et un écosystème riche facilitant le développement d'applications web d'entreprise robustes et maintenables.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/angular_logo.png}
+    \caption{Angular \cite{Angular}}
+\end{figure}
+
+\item\textbf{TypeScript} : TypeScript est un sur-ensemble de JavaScript à typage statique qui améliore la maintenabilité du code et l'efficacité du développement. Il fournit des fonctionnalités telles que la vérification statique des types, l'autocomplétion avancée et la détection précoce des erreurs.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/typescript_logo.png}
+    \caption{TypeScript \cite{TypeScript}}
+\end{figure}
+
+\item\textbf{Chart.js} : Chart.js est une bibliothèque JavaScript de visualisation de données permettant de créer des graphiques interactifs (doughnut, barres, camembert, barres horizontales). Elle est utilisée dans AIGAC pour afficher les KPI clients et les statistiques du tableau de bord.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/chartjs_logo.png}
+    \caption{Chart.js \cite{ChartJS}}
+\end{figure}
+\end{itemize}
+
+\subsection{Technologies Backend}
+La couche backend est responsable de la gestion de la logique métier, du stockage des données et des opérations côté serveur. Les technologies suivantes forment le cœur de l'architecture backend :
+
+\begin{itemize}
+\item\textbf{Spring Boot (Java 21)} : Spring Boot est un framework Java qui simplifie la création d'applications d'entreprise autonomes et prêtes pour la production. Il intègre un serveur embarqué, une configuration automatique et un écosystème complet (Spring Security, Spring Data JPA), ce qui en fait le choix idéal pour développer des API RESTful sécurisées et performantes. L'application AIGAC s'exécute sur le port 8081.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/springboot_logo.png}
+    \caption{Spring Boot \cite{SpringBoot}}
+\end{figure}
+
+\item\textbf{MySQL} : MySQL est un système de gestion de base de données relationnelle open-source, reconnu pour ses performances et sa fiabilité. Il est utilisé dans AIGAC pour stocker l'ensemble des entités métier (clients, questionnaires, KPI, offres, etc.) avec le schéma auto-généré via Hibernate.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/mysql_logo.png}
+    \caption{MySQL \cite{MySQL}}
+\end{figure}
+
+\item\textbf{WebSocket / STOMP} : Le protocole WebSocket combiné à STOMP (Simple Text Oriented Messaging Protocol) permet la communication bidirectionnelle en temps réel entre le serveur et les clients Angular. Cette technologie est utilisée dans AIGAC pour le système de notifications en temps réel.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/websocket_logo.png}
+    \caption{WebSocket \cite{WebSocket}}
+\end{figure}
+\end{itemize}
+
+\subsection{Intelligence Artificielle}
+L'application AIGAC intègre des capacités d'intelligence artificielle pour enrichir l'expérience utilisateur et automatiser l'analyse des données clients :
+
+\begin{itemize}
+\item\textbf{Google Gemini 2.0 Flash} : Gemini est le modèle d'IA générative de Google, utilisé dans AIGAC pour plusieurs fonctionnalités intelligentes : la reformulation automatique des questions de questionnaires, la détection de doublons, la réorganisation logique des questions, l'analyse des réponses clients avec calcul de sentiment, et la génération de recommandations d'offres personnalisées.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/gemini_logo.png}
+    \caption{Google Gemini \cite{Gemini}}
+\end{figure}
+\end{itemize}
+
+\subsection{Intégrations et Services}
+\begin{itemize}
+\item\textbf{Twilio SMS} : Twilio est une plateforme cloud de communication qui permet l'envoi de SMS programmatiques. Elle est intégrée dans AIGAC pour notifier les clients lors d'événements importants (approbation de questionnaire, nouvelles offres recommandées, etc.).
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/twilio_logo.png}
+    \caption{Twilio \cite{Twilio}}
+\end{figure}
+
+\item\textbf{Sécurité AES + HMAC-SHA256} : Un mécanisme de sécurité basé sur le chiffrement AES combiné à HMAC-SHA256 a été implémenté pour sécuriser les liens de questionnaires publics envoyés aux clients. Ce système garantit l'intégrité et la confidentialité des tokens d'accès.
+\end{itemize}
+
+\section{Outils de développement}
+Le développement moderne s'appuie sur un ensemble d'outils qui rationalisent le codage, la collaboration et les tests.
+
+\begin{itemize}
+\item\textbf{Git \& GitHub} : Git est un système de contrôle de version distribué qui suit les modifications du code source. GitHub est la plateforme cloud d'hébergement des dépôts Git. Ces outils ont été utilisés pour la gestion collaborative du code entre les membres de l'équipe du projet AIGAC.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/github_logo.png}
+    \caption{GitHub \cite{GitHub}}
+\end{figure}
+
+\item\textbf{IntelliJ IDEA} : IntelliJ IDEA est un environnement de développement intégré (IDE) puissant, particulièrement adapté au développement Java/Spring Boot. Il offre un refactoring intelligent, une intégration Git native et des outils de débogage avancés.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/intellij_logo.png}
+    \caption{IntelliJ IDEA \cite{IntelliJ}}
+\end{figure}
+
+\item\textbf{Visual Studio Code} : Visual Studio Code est un éditeur de code léger mais puissant, utilisé pour le développement de la partie Angular du projet. Son écosystème d'extensions riche (Angular Language Service, ESLint, etc.) facilite le développement frontend.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/vscode_logo.png}
+    \caption{Visual Studio Code \cite{VSCode}}
+\end{figure}
+
+\item\textbf{Postman} : Postman est une plateforme collaborative pour le développement d'API, permettant aux développeurs de tester les endpoints, d'automatiser les tests et de documenter les API tout au long du cycle de développement.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/postman_logo.png}
+    \caption{Postman \cite{Postman}}
+\end{figure}
+
+\item\textbf{XAMPP} : XAMPP est un environnement de développement local intégrant Apache, MySQL et PHP. Il a été utilisé pour héberger le serveur MySQL local durant la phase de développement et de tests de l'application AIGAC.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/xampp_logo.png}
+    \caption{XAMPP \cite{XAMPP}}
+\end{figure}
+
+\item\textbf{Overleaf} : Overleaf est une plateforme en ligne populaire pour la rédaction et la collaboration sur des documents scientifiques et académiques. Elle a été utilisée pour la rédaction du présent rapport de stage en \LaTeX.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\linewidth]{chapter4/logos/overleaf_logo.png}
+    \caption{Overleaf \cite{Overleaf}}
+\end{figure}
+\end{itemize}
+
+\section{Présentation des interfaces de l'application}
+Cette section présente les différentes interfaces de l'application AIGAC, organisées selon les sprints de développement réalisés dans le cadre de la méthodologie Scrum. Chaque sprint correspond à une phase spécifique du développement et de l'enrichissement fonctionnel du système. Voici un aperçu des sprints :
+
+\begin{itemize}
+  \item \textbf{Sprint 1 : Gestion des utilisateurs et authentification} : Mise en place de l'architecture de sécurité, gestion des rôles (Administrateur, Gestionnaire, Directeur, Client) et des permissions.
+  \item \textbf{Sprint 2 : Gestion des questionnaires} : Développement du cycle de vie complet des questionnaires avec assistance IA (création, approbation, diffusion).
+  \item \textbf{Sprint 3 : Analyse clients et recommandations} : Implémentation du moteur de calcul des KPI clients, de l'analyse de sentiment et du système de recommandation d'offres par IA.
+\end{itemize}
+
+\subsection{Sprint 1 : Gestion des utilisateurs et authentification}
+Ce sprint a porté sur la mise en œuvre des fonctionnalités de gestion des utilisateurs, incluant les mécanismes d'authentification, la gestion des rôles et le contrôle d'accès basé sur les rôles (RBAC).
+
+\subsubsection{Authentification et connexion}
+L'application propose une interface de connexion sécurisée permettant aux utilisateurs de s'authentifier selon leur rôle (Administrateur, Gestionnaire/Directeur, Client), comme illustré en Figure \ref{fig:signin}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/signin.pdf}
+    \caption{Interface de connexion}
+    \label{fig:signin}
+\end{figure}
+
+\subsubsection{Tableau de bord Administrateur}
+L'administrateur dispose d'un tableau de bord centralisé (Figure \ref{fig:admin-dashboard}) offrant une vue d'ensemble des statistiques de la plateforme : nombre de clients, de gestionnaires, de questionnaires actifs et d'offres recommandées.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/admin_dashboard.pdf}
+    \caption{Tableau de bord Administrateur}
+    \label{fig:admin-dashboard}
+\end{figure}
+
+\subsubsection{Gestion des utilisateurs}
+L'administrateur dispose d'une interface de gestion complète des utilisateurs (Figure \ref{fig:user-management}), lui permettant de superviser tous les comptes enregistrés, de visualiser les données utilisateur et d'effectuer des opérations administratives (création, modification, suppression).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/user_management.pdf}
+    \caption{Gestion des utilisateurs}
+    \label{fig:user-management}
+\end{figure}
+
+\subsubsection{Gestion des rôles et permissions}
+Un contrôle d'accès granulaire est assuré grâce aux interfaces de gestion des permissions. L'administrateur peut configurer les permissions associées aux rôles prédéfinis (Figure \ref{fig:role-permissions}), garantissant ainsi une ségrégation rigoureuse des responsabilités entre Administrateur, Gestionnaire, Directeur et Client.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/role_permissions.pdf}
+    \caption{Gestion des rôles et permissions}
+    \label{fig:role-permissions}
+\end{figure}
+
+\subsection{Sprint 2 : Gestion des questionnaires}
+Ce sprint a été consacré au développement du cœur fonctionnel de l'application : le cycle de vie complet des questionnaires, enrichi par des fonctionnalités d'intelligence artificielle.
+
+\subsubsection{Création assistée par IA}
+L'interface de création de questionnaire (Figure \ref{fig:questionnaire-create}) propose un assistant en trois étapes guidant le gestionnaire dans la définition du questionnaire : informations générales, ajout des questions, et révision finale. À chaque étape, le module IA Gemini est disponible pour reformuler les questions, détecter les doublons et suggérer une réorganisation logique.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/questionnaire_create.pdf}
+    \caption{Création de questionnaire avec assistant IA}
+    \label{fig:questionnaire-create}
+\end{figure}
+
+\subsubsection{Cycle d'approbation}
+Les questionnaires suivent un cycle de vie structuré : \textbf{BROUILLON} $\rightarrow$ \textbf{EN\_ATTENTE} $\rightarrow$ \textbf{APPROUVÉ} / \textbf{REJETÉ}. Le Directeur dispose d'une interface dédiée (Figure \ref{fig:questionnaire-approval}) pour examiner les questionnaires soumis par les gestionnaires et décider de leur approbation ou rejet, avec une justification.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/questionnaire_approval.pdf}
+    \caption{Interface d'approbation des questionnaires}
+    \label{fig:questionnaire-approval}
+\end{figure}
+
+\subsubsection{Diffusion et réponses clients}
+Une fois approuvé, le questionnaire est diffusé aux clients via un lien sécurisé (chiffrement AES + HMAC-SHA256) accompagné d'une notification SMS via Twilio. Le client accède à l'interface de réponse (Figure \ref{fig:questionnaire-response}) sans authentification, grâce au token sécurisé.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/questionnaire_response.pdf}
+    \caption{Interface de réponse au questionnaire (côté Client)}
+    \label{fig:questionnaire-response}
+\end{figure}
+
+\subsubsection{Notifications en temps réel}
+Le système de notifications WebSocket/STOMP (Figure \ref{fig:notifications}) informe instantanément les utilisateurs concernés lors d'événements clés : soumission d'un questionnaire pour approbation, décision d'approbation/rejet, nouvelles réponses clients, etc.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/notifications.pdf}
+    \caption{Système de notifications en temps réel}
+    \label{fig:notifications}
+\end{figure}
+
+\subsection{Sprint 3 : Analyse clients et recommandations IA}
+Ce sprint a porté sur l'implémentation du moteur analytique d'AIGAC : le calcul des KPI clients à partir des réponses aux questionnaires, l'analyse de sentiment, et la génération automatique de recommandations d'offres personnalisées.
+
+\subsubsection{Tableau de bord analytique}
+Le tableau de bord analytique (Figure \ref{fig:analytics-dashboard}) centralise les indicateurs clés de performance (KPI) de la clientèle. Il présente des graphiques interactifs Chart.js (doughnut, barres, camembert, barres horizontales) illustrant la distribution des scores KPI, les tendances de satisfaction et la segmentation des clients.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/analytics_dashboard.pdf}
+    \caption{Tableau de bord analytique des KPI clients}
+    \label{fig:analytics-dashboard}
+\end{figure}
+
+\subsubsection{Profil KPI client}
+Chaque client dispose d'un profil KPI détaillé (Figure \ref{fig:client-kpi}) généré à partir de ses réponses aux questionnaires. Ce profil inclut le score KPI global, l'analyse de sentiment (positif/neutre/négatif) calculée par le modèle Gemini, et l'historique des évaluations.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/client_kpi.pdf}
+    \caption{Profil KPI d'un client}
+    \label{fig:client-kpi}
+\end{figure}
+
+\subsubsection{Recommandations d'offres personnalisées}
+Sur la base des scores KPI et de l'analyse de sentiment, le module IA génère des recommandations d'offres d'assurance personnalisées pour chaque client (Figure \ref{fig:offer-recommendations}). Le gestionnaire peut consulter ces recommandations, les valider et les transmettre aux clients concernés.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/offer_recommendations.pdf}
+    \caption{Recommandations d'offres générées par IA}
+    \label{fig:offer-recommendations}
+\end{figure}
+
+\subsubsection{Gestion des offres}
+L'interface de gestion des offres (Figure \ref{fig:offers-management}) permet à l'administrateur de définir le catalogue des offres d'assurance disponibles chez STAR Assurances. Ces offres constituent la base à partir de laquelle le système IA effectue ses recommandations personnalisées.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/offers_management.pdf}
+    \caption{Gestion du catalogue des offres}
+    \label{fig:offers-management}
+\end{figure}
+
+\subsubsection{Support multilingue}
+L'application AIGAC intègre un support multilingue Arabe/Français via ngx-translate, avec basculement dynamique de la direction du texte (RTL/LTR) pour l'interface en langue arabe (Figure \ref{fig:multilingual}), répondant ainsi aux besoins locaux du marché tunisien.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{chapter4/screens/multilingual.pdf}
+    \caption{Interface en mode Arabe (RTL)}
+    \label{fig:multilingual}
+\end{figure}
+
+\section{Conclusion}
+Ce chapitre a présenté un compte rendu complet de la phase de réalisation du projet AIGAC, en débutant par un aperçu de l'environnement de développement employé. Les principales interfaces de l'application ont ensuite été introduites, avec les fonctionnalités clés illustrées par des captures d'écran représentatives, organisées selon les trois sprints de développement. Ce chapitre a permis de démontrer concrètement la mise en application des concepts définis lors de la phase de conception, mettant ainsi en évidence le travail accompli et les solutions développées pour répondre aux exigences fonctionnelles et techniques identifiées.

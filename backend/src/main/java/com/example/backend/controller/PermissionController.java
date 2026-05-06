@@ -11,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/permissions")
-@CrossOrigin(origins = { "http://localhost:4200", "http://localhost:4201" })
 public class PermissionController {
 
     @Autowired
@@ -25,33 +24,30 @@ public class PermissionController {
     @GetMapping("/{id}")
     public ResponseEntity<Permission> getPermissionById(@PathVariable Long id) {
         Permission permission = permissionService.getPermissionById(id);
-        if (permission != null) {
-            return ResponseEntity.ok(permission);
-        }
+        if (permission != null) return ResponseEntity.ok(permission);
         return ResponseEntity.notFound().build();
     }
 
     @PostMapping
-    public ResponseEntity<Permission> addPermission(@RequestBody Permission permission) {
-        Permission savedPermission = permissionService.addPermission(permission);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedPermission);
+    public ResponseEntity<?> addPermission(@RequestBody Permission permission) {
+        if (permission.getDescription() == null || permission.getDescription().isBlank())
+            return ResponseEntity.badRequest().body("La description de la permission est obligatoire");
+        return ResponseEntity.status(HttpStatus.CREATED).body(permissionService.addPermission(permission));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Permission> updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
-        Permission updatedPermission = permissionService.updatePermission(id, permission);
-        if (updatedPermission != null) {
-            return ResponseEntity.ok(updatedPermission);
-        }
+    public ResponseEntity<?> updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
+        if (permission.getDescription() == null || permission.getDescription().isBlank())
+            return ResponseEntity.badRequest().body("La description de la permission est obligatoire");
+        Permission updated = permissionService.updatePermission(id, permission);
+        if (updated != null) return ResponseEntity.ok(updated);
         return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Permission> deletePermission(@PathVariable Long id) {
-        Permission deletedPermission = permissionService.deletePermission(id);
-        if (deletedPermission != null) {
-            return ResponseEntity.ok(deletedPermission);
-        }
+        Permission deleted = permissionService.deletePermission(id);
+        if (deleted != null) return ResponseEntity.ok(deleted);
         return ResponseEntity.notFound().build();
     }
 }

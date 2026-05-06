@@ -24,7 +24,6 @@ import com.example.backend.service.QuestionnaireService;
 
 @RestController
 @RequestMapping("/api/envoi")
-@CrossOrigin(origins = "http://localhost:4200")
 public class EnvoiController {
 
     @Autowired private EnvoiService envoiService;

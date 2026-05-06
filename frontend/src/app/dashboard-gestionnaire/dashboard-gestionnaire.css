@@ -912,7 +912,8 @@
   max-width: 520px;
   max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  padding-bottom: 8px;
 }
 
 .modal-large {
@@ -950,9 +951,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e8f5ee;
-  background: white;
+  padding: 22px 28px;
+  border-bottom: 2px solid #f0faf4;
+  background: #fafffe;
   border-radius: 20px 20px 0 0;
   position: sticky;
   top: 0;
@@ -971,15 +972,15 @@
   font-size: 13px;
   font-weight: 600;
   color: #34495e;
-  margin: 16px 24px 6px;
+  margin: 20px 28px 8px;
 }
 
 .modal input,
 .modal select,
 .modal textarea {
-  width: calc(100% - 48px);
-  margin: 0 24px;
-  padding: 12px 14px;
+  width: calc(100% - 56px);
+  margin: 0 28px;
+  padding: 13px 16px;
   border: 2px solid #e8f5ee;
   border-radius: 10px;
   font-size: 14px;
@@ -1366,9 +1367,9 @@
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1.5%;
-  padding: 2% 3%;
-  border-top: 1px solid #e8f5ee;
+  gap: 12px;
+  padding: 20px 28px;
+  border-top: 2px solid #f0faf4;
   margin-top: 2%;
 }
 

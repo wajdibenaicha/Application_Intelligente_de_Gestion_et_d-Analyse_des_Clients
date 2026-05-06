@@ -1,8 +1,10 @@
 package com.example.backend.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +15,6 @@ import com.example.backend.service.GestionnaireService;
 
 @RestController
 @RequestMapping("/api/gestionnaires")
-@CrossOrigin(origins = "http://localhost:4200")
 public class GestionnaireController {
 
     @Autowired
@@ -35,7 +36,11 @@ public class GestionnaireController {
             response.put("email", loggedIn.getEmail() != null ? loggedIn.getEmail() : "");
             response.put("role", "gestionnaire");
             response.put("gestionnaireRole", loggedIn.getRole() != null ? loggedIn.getRole().getName() : null);
-            response.put("gestionnairePermission", loggedIn.getRole() != null && loggedIn.getRole().getPermission() != null ? loggedIn.getRole().getPermission().getDescription() : null);
+            response.put("gestionnairePermissions", loggedIn.getRole() != null
+                ? loggedIn.getRole().getPermissions().stream()
+                    .map(p -> p.getDescription())
+                    .collect(Collectors.toList())
+                : new ArrayList<>());
             return ResponseEntity.ok(response);
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -56,27 +61,31 @@ public class GestionnaireController {
     }
 
     @PostMapping
-    public ResponseEntity<Gestionnaire> addGestionnaire(@RequestBody Gestionnaire gestionnaire) {
-        if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank()
-                || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()
-                || gestionnaire.getPassword() == null || gestionnaire.getPassword().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<?> addGestionnaire(@RequestBody Gestionnaire gestionnaire) {
+        if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank())
+            return ResponseEntity.badRequest().body("Le nom complet est obligatoire");
+        if (gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank())
+            return ResponseEntity.badRequest().body("L'email est obligatoire");
+        if (gestionnaire.getPassword() == null || gestionnaire.getPassword().isBlank())
+            return ResponseEntity.badRequest().body("Le mot de passe est obligatoire");
+        if (gestionnaire.getPassword().length() < 6)
+            return ResponseEntity.badRequest().body("Le mot de passe doit contenir au moins 6 caractères");
         Gestionnaire saved = gestionnaireService.addGestionnaire(gestionnaire);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Gestionnaire> updateGestionnaire(@PathVariable Long id,
+    public ResponseEntity<?> updateGestionnaire(@PathVariable Long id,
             @RequestBody Gestionnaire gestionnaire) {
-        if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank()
-                || gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
+        if (gestionnaire.getFullName() == null || gestionnaire.getFullName().isBlank())
+            return ResponseEntity.badRequest().body("Le nom complet est obligatoire");
+        if (gestionnaire.getEmail() == null || gestionnaire.getEmail().isBlank())
+            return ResponseEntity.badRequest().body("L'email est obligatoire");
+        if (gestionnaire.getPassword() != null && !gestionnaire.getPassword().isBlank()
+                && gestionnaire.getPassword().length() < 6)
+            return ResponseEntity.badRequest().body("Le mot de passe doit contenir au moins 6 caractères");
         Gestionnaire updated = gestionnaireService.updateGestionnaire(id, gestionnaire);
-        if (updated != null) {
-            return ResponseEntity.ok(updated);
-        }
+        if (updated != null) return ResponseEntity.ok(updated);
         return ResponseEntity.notFound().build();
     }
 

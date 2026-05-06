@@ -2,6 +2,7 @@ import { Injectable, NgZone } from '@angular/core';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Subject } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class WebSocketService {
@@ -24,7 +25,7 @@ export class WebSocketService {
     if (this.stompClient?.active) return;
 
     this.stompClient = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
+      webSocketFactory: () => new SockJS(environment.wsUrl),
       reconnectDelay: 5000,
       onConnect: () => {
         this.stompClient.subscribe('/topic/notifications', (message) => {
