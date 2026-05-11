@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8081/api/ia/toggle)",
-      "Read(//c/Users/lapto/Downloads/**)"
+      "Read(//c/Users/lapto/Downloads/**)",
+      "Bash(xargs grep -l \"aiEnabled\\\\|iaEnabled\")",
+      "Bash(curl -s \"http://localhost:8081/api/reponses/questionnaire/1\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); types=set\\(r.get\\('question',{}\\).get\\('type','?'\\) for r in data[:20]\\); print\\('Types de questions:', types\\); print\\('Exemple réponse:', data[0] if data else 'vide'\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\lapto\\Downloads"

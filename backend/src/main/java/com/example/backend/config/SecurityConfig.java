@@ -59,6 +59,8 @@ public class SecurityConfig {
                 "/api/envoi/**",
                 "/api/reponses/repondre",
                 "/api/ia/status",
+                "/api/ml/**",
+                "/api/anomaly/**",
                 "/ws/**"
             )
             .csrf(AbstractHttpConfigurer::disable)

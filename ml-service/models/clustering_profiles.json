@@ -1,0 +1,82 @@
+{
+  "0": {
+    "name": "VIP Platinium",
+    "description": "Clients haut de gamme avec contrat Platinium/Vie, KPI 92/100 et prime annuelle très élevée (4 800 DT+). Priorité de rétention absolue.",
+    "color": "#10b981",
+    "priority": "RETENTION_VIP",
+    "id": 0,
+    "size": 1583,
+    "avg_kpi": 92.3,
+    "centroid": {
+      "kpi_score": 92.32,
+      "seniority_years": 13.85,
+      "prime_annuelle": 4860.83,
+      "contract_score": 4.0,
+      "age": 42.61,
+      "situation_score": 1.24,
+      "profession_score": 1.6,
+      "region_score": 2.15,
+      "sentiment_score": 0.98
+    }
+  },
+  "1": {
+    "name": "Insatisfait à risque",
+    "description": "Clients avec KPI faible (41/100), contrat basique et sentiment très négatif. Intervention commerciale urgente nécessaire.",
+    "color": "#ef4444",
+    "priority": "URGENT_CARE",
+    "id": 1,
+    "size": 4157,
+    "avg_kpi": 41.3,
+    "centroid": {
+      "kpi_score": 41.29,
+      "seniority_years": 11.57,
+      "prime_annuelle": 809.43,
+      "contract_score": 1.34,
+      "age": 41.29,
+      "situation_score": 1.08,
+      "profession_score": 1.48,
+      "region_score": 2.18,
+      "sentiment_score": 0.27
+    }
+  },
+  "2": {
+    "name": "Famille fidèle",
+    "description": "Clients mariés, anciens (15 ans), KPI correct (70/100) et sentiment positif. Profil familial stable à maintenir.",
+    "color": "#6366f1",
+    "priority": "MAINTAIN",
+    "id": 2,
+    "size": 1775,
+    "avg_kpi": 69.8,
+    "centroid": {
+      "kpi_score": 69.86,
+      "seniority_years": 14.86,
+      "prime_annuelle": 1527.56,
+      "contract_score": 1.71,
+      "age": 43.95,
+      "situation_score": 2.0,
+      "profession_score": 1.65,
+      "region_score": 2.13,
+      "sentiment_score": 0.74
+    }
+  },
+  "3": {
+    "name": "Fidèle ancienneté",
+    "description": "Clients très anciens (17 ans en moyenne), KPI élevé (82/100) et sentiment très positif. Ambassadeurs naturels de la compagnie.",
+    "color": "#8b5cf6",
+    "priority": "ADVOCACY",
+    "id": 3,
+    "size": 2485,
+    "avg_kpi": 82.5,
+    "centroid": {
+      "kpi_score": 82.41,
+      "seniority_years": 17.04,
+      "prime_annuelle": 2299.87,
+      "contract_score": 1.98,
+      "age": 45.2,
+      "situation_score": 1.0,
+      "profession_score": 1.73,
+      "region_score": 2.14,
+      "sentiment_score": 0.95
+    }
+  }
+}

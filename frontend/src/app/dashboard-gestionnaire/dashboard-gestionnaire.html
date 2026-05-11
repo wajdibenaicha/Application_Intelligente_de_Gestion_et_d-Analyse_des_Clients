@@ -312,6 +312,9 @@
         <button class="btn-offre-tous" (click)="voirRecommandationsIA()" *ngIf="reponses.length > 0">
           <i class="bi bi-pie-chart-fill"></i> Recommandations IA
         </button>
+        <button class="btn-envoyer-tous" (click)="envoyerToutesOffresIA()" *ngIf="reponses.length > 0">
+          <i class="bi bi-send-fill"></i> Envoyer à tous
+        </button>
         <button class="btn-danger-sm" (click)="supprimerToutesReponsesSection()" *ngIf="reponses.length > 0">
           <i class="bi bi-trash3-fill"></i> Supprimer tout
         </button>
@@ -346,11 +349,13 @@
                 <th>Email</th>
                 <th>Téléphone</th>
                 <th>Réponses</th>
+                <th>Fraude IA</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let entry of clientsReponses">
+              <tr *ngFor="let entry of clientsReponses"
+                  [class.row-suspect]="anomalyResults[entry.client?.id]?.is_anomaly">
                 <td>
                   <div class="client-cell">
                     <div class="client-avatar-sm">{{ (entry.client?.fullName || entry.client?.mail || '?').charAt(0).toUpperCase() }}</div>
@@ -361,6 +366,20 @@
                 <td>{{ entry.client?.tel || '—' }}</td>
                 <td>
                   <span class="reponse-count-badge">{{ entry.nbReponses }} réponse{{ entry.nbReponses > 1 ? 's' : '' }}</span>
+                </td>
+                <td>
+                  <ng-container *ngIf="anomalyResults[entry.client?.id] as ar; else loadingAnomaly">
+                    <span *ngIf="ar.is_anomaly" class="anomaly-badge"
+                          [class.anomaly-high]="ar.risk_level === 'HIGH'"
+                          [class.anomaly-medium]="ar.risk_level === 'MEDIUM'"
+                          [title]="ar.reasons?.join(', ')">
+                      ⚠️ {{ ar.risk_level === 'HIGH' ? 'Suspect' : 'Douteux' }}
+                    </span>
+                    <span *ngIf="!ar.is_anomaly" class="anomaly-ok">✓ Normal</span>
+                  </ng-container>
+                  <ng-template #loadingAnomaly>
+                    <span class="anomaly-checking">…</span>
+                  </ng-template>
                 </td>
                 <td style="display:flex;gap:8px;align-items:center;">
                   <button class="btn-voir" (click)="voirReponsesClient(entry)"><i class="bi bi-eye"></i> Voir</button>
@@ -498,11 +517,30 @@
           Analyse IA du ciblage en cours…
         </div>
 
+        <!-- Saisie manuelle quand l'IA est désactivée et qu'on crée une nouvelle offre -->
+        <div *ngIf="!aiEnabled && !editingOffre" style="margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:12px;color:#888;background:#f5f5f5;border-radius:4px;padding:3px 8px;">IA désactivée — ciblage manuel</span>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;">
+              <label style="font-size:12px;color:#555;margin-bottom:4px;display:block;">Score min (0–100) <span style="color:red">*</span></label>
+              <input type="number" min="0" max="99" [(ngModel)]="offreForm.scoreMin" placeholder="ex: 0"
+                style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:13px;" />
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:12px;color:#555;margin-bottom:4px;display:block;">Score max (0–100) <span style="color:red">*</span></label>
+              <input type="number" min="1" max="100" [(ngModel)]="offreForm.scoreMax" placeholder="ex: 100"
+                style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:13px;" />
+            </div>
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button class="btn-cancel" (click)="showOffreForm=false">Annuler</button>
           <button class="btn-save" (click)="saveOffre()" [disabled]="offreIaLoading || offreIaChecking || !!offreIaWarning">
-            <i class="bi bi-stars" *ngIf="!editingOffre"></i>
-            {{ editingOffre ? 'Modifier' : (offreIaResult ? 'Créer l\'offre' : 'Analyser et ajouter') }}
+            <i class="bi bi-stars" *ngIf="!editingOffre && aiEnabled"></i>
+            {{ editingOffre ? 'Modifier' : (aiEnabled ? (offreIaResult ? 'Créer l\'offre' : 'Analyser et ajouter') : 'Créer l\'offre') }}
           </button>
         </div>
       </div>
@@ -565,6 +603,7 @@
 
   </main>
 </div>
+
 
 <div class="notif-panel" *ngIf="showNotifPanel">
   <div class="notif-header">
@@ -1153,6 +1192,104 @@
       <h2><i class="bi bi-share"></i> Partager "{{ selectedQuestionnaire?.titre }}"</h2>
       <button class="btn-close" (click)="showPartageModal=false">✕</button>
     </div>
+    <!-- Filtre Segment ML -->
+    <div class="ml-segment-bar" *ngIf="mlSegments.length > 0">
+      <span class="ml-seg-label"><i class="bi bi-stars"></i> Segments AI</span>
+      <div class="ml-seg-pills">
+        <button class="ml-seg-pill"
+          [class.ml-seg-active]="selectedMlSegmentId === null"
+          (click)="filtrerParSegmentML(null)">
+          Tous les clients
+        </button>
+        <button class="ml-seg-pill" *ngFor="let s of mlSegments"
+          [style.border-color]="s.color"
+          [style.background]="selectedMlSegmentId === s.id ? s.color : 'transparent'"
+          [style.color]="selectedMlSegmentId === s.id ? '#fff' : s.color"
+          (click)="filtrerParSegmentML(s.id)">
+          {{ s.name }}
+          <span class="ml-seg-count">{{ s.size }}</span>
+        </button>
+      </div>
+    </div>
+    <div class="ml-segment-loading" *ngIf="mlSegments.length === 0 && showPartageModal">
+      <span class="ml-seg-spinner"></span> Chargement des segments AI...
+    </div>
+
+    <!-- Segments personnalisés -->
+    <div class="custom-segment-bar">
+      <span class="ml-seg-label"><i class="bi bi-bookmark-star-fill"></i> Mes segments</span>
+      <div class="ml-seg-pills">
+        <button class="ml-seg-pill"
+          [class.ml-seg-active]="selectedCustomSegmentId === null && selectedMlSegmentId === null"
+          (click)="filtrerParSegmentML(null); filtrerParSegmentCustom(null)">
+          Tous
+        </button>
+        <button class="ml-seg-pill custom-pill" *ngFor="let s of segmentsPersonnalises"
+          [style.border-color]="s.color"
+          [style.background]="selectedCustomSegmentId === s.id ? s.color : 'transparent'"
+          [style.color]="selectedCustomSegmentId === s.id ? '#fff' : s.color"
+          (click)="filtrerParSegmentCustom(s.id)">
+          {{ s.name }}
+          <span class="ml-seg-count">{{ countCustomSegment(s) }}</span>
+          <span class="seg-actions">
+            <i class="bi bi-pencil-fill" (click)="$event.stopPropagation(); editerSegment(s)" title="Modifier"></i>
+            <i class="bi bi-trash-fill" (click)="$event.stopPropagation(); supprimerSegment(s.id)" title="Supprimer"></i>
+          </span>
+        </button>
+        <button class="ml-seg-pill seg-add-btn" (click)="showCreateSegmentForm = !showCreateSegmentForm; editingSegment = null; annulerSegmentForm(); showCreateSegmentForm = true">
+          <i class="bi bi-plus-lg"></i> Créer un segment
+        </button>
+      </div>
+
+      <!-- Formulaire de création/édition -->
+      <div class="seg-form" *ngIf="showCreateSegmentForm">
+        <div class="seg-form-header">
+          <strong>{{ editingSegment ? 'Modifier' : 'Nouveau' }} segment</strong>
+          <button class="seg-form-close" (click)="annulerSegmentForm()">✕</button>
+        </div>
+        <div class="seg-form-row">
+          <input [(ngModel)]="newSegment.name" placeholder="Nom du segment *" class="seg-input" />
+          <input type="color" [(ngModel)]="newSegment.color" class="seg-color-picker" title="Couleur" />
+        </div>
+        <input [(ngModel)]="newSegment.description" placeholder="Description (optionnel)" class="seg-input" />
+        <div class="seg-form-criteria">
+          <span class="seg-criteria-title">Critères de sélection</span>
+          <div class="seg-form-row">
+            <select [(ngModel)]="newSegment.typeContrat" class="seg-select">
+              <option value="">Tous types de contrat</option>
+              <option *ngFor="let t of typeContrats" [value]="t">{{ t }}</option>
+            </select>
+            <select [(ngModel)]="newSegment.situationFamiliale" class="seg-select">
+              <option value="">Toutes situations</option>
+              <option value="MARIE">Marié(e)</option>
+              <option value="CELIBATAIRE">Célibataire</option>
+              <option value="DIVORCE">Divorcé(e)</option>
+              <option value="VEUF">Veuf/Veuve</option>
+            </select>
+          </div>
+          <div class="seg-form-row">
+            <input type="number" [(ngModel)]="newSegment.primeMin" placeholder="Prime min (DT)" class="seg-input-sm" />
+            <input type="number" [(ngModel)]="newSegment.primeMax" placeholder="Prime max (DT)" class="seg-input-sm" />
+            <input type="number" [(ngModel)]="newSegment.anneeInscriptionMin" placeholder="Inscrit depuis (année)" class="seg-input-sm" />
+          </div>
+          <div class="seg-form-row">
+            <input [(ngModel)]="newSegment.adresseKeyword" placeholder="Région (ex: Tunis, Sfax...)" class="seg-input-sm" />
+            <input [(ngModel)]="newSegment.profession" placeholder="Profession exacte" class="seg-input-sm" />
+          </div>
+        </div>
+        <div class="seg-form-actions">
+          <button class="seg-btn-save" (click)="sauvegarderSegment()" [disabled]="!newSegment.name?.trim()">
+            <i class="bi bi-check-lg"></i> {{ editingSegment ? 'Enregistrer' : 'Créer' }}
+          </button>
+          <button class="seg-btn-cancel" (click)="annulerSegmentForm()">Annuler</button>
+        </div>
+        <div class="seg-preview" *ngIf="newSegment.name">
+          <span class="seg-preview-label">Aperçu : </span>
+          <strong>{{ countCustomSegment(newSegment) }}</strong> client(s) correspondent à ces critères
+        </div>
+      </div>
+    </div>
+
     <div class="partage-filters">
       <select [(ngModel)]="filtre.typeContrat" (ngModelChange)="appliquerFiltre()">
         <option value="">Tous les types de contrat</option>

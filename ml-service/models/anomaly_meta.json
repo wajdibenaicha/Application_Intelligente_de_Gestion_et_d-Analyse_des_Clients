@@ -1,0 +1,15 @@
+{
+  "feature_names": [
+    "scale_variance",
+    "scale_extreme_ratio",
+    "text_empty_ratio",
+    "text_avg_length",
+    "nb_questions",
+    "kpi_score",
+    "unique_ratio"
+  ],
+  "contamination": 0.08,
+  "threshold_medium": 0.0496,
+  "threshold_high": 0.0,
+  "n_training_samples": 880
+}

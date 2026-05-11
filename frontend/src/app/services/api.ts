@@ -100,4 +100,18 @@ removeMember(teamId: number, gestionnaireId: number) {
   return this.http.delete<any>(`${environment.apiUrl}/teams/${teamId}/members/${gestionnaireId}`);
 }
 
+// ── ML / Clustering ──────────────────────────────────────────────────────────
+getMlHealth(): Observable<any> { return this.http.get<any>(`${this.base}/ml/health`); }
+getClientSegment(clientId: number): Observable<any> { return this.http.get<any>(`${this.base}/ml/clients/${clientId}/segment`); }
+getAllSegments(): Observable<any[]> { return this.http.get<any[]>(`${this.base}/ml/clients/segments`); }
+getClustersVisualization(): Observable<any> { return this.http.get<any>(`${this.base}/ml/clusters/visualization`); }
+getClustersProfiles(): Observable<any> { return this.http.get<any>(`${this.base}/ml/clusters/profiles`); }
+getDbSegments(): Observable<any> { return this.http.get<any>(`${this.base}/ml/clients/db-segments`); }
+
+// ── Segments personnalisés ────────────────────────────────────────────────────
+getSegmentsPersonnalises(gestionnaireId: number): Observable<any[]> { return this.http.get<any[]>(`${this.base}/segments/gestionnaire/${gestionnaireId}`); }
+createSegmentPersonnalise(segment: any, gestionnaireId: number): Observable<any> { return this.http.post<any>(`${this.base}/segments?gestionnaireId=${gestionnaireId}`, segment); }
+updateSegmentPersonnalise(id: number, segment: any): Observable<any> { return this.http.put<any>(`${this.base}/segments/${id}`, segment); }
+deleteSegmentPersonnalise(id: number): Observable<any> { return this.http.delete<any>(`${this.base}/segments/${id}`); }
+
 }

@@ -12,11 +12,12 @@ import { Api } from '../services/api';
 import Swal from 'sweetalert2';
 import { environment } from '../../environments/environment';
 import { PERMISSIONS } from '../shared/permissions.constants';
+import { ClusteringSectionComponent } from './components/clustering-section/clustering-section.component';
 
 @Component({
   selector: 'app-dashboard-gestionnaire',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ClusteringSectionComponent],
   templateUrl: './dashboard-gestionnaire.html',
   styleUrl: './dashboard-gestionnaire.css'
 })
@@ -63,6 +64,8 @@ export class DashboardGestionnaire implements OnInit {
   selectedquestion: any[] = [];
   questionSearchText = '';
 
+  aiEnabled = false;
+
   iaAutoSuggestion: any = null;
   iaDoublonWarning: any = null;
   iaCoherenceWarning: any = null;
@@ -85,6 +88,21 @@ export class DashboardGestionnaire implements OnInit {
   filtre = { typeContrat: '', anneeMin: null, profession: '', primeRange: '' };
   clientChannels: { [id: number]: string } = {};
   clientsAyantRepondu: Set<number> = new Set();
+
+  // ML Segmentation
+  mlSegments: any[] = [];
+  selectedMlSegmentId: number | null = null;
+  private mlClientSegmentMap: Map<number, number> = new Map();
+
+  // Détection de fraude
+  anomalyResults: Record<number, any> = {};
+
+  // Segments personnalisés
+  segmentsPersonnalises: any[] = [];
+  selectedCustomSegmentId: number | null = null;
+  showCreateSegmentForm = false;
+  newSegment: any = { name: '', description: '', color: '#6366f1', typeContrat: '', anneeInscriptionMin: null, primeMin: null, primeMax: null, profession: '', situationFamiliale: '', adresseKeyword: '', kpiMin: null, kpiMax: null };
+  editingSegment: any = null;
 
   notifications: any[] = [];
   unreadNotifCount = 0;
@@ -161,6 +179,7 @@ export class DashboardGestionnaire implements OnInit {
     });
     this.loadNotifications();
 
+    this.loadAiStatus();
     this.loadQuestionnaires();
     this.loadOffresIA();
     this.loadRecommendations();
@@ -172,6 +191,13 @@ export class DashboardGestionnaire implements OnInit {
     this.api.getClientsFiltres({}).subscribe({
       next: (data) => { this.allClients = data; },
       error: () => {}
+    });
+  }
+
+  loadAiStatus() {
+    this.http.get<any>(this.apiUrl + '/ia/status').subscribe({
+      next: (res) => { this.aiEnabled = !!res?.enabled; this.cdr.detectChanges(); },
+      error: () => { this.aiEnabled = false; }
     });
   }
 
@@ -236,6 +262,7 @@ export class DashboardGestionnaire implements OnInit {
     if (this.activeSection === 'reponses') return 'Réponses des clients';
     if (this.activeSection === 'offres') return 'Offres';
     if (this.activeSection === 'teams') return 'Mes Équipes';
+    if (this.activeSection === 'clustering') return 'Segmentation ML des Clients';
     return '';
   }
 
@@ -830,9 +857,18 @@ renderReponsesChart() {
     this.http.get<any[]>(this.apiUrl + '/reponses/questionnaire/' + this.selectedQuestionnaireId).subscribe({
       next: (data) => {
         this.reponses = data;
+        this.anomalyResults = {};
         const clients = new Set(data.map((r: any) => r.client?.id)).size;
         this.totalReponses = clients;
         this.cdr.detectChanges();
+        // Analyse fraude pour chaque client en parallèle
+        const clientIds = [...new Set(data.map((r: any) => r.client?.id).filter(Boolean))];
+        clientIds.forEach((clientId: number) => {
+          this.http.get<any>(`${this.apiUrl}/anomaly/check?clientId=${clientId}&questionnaireId=${this.selectedQuestionnaireId}`).subscribe({
+            next: (result) => { this.anomalyResults[clientId] = result; this.cdr.detectChanges(); },
+            error: () => { this.anomalyResults[clientId] = { is_anomaly: false, risk_level: 'NONE' }; }
+          });
+        });
         const nb = data.length;
         if (nb === 0) {
           Swal.fire({
@@ -1036,6 +1072,38 @@ renderReponsesChart() {
   }
 
   private envoyerOffreAvecIA(client: any, offre: any, rec: any, aiOffre: any, channel: string) {
+    const isEmail = channel === 'email';
+    const channelLabel = isEmail ? '✉️ Email' : '📱 SMS';
+    const channelColor = isEmail ? '#1a56db' : '#27ae60';
+
+    const showPreviewAndSend = (sujet: string, corps: string, isAi: boolean) => {
+      Swal.fire({
+        title: `${channelLabel} — Aperçu ${isAi ? 'IA' : 'du message'}`,
+        html: `
+          ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
+            <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
+          </div>` : ''}
+          <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;">${corps}</div>
+          <p style="font-size:11px;color:#999;margin-top:8px;">Vous pouvez envoyer ce message ou revenir en arrière.</p>`,
+        showCancelButton: true,
+        confirmButtonText: `Envoyer par ${isEmail ? 'email' : 'SMS'}`,
+        cancelButtonText: '← Retour',
+        confirmButtonColor: channelColor,
+        cancelButtonColor: '#95a5a6',
+        reverseButtons: true
+      }).then(r2 => {
+        if (!r2.isConfirmed) { this.envoyerOffreStep2(client, offre, rec, aiOffre); return; }
+        this.doEnvoyerOffre(client, offre, rec, aiOffre, channel, sujet, corps);
+      });
+    };
+
+    if (!this.aiEnabled) {
+      const sujet = `STAR Assurances – Offre spéciale : ${offre?.title || ''}`;
+      const corps = `Bonjour ${client.fullName || 'client'},\n\nNous avons une offre exclusive pour vous :\n\n${offre?.title}\n${offre?.description || ''}\n\nCordialement,\nL'équipe STAR Assurances`;
+      showPreviewAndSend(sujet, corps, false);
+      return;
+    }
+
     // Step 3: AI generates text → preview → send
     Swal.fire({
       title: 'Génération IA en cours…',
@@ -1052,33 +1120,13 @@ renderReponsesChart() {
       next: (msg) => {
         const sujet = msg.sujet || '';
         const corps = (msg.corps || '').replace('{NOM_CLIENT}', client.fullName || 'client');
-        const isEmail = channel === 'email';
-        const channelLabel = isEmail ? '✉️ Email' : '📱 SMS';
-        const channelColor = isEmail ? '#1a56db' : '#27ae60';
-
-        Swal.fire({
-          title: `${channelLabel} — Aperçu IA`,
-          html: `
-            ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
-              <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
-            </div>` : ''}
-            <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;">${corps}</div>
-            <p style="font-size:11px;color:#999;margin-top:8px;">Vous pouvez envoyer ce message ou revenir en arrière.</p>`,
-          showCancelButton: true,
-          confirmButtonText: `Envoyer par ${isEmail ? 'email' : 'SMS'}`,
-          cancelButtonText: '← Retour',
-          confirmButtonColor: channelColor,
-          cancelButtonColor: '#95a5a6',
-          reverseButtons: true
-        }).then(r2 => {
-          if (!r2.isConfirmed) { this.envoyerOffreStep2(client, offre, rec, aiOffre); return; }
-          this.doEnvoyerOffre(client, offre, rec, aiOffre, channel, sujet, corps);
-        });
+        showPreviewAndSend(sujet, corps, true);
       },
       error: () => {
-        // AI failed — send with default text
-        const corps = `Bonjour ${client.fullName},\n\n${offre?.title}\n${offre?.description}\n\nCordialement,\nSTAR Assurances`;
-        this.doEnvoyerOffre(client, offre, rec, aiOffre, channel, offre?.title, corps);
+        const sujet = `STAR Assurances – Offre spéciale : ${offre?.title || ''}`;
+        const corps = `Bonjour ${client.fullName || 'client'},\n\nNous avons une offre exclusive pour vous :\n\n${offre?.title}\n${offre?.description || ''}\n\nCordialement,\nL'équipe STAR Assurances`;
+        Swal.close();
+        showPreviewAndSend(sujet, corps, false);
       }
     });
   }
@@ -1102,6 +1150,103 @@ renderReponsesChart() {
     } else {
       send();
     }
+  }
+
+  async envoyerToutesOffresIA() {
+    // Build list of clients that have an AI recommendation
+    const toSend: { client: any; offre: any; rec: any }[] = [];
+    for (const e of this.clientsReponses) {
+      const rec = this.recommendations.find((r: any) => r.clientKpi?.client?.id === e.client?.id);
+      const aiOffre = rec ? (rec.finalOffre || rec.aiRecommendedOffre) : null;
+      if (aiOffre && e.client) {
+        toSend.push({ client: e.client, offre: aiOffre, rec });
+      }
+    }
+
+    if (toSend.length === 0) {
+      Swal.fire({ icon: 'info', title: 'Aucune recommandation', text: 'Aucun client n\'a de recommandation IA disponible pour ce questionnaire.', confirmButtonColor: '#4a6fa5' });
+      return;
+    }
+
+    // Choose channel
+    const { value: channel } = await Swal.fire({
+      title: '📤 Envoyer à tous',
+      html: `<p style="color:#555;font-size:13px;margin-bottom:14px;"><b>${toSend.length}</b> client(s) recevront leur offre IA personnalisée.</p>
+             <p style="font-size:12px;color:#888;">Choisissez le canal d'envoi :</p>`,
+      input: 'radio',
+      inputOptions: { email: '✉️ Email', sms: '📱 SMS' },
+      inputValue: 'email',
+      confirmButtonText: 'Envoyer à tous',
+      showCancelButton: true,
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#27ae60',
+      cancelButtonColor: '#95a5a6',
+    });
+
+    if (!channel) return;
+
+    // Group by offer so we generate one AI message per offer type
+    const byOffre = new Map<number, { offre: any; clients: any[]; recs: any[] }>();
+    for (const { client, offre, rec } of toSend) {
+      const entry = byOffre.get(offre.id);
+      if (entry) { entry.clients.push(client); entry.recs.push(rec); }
+      else byOffre.set(offre.id, { offre, clients: [client], recs: [rec] });
+    }
+
+    let sent = 0;
+    let errors = 0;
+    const total = toSend.length;
+
+    Swal.fire({
+      title: 'Envoi en cours…',
+      html: `<p style="color:#555;">0 / ${total} offres envoyées</p>`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    for (const [, group] of byOffre) {
+      let sujet = `STAR Assurances – Offre spéciale : ${group.offre.title}`;
+      let corps = `Bonjour {NOM_CLIENT},\n\nNous avons une offre exclusive pour vous :\n\n${group.offre.title}\n${group.offre.description || ''}\n\nCordialement,\nL'équipe STAR Assurances`;
+
+      if (this.aiEnabled) {
+        try {
+          const msg: any = await this.http.post<any>(this.apiUrl + '/ia/generer-message', {
+            type: 'offre', channel, titre: group.offre.title, description: group.offre.description
+          }).toPromise();
+          if (msg?.corps) { sujet = msg.sujet || sujet; corps = msg.corps; }
+        } catch {}
+      }
+
+      try {
+        await this.http.post<any>(this.apiUrl + '/offres/envoyer', {
+          offreId: group.offre.id,
+          clientIds: group.clients.map((c: any) => c.id),
+          channel, sujet, corps
+        }).toPromise();
+
+        // Mark recommendations as accepted
+        for (const rec of group.recs) {
+          if (rec) {
+            await this.http.put(this.apiUrl + '/recommendations/' + rec.id + '/accept', {}).toPromise().catch(() => {});
+          }
+        }
+        sent += group.clients.length;
+      } catch {
+        errors += group.clients.length;
+        sent += group.clients.length;
+      }
+
+      Swal.update({ html: `<p style="color:#555;">${sent} / ${total} offres envoyées</p>` });
+    }
+
+    this.loadRecommendations();
+    Swal.fire({
+      icon: errors === 0 ? 'success' : 'warning',
+      title: errors === 0 ? 'Envoi terminé !' : 'Envoi partiel',
+      html: `<p>${sent - errors} offre(s) envoyée(s) avec succès${errors > 0 ? `<br><span style="color:#e74c3c">${errors} erreur(s)</span>` : ''}.</p>`,
+      confirmButtonColor: '#27ae60'
+    });
   }
 
   voirRecommandationsIA() {
@@ -1308,7 +1453,7 @@ renderReponsesChart() {
 
   openAddOffre() {
     this.editingOffre = null;
-    this.offreForm = { title: '', description: '', categorie: 'GENERAL' };
+    this.offreForm = { title: '', description: '', categorie: 'GENERAL', scoreMin: 0, scoreMax: 100 };
     this.offreIaResult = null;
     this.offreIaWarning = null;
     this.offreIaSuggestion = null;
@@ -1335,6 +1480,7 @@ renderReponsesChart() {
 
   scheduleOffreCoherenceCheck() {
     if (this.editingOffre) return;
+    if (!this.aiEnabled) return;
     this.offreIaResult = null;
     this.offreIaWarning = null;
     this.offreIaSuggestion = null;
@@ -1368,6 +1514,19 @@ renderReponsesChart() {
       this.api.updateoffre(this.editingOffre.id, payload).subscribe({
         next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre modifiée'); },
         error: () => this.showToastMessage('Erreur lors de la modification', 'error')
+      });
+      return;
+    }
+    if (!this.aiEnabled) {
+      const sMin = Number(this.offreForm.scoreMin ?? 0);
+      const sMax = Number(this.offreForm.scoreMax ?? 100);
+      if (isNaN(sMin) || isNaN(sMax) || sMin < 0 || sMax > 100 || sMin >= sMax) {
+        this.showToastMessage('Score min doit être < score max (0–100)', 'error'); return;
+      }
+      const payload = { ...this.offreForm, scoreMin: sMin, scoreMax: sMax, active: true };
+      this.api.addoffre(payload).subscribe({
+        next: () => { this.showOffreForm = false; this.loadOffresIA(); this.showToastMessage('Offre ajoutée'); },
+        error: () => this.showToastMessage('Erreur lors de l\'ajout', 'error')
       });
       return;
     }
@@ -1636,7 +1795,13 @@ renderReponsesChart() {
     this.clientChannels = {};
     this.clientsAyantRepondu = new Set();
     this.filtre = { typeContrat: '', anneeMin: null, profession: '', primeRange: '' };
+    this.selectedMlSegmentId = null;
+    this.selectedCustomSegmentId = null;
+    this.mlSegments = [];
+    this.mlClientSegmentMap = new Map();
+    this.showCreateSegmentForm = false;
     this.showPartageModal = true;
+
     this.api.getClientsFiltres({}).subscribe(data => {
       this.allClients = data;
       this.clientsFiltres = data;
@@ -1646,6 +1811,28 @@ renderReponsesChart() {
       this.annees       = [...new Set(data.map((c: any) => c.anneeInscription).filter(Boolean))].sort((a: any, b: any) => a - b);
       this.cdr.detectChanges();
     });
+
+    // Charger les segments des vrais clients DB via bulk Flask (1 seul appel)
+    this.api.getDbSegments().subscribe({
+      next: (data: any) => {
+        this.mlSegments = data?.segments || [];
+        const assignments: Record<string, number> = data?.assignments || {};
+        this.mlClientSegmentMap = new Map(
+          Object.entries(assignments).map(([id, seg]) => [Number(id), Number(seg)])
+        );
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+
+    // Charger segments personnalisés
+    if (this.gestionnaire?.id) {
+      this.api.getSegmentsPersonnalises(this.gestionnaire.id).subscribe({
+        next: (data) => { this.segmentsPersonnalises = data || []; this.cdr.detectChanges(); },
+        error: () => {}
+      });
+    }
+
     this.chargerReponsesQuestionnaire();
   }
 
@@ -1762,11 +1949,103 @@ renderReponsesChart() {
         if (this.filtre.primeRange === '1000-1500' && (p < 1000 || p > 1500)) return false;
         if (this.filtre.primeRange === 'gt1500'  && p <= 1500)  return false;
       }
+      if (this.selectedMlSegmentId !== null) {
+        if (this.mlClientSegmentMap.get(c.id) !== this.selectedMlSegmentId) return false;
+      }
+      if (this.selectedCustomSegmentId !== null) {
+        const seg = this.segmentsPersonnalises.find(s => s.id === this.selectedCustomSegmentId);
+        if (seg) {
+          if (seg.typeContrat && c.typeContrat !== seg.typeContrat) return false;
+          if (seg.anneeInscriptionMin && c.anneeInscription < seg.anneeInscriptionMin) return false;
+          if (seg.primeMin != null && (c.primeAnnuelle ?? 0) < seg.primeMin) return false;
+          if (seg.primeMax != null && (c.primeAnnuelle ?? 0) > seg.primeMax) return false;
+          if (seg.profession && c.profession !== seg.profession) return false;
+          if (seg.situationFamiliale && c.situationFamiliale !== seg.situationFamiliale) return false;
+          if (seg.adresseKeyword && !(c.adresse || '').toLowerCase().includes(seg.adresseKeyword.toLowerCase())) return false;
+        }
+      }
       return true;
     });
     this.clientChannels = {};
     this.clientsFiltres.forEach((c: any) => this.clientChannels[c.id] = 'email');
     this.cdr.detectChanges();
+  }
+
+  filtrerParSegmentML(segmentId: number | null) {
+    this.selectedMlSegmentId = segmentId;
+    this.selectedCustomSegmentId = null;
+    this.appliquerFiltre();
+  }
+
+  filtrerParSegmentCustom(segmentId: number | null) {
+    this.selectedCustomSegmentId = segmentId;
+    this.selectedMlSegmentId = null;
+    this.appliquerFiltre();
+  }
+
+  sauvegarderSegment() {
+    if (!this.newSegment.name?.trim()) return;
+    const seg = { ...this.newSegment };
+    if (this.editingSegment) {
+      this.api.updateSegmentPersonnalise(this.editingSegment.id, seg).subscribe({
+        next: (updated) => {
+          const idx = this.segmentsPersonnalises.findIndex(s => s.id === updated.id);
+          if (idx >= 0) this.segmentsPersonnalises[idx] = updated;
+          this.annulerSegmentForm();
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      this.api.createSegmentPersonnalise(seg, this.gestionnaire.id).subscribe({
+        next: (created) => {
+          this.segmentsPersonnalises.unshift(created);
+          this.annulerSegmentForm();
+          this.cdr.detectChanges();
+        }
+      });
+    }
+  }
+
+  editerSegment(s: any) {
+    this.editingSegment = s;
+    this.newSegment = { ...s };
+    this.showCreateSegmentForm = true;
+  }
+
+  supprimerSegment(id: number) {
+    this.api.deleteSegmentPersonnalise(id).subscribe({
+      next: () => {
+        this.segmentsPersonnalises = this.segmentsPersonnalises.filter(s => s.id !== id);
+        if (this.selectedCustomSegmentId === id) { this.selectedCustomSegmentId = null; this.appliquerFiltre(); }
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  annulerSegmentForm() {
+    this.showCreateSegmentForm = false;
+    this.editingSegment = null;
+    this.newSegment = { name: '', description: '', color: '#6366f1', typeContrat: '', anneeInscriptionMin: null, primeMin: null, primeMax: null, profession: '', situationFamiliale: '', adresseKeyword: '', kpiMin: null, kpiMax: null };
+  }
+
+  private getCustomSegmentClients(seg: any): any[] {
+    return this.allClients.filter(c => {
+      if (seg.typeContrat && c.typeContrat !== seg.typeContrat) return false;
+      if (seg.anneeInscriptionMin && c.anneeInscription < seg.anneeInscriptionMin) return false;
+      if (seg.primeMin != null && (c.primeAnnuelle ?? 0) < seg.primeMin) return false;
+      if (seg.primeMax != null && (c.primeAnnuelle ?? 0) > seg.primeMax) return false;
+      if (seg.profession && c.profession !== seg.profession) return false;
+      if (seg.situationFamiliale && c.situationFamiliale !== seg.situationFamiliale) return false;
+      if (seg.adresseKeyword && !(c.adresse || '').toLowerCase().includes(seg.adresseKeyword.toLowerCase())) return false;
+      if (seg.kpiMin != null || seg.kpiMax != null) {
+        // kpi filtering would need kpi data per client — skip for now if not available
+      }
+      return true;
+    });
+  }
+
+  countCustomSegment(seg: any): number {
+    return this.getCustomSegmentClients(seg).length;
   }
 
   // Flow A: generates link and copies to clipboard → client uses /repondre
@@ -1784,6 +2063,48 @@ renderReponsesChart() {
     const questionnaire = this.selectedQuestionnaire;
     const isEmail = channel === 'email';
     const channelColor = isEmail ? '#1a56db' : '#27ae60';
+    const contact = isEmail ? client.mail : client.tel;
+
+    const doSend = (sujet: string, corps: string) => {
+      this.http.post('/api/envoi/distribuer', {
+        questionnaireId: questionnaire.id,
+        distributions: [{ clientId: client.id, channel, sujet, corps }]
+      }).subscribe({
+        next: () => {
+          this.cdr.detectChanges();
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: isEmail ? 'Email envoyé !' : 'SMS envoyé !', showConfirmButton: false, timer: 2500, timerProgressBar: true });
+        },
+        error: (err) => Swal.fire({ icon: 'error', title: 'Échec', text: err?.error?.message || 'Erreur lors de l\'envoi', confirmButtonColor: '#27ae60' })
+      });
+    };
+
+    const showPreviewAndSend = (sujet: string, corps: string, isAi: boolean) => {
+      Swal.fire({
+        title: `${isEmail ? '✉️ Email' : '📱 SMS'} — Aperçu ${isAi ? 'IA' : 'du message'}`,
+        html: `
+          <p style="font-size:12px;color:#888;margin-bottom:10px;">Destinataire : <b>${client.fullName}</b> — ${contact}</p>
+          ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
+            <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
+          </div>` : ''}
+          <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:180px;overflow-y:auto;">${corps}</div>`,
+        showCancelButton: true,
+        confirmButtonText: 'Envoyer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: channelColor,
+        cancelButtonColor: '#95a5a6',
+        reverseButtons: true
+      }).then(result => {
+        if (!result.isConfirmed) return;
+        doSend(sujet, corps);
+      });
+    };
+
+    if (!this.aiEnabled) {
+      const sujet = `STAR Assurances – Questionnaire : ${questionnaire?.titre || ''}`;
+      const corps = `Bonjour ${client.fullName || 'client'},\n\nNous vous invitons à répondre à notre questionnaire "${questionnaire?.titre}".\n\nCordialement,\nL'équipe STAR Assurances`;
+      showPreviewAndSend(sujet, corps, false);
+      return;
+    }
 
     Swal.fire({
       title: 'Génération IA en cours…',
@@ -1798,45 +2119,13 @@ renderReponsesChart() {
       next: (msg) => {
         const sujet = msg.sujet || '';
         const corps = (msg.corps || '').replace('{NOM_CLIENT}', client.fullName || 'client');
-        const contact = isEmail ? client.mail : client.tel;
-
-        Swal.fire({
-          title: `${isEmail ? '✉️ Email' : '📱 SMS'} — Aperçu IA`,
-          html: `
-            <p style="font-size:12px;color:#888;margin-bottom:10px;">Destinataire : <b>${client.fullName}</b> — ${contact}</p>
-            ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
-              <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
-            </div>` : ''}
-            <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:180px;overflow-y:auto;">${corps}</div>`,
-          showCancelButton: true,
-          confirmButtonText: `Envoyer`,
-          cancelButtonText: 'Annuler',
-          confirmButtonColor: channelColor,
-          cancelButtonColor: '#95a5a6',
-          reverseButtons: true
-        }).then(result => {
-          if (!result.isConfirmed) return;
-          this.http.post('/api/envoi/distribuer', {
-            questionnaireId: questionnaire.id,
-            distributions: [{ clientId: client.id, channel, sujet, corps }]
-          }).subscribe({
-            next: () => {
-              this.cdr.detectChanges();
-              Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: isEmail ? 'Email envoyé !' : 'SMS envoyé !', showConfirmButton: false, timer: 2500, timerProgressBar: true });
-            },
-            error: (err) => Swal.fire({ icon: 'error', title: 'Échec', text: err?.error?.message || 'Erreur lors de l\'envoi', confirmButtonColor: '#27ae60' })
-          });
-        });
+        showPreviewAndSend(sujet, corps, true);
       },
       error: () => {
-        // AI failed — fall back to plain send without preview
-        this.http.post('/api/envoi/distribuer', {
-          questionnaireId: questionnaire.id,
-          distributions: [{ clientId: client.id, channel }]
-        }).subscribe({
-          next: () => { this.cdr.detectChanges(); Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: isEmail ? 'Email envoyé !' : 'SMS envoyé !', showConfirmButton: false, timer: 2500, timerProgressBar: true }); },
-          error: (err) => Swal.fire({ icon: 'error', title: 'Échec', text: err?.error?.message || 'Erreur lors de l\'envoi', confirmButtonColor: '#27ae60' })
-        });
+        const sujet = `STAR Assurances – Questionnaire : ${questionnaire?.titre || ''}`;
+        const corps = `Bonjour ${client.fullName || 'client'},\n\nNous vous invitons à répondre à notre questionnaire "${questionnaire?.titre}".\n\nCordialement,\nL'équipe STAR Assurances`;
+        Swal.close();
+        showPreviewAndSend(sujet, corps, false);
       }
     });
   }
@@ -1883,6 +2172,38 @@ renderReponsesChart() {
   }
 
   doEnvoyerATous(channel: string, count: number) {
+    const isEmail = channel === 'email';
+    const titre = this.selectedQuestionnaire?.titre || '';
+
+    const showPreviewAndSend = (sujet: string, corps: string) => {
+      Swal.fire({
+        title: `${isEmail ? '✉️ Email' : '📱 SMS'} — Aperçu du message`,
+        html: `
+          <p style="font-size:12px;color:#888;margin-bottom:10px;"><b>${count} client${count > 1 ? 's' : ''}</b> recevront ce message</p>
+          ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
+            <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
+          </div>` : ''}
+          <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:160px;overflow-y:auto;">${corps.replace('{NOM_CLIENT}', '[Nom du client]')}</div>
+          <p style="font-size:11px;color:#999;margin-top:6px;">{NOM_CLIENT} sera remplacé par le prénom de chaque client.</p>`,
+        showCancelButton: true,
+        confirmButtonText: `Envoyer à ${count} client${count > 1 ? 's' : ''}`,
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: isEmail ? '#1a56db' : '#27ae60',
+        cancelButtonColor: '#95a5a6',
+        reverseButtons: true
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        this.sendATous(channel, count, sujet, corps);
+      });
+    };
+
+    if (!this.aiEnabled) {
+      const sujet = `STAR Assurances – Questionnaire : ${titre}`;
+      const corps = `Bonjour {NOM_CLIENT},\n\nNous vous invitons à répondre à notre questionnaire "${titre}".\n\nCordialement,\nL'équipe STAR Assurances`;
+      showPreviewAndSend(sujet, corps);
+      return;
+    }
+
     Swal.fire({
       title: 'Génération IA en cours…',
       html: '<p style="color:#555;font-size:13px;">L\'IA rédige le message à envoyer à tous…</p>',
@@ -1891,34 +2212,19 @@ renderReponsesChart() {
     });
 
     this.http.post<any>(this.apiUrl + '/ia/generer-message', {
-      type: 'questionnaire', channel, titre: this.selectedQuestionnaire?.titre
+      type: 'questionnaire', channel, titre
     }).subscribe({
       next: (msg) => {
         const sujet = msg.sujet || '';
         const corps = msg.corps || '';
-        const isEmail = channel === 'email';
-
-        Swal.fire({
-          title: `${isEmail ? '✉️ Email' : '📱 SMS'} — Aperçu IA`,
-          html: `
-            <p style="font-size:12px;color:#888;margin-bottom:10px;"><b>${count} client${count > 1 ? 's' : ''}</b> recevront ce message</p>
-            ${isEmail && sujet ? `<div style="background:#f5f6ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:left;font-size:12px;">
-              <b style="color:#4a5568">Objet :</b> <span style="color:#1a3d2b">${sujet}</span>
-            </div>` : ''}
-            <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:left;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:160px;overflow-y:auto;">${corps.replace('{NOM_CLIENT}', '[Nom du client]')}</div>
-            <p style="font-size:11px;color:#999;margin-top:6px;">{NOM_CLIENT} sera remplacé par le prénom de chaque client.</p>`,
-          showCancelButton: true,
-          confirmButtonText: `Envoyer à ${count} client${count > 1 ? 's' : ''}`,
-          cancelButtonText: 'Annuler',
-          confirmButtonColor: isEmail ? '#1a56db' : '#27ae60',
-          cancelButtonColor: '#95a5a6',
-          reverseButtons: true
-        }).then(r => {
-          if (!r.isConfirmed) return;
-          this.sendATous(channel, count, sujet, corps);
-        });
+        showPreviewAndSend(sujet, corps);
       },
-      error: () => this.sendATous(channel, count, '', '')
+      error: () => {
+        const sujet = `STAR Assurances – Questionnaire : ${titre}`;
+        const corps = `Bonjour {NOM_CLIENT},\n\nNous vous invitons à répondre à notre questionnaire "${titre}".\n\nCordialement,\nL'équipe STAR Assurances`;
+        Swal.close();
+        showPreviewAndSend(sujet, corps);
+      }
     });
   }
 
@@ -2067,7 +2373,7 @@ renderReponsesChart() {
         worstMatch = existing;
       }
     }
-    if (maxOverlap > 0.49 && worstMatch) {
+    if (maxOverlap > 0.90 && worstMatch) {
       this.iaQuestDoublonWarning = {
         doublon: true,
         questionnaireSimilaire: worstMatch.titre,
@@ -2088,6 +2394,7 @@ renderReponsesChart() {
     this.iaLoading = false;
     this.cdr.detectChanges();
     if (!this.newquest.titre || this.newquest.titre.length < 5) return;
+    if (!this.aiEnabled) return;
     this.iaLoading = true;
     this.cdr.detectChanges();
     this.iaDebounceTimer = setTimeout(() => this.autoSuggestQuestion(), 1200);
@@ -2110,6 +2417,7 @@ renderReponsesChart() {
   }
 
   autoSuggestQuestion() {
+    if (!this.aiEnabled) { this.iaLoading = false; return; }
     if (!this.newquest.titre || this.newquest.titre.length < 5) { this.iaLoading = false; return; }
     this.iaAutoSuggestion = null;
     this.iaDoublonWarning = null;
@@ -2160,6 +2468,7 @@ renderReponsesChart() {
 
   verifierEnsemble() {
     clearTimeout(this.iaEnsembleTimer);
+    if (!this.aiEnabled) { this.iaEnsembleWarning = null; return; }
     if (this.selectedquestion.length < 3) { this.iaEnsembleWarning = null; return; }
     this.iaEnsembleTimer = setTimeout(() => {
       if (this.iaActiveCalls > 0) { this.verifierEnsemble(); return; }
@@ -2245,6 +2554,9 @@ renderReponsesChart() {
       return;
     }
     if (this.iaQuestDoublonWarning) return;
+    if (!this.aiEnabled || this.selectedquestion.length < 3) {
+      this.doSaveQuestionnaire(); return;
+    }
     if (this.selectedquestion.length >= 3) {
       const questions = this.selectedquestion.map((q: any) => q.titre || q.title).filter(Boolean);
       this.iaActiveCalls++;

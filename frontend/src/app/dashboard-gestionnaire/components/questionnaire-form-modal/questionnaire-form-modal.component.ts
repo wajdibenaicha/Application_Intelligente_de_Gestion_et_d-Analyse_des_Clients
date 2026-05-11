@@ -254,7 +254,7 @@ export class QuestionnaireFormModalComponent implements OnChanges {
       const overlap = common / union;
       if (overlap > maxOverlap) { maxOverlap = overlap; worstMatch = existing; }
     }
-    if (maxOverlap > 0.49 && worstMatch) {
+    if (maxOverlap > 0.90 && worstMatch) {
       this.iaQuestDoublonWarning = {
         doublon: true,
         questionnaireSimilaire: worstMatch.titre,
