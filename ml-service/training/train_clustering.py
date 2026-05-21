@@ -2,10 +2,11 @@
 Entraînement K-Means clustering sur 9 features client.
 
 Usage:
-    python training/train_clustering.py                        # depuis MySQL
-    python training/train_clustering.py --csv data/clients_sample.csv  # depuis CSV
-    python training/train_clustering.py --csv data/clients_sample.csv --k 5
-    python training/train_clustering.py --csv data/clients_sample.csv --auto
+    python training/train_clustering.py                              # depuis CSV par défaut (clients_trainne.csv)
+    python training/train_clustering.py --csv data/clients_trainne.csv  # explicite
+    python training/train_clustering.py --csv data/clients_trainne.csv --k 5
+    python training/train_clustering.py --csv data/clients_trainne.csv --auto
+    python training/train_clustering.py --mysql                      # depuis MySQL
 """
 import sys
 from pathlib import Path
@@ -28,7 +29,7 @@ from config import (
 )
 from utils.features import build_client_feature_vector
 
-DEFAULT_CSV = DATA_DIR / "clients_sample.csv"
+DEFAULT_CSV = DATA_DIR / "clients_trainne.csv"
 
 
 def load_from_csv(csv_path: Path) -> pd.DataFrame:
@@ -317,10 +318,18 @@ def train(k=None, auto_k=False, csv_path: Path = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--k",    type=int, default=None, help="Nombre de clusters (défaut: 4)")
-    parser.add_argument("--auto", action="store_true",    help="Détection automatique du K optimal")
-    parser.add_argument("--csv",  type=str, default=None, help="Chemin vers un fichier CSV client")
+    parser.add_argument("--k",     type=int, default=None,  help="Nombre de clusters (défaut: 4)")
+    parser.add_argument("--auto",  action="store_true",     help="Détection automatique du K optimal")
+    parser.add_argument("--csv",   type=str, default=None,  help="Chemin vers un fichier CSV client")
+    parser.add_argument("--mysql", action="store_true",     help="Forcer l'utilisation de MySQL")
     args = parser.parse_args()
 
-    csv = Path(args.csv) if args.csv else None
+    if args.mysql:
+        csv = None   # force MySQL
+    elif args.csv:
+        csv = Path(args.csv)
+    else:
+        # Par défaut : CSV clients_trainne.csv
+        csv = DEFAULT_CSV if DEFAULT_CSV.exists() else None
+
     train(k=args.k, auto_k=args.auto, csv_path=csv)

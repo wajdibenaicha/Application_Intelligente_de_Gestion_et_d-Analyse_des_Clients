@@ -5,7 +5,15 @@
       "Read(//c/Users/lapto/Downloads/**)",
       "Bash(xargs grep -l \"aiEnabled\\\\|iaEnabled\")",
       "Bash(curl -s \"http://localhost:8081/api/reponses/questionnaire/1\")",
-      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); types=set\\(r.get\\('question',{}\\).get\\('type','?'\\) for r in data[:20]\\); print\\('Types de questions:', types\\); print\\('Exemple réponse:', data[0] if data else 'vide'\\)\")"
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); types=set\\(r.get\\('question',{}\\).get\\('type','?'\\) for r in data[:20]\\); print\\('Types de questions:', types\\); print\\('Exemple réponse:', data[0] if data else 'vide'\\)\")",
+      "Bash(Remove-Item \"c:\\\\Users\\\\lapto\\\\Documents\\\\Application_Intelligente_de_Gestion_et_d-Analyse_des_Clients\\\\backend\\\\src\\\\test\\\\java\\\\com\\\\example\\\\backend\\\\BackendApplicationTests.java\")",
+      "PowerShell(Move-Item \"c:\\\\Users\\\\lapto\\\\Documents\\\\Application_Intelligente_de_Gestion_et_d-Analyse_des_Clients\\\\backend\\\\src\\\\test\\\\PerformanceSqlTest.java\" \"c:\\\\Users\\\\lapto\\\\Documents\\\\Application_Intelligente_de_Gestion_et_d-Analyse_des_Clients\\\\backend\\\\src\\\\test\\\\java\\\\com\\\\example\\\\backend\\\\PerformanceSqlTest.java\")",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.m2\\\\repository\\\\org\\\\springframework\\\\boot\" | Select-Object Name)",
+      "Read(//c/Users/lapto/.m2/repository/org/springframework/boot/**)",
+      "Read(//c/Users/lapto/.m2/**)",
+      "Bash(./mvnw test *)",
+      "Bash(Get-Item \"c:\\\\Users\\\\lapto\\\\Documents\\\\Application_Intelligente_de_Gestion_et_d-Analyse_des_Clients\\\\backend\\\\target\\\\perf-sql-report.html\")",
+      "Bash(Select-Object Name, Length, LastWriteTime)"
     ],
     "additionalDirectories": [
       "c:\\Users\\lapto\\Downloads"

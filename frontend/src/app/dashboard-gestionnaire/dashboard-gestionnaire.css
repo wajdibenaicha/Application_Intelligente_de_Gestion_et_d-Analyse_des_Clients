@@ -3836,4 +3836,43 @@
 .anomaly-medium { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
 .anomaly-ok     { font-size: 0.75rem; color: #16a34a; font-weight: 600; }
 .anomaly-checking { font-size: 0.75rem; color: #94a3b8; font-style: italic; }
-.row-suspect td { background: #fff7f7 !important; }
+.row-suspect    td { background: #fff7f7 !important; }
+.row-fraud-high td {
+  background: #fee2e2 !important;
+  border-bottom: 1px solid #fca5a5 !important;
+}
+.row-fraud-high td:first-child {
+  border-left: 4px solid #dc2626 !important;
+}
+.row-fraud-medium td {
+  background: #fff7ed !important;
+  border-bottom: 1px solid #fed7aa !important;
+}
+.row-fraud-medium td:first-child {
+  border-left: 4px solid #f97316 !important;
+}
+
+/* ── Fraud summary chips ─────────────────────────────────────────────── */
+.fraud-chip-high {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fca5a5 !important;
+  font-weight: 700;
+  animation: pulse-red 2s infinite;
+}
+.fraud-chip-medium {
+  background: #ffedd5 !important;
+  color: #9a3412 !important;
+  border: 1px solid #fdba74 !important;
+  font-weight: 700;
+}
+.fraud-chip-ok {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  border: 1px solid #86efac !important;
+  font-weight: 600;
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.3); }
+  50%       { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
+}

@@ -1,0 +1,33 @@
+{
+  "feature_names": [
+    "scale_variance",
+    "scale_extreme_ratio",
+    "text_empty_ratio",
+    "text_avg_length",
+    "nb_questions",
+    "kpi_score",
+    "unique_ratio"
+  ],
+  "threshold_medium": 0.0008,
+  "threshold_high": 0.0008,
+  "n_training_samples": 2000,
+  "n_fraud_samples": 150,
+  "fraud_ratio": 0.075,
+  "metrics": {
+    "auc_roc": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "cv_auc_mean": NaN
+  },
+  "feature_importance": {
+    "scale_variance": 0.2179,
+    "scale_extreme_ratio": 0.2829,
+    "text_empty_ratio": 0.0009,
+    "text_avg_length": 0.0008,
+    "nb_questions": 0.0,
+    "kpi_score": 0.0013,
+    "unique_ratio": 0.4962
+  },
+  "source": "C:\\Users\\lapto\\Documents\\Application_Intelligente_de_Gestion_et_d-Analyse_des_Clients\\ml-service\\data\\fraud_xgboost_train.csv"
+}

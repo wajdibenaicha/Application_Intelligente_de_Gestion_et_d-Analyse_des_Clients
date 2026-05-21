@@ -5,10 +5,11 @@ Endpoints:
   GET  /health                   - Health check
   POST /predict/sentiment        - Sentiment d'une réponse texte
   POST /predict/anomaly          - Détection de réponses suspectes
-  POST /predict/churn            - Probabilité de churn + SHAP
   POST /predict/segment          - Cluster d'un client
   GET  /clusters/visualization   - Coordonnées 2D PCA pour scatter plot
   GET  /clusters/profiles        - Profils moyens des segments
+  POST /predict/fraud            - Détection fraude XGBoost (probabilité 0.0-1.0)
+  POST /predict/fraud/combined   - Ensemble IF + XGBoost
   POST /train/<model_name>       - Re-entraînement d'un modèle
 """
 from flask import Flask, jsonify
@@ -17,6 +18,7 @@ from flask_cors import CORS
 from config import FLASK_HOST, FLASK_PORT, FLASK_DEBUG, CORS_ORIGINS
 from api.clustering import clustering_bp
 from api.anomaly import anomaly_bp
+from api.xgboost_fraud import xgboost_fraud_bp
 from api.training import training_bp
 
 
@@ -26,6 +28,7 @@ def create_app():
 
     app.register_blueprint(clustering_bp)
     app.register_blueprint(anomaly_bp)
+    app.register_blueprint(xgboost_fraud_bp)
     app.register_blueprint(training_bp, url_prefix="/train")
 
     @app.route("/health", methods=["GET"])

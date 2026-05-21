@@ -315,7 +315,7 @@
         <button class="btn-envoyer-tous" (click)="envoyerToutesOffresIA()" *ngIf="reponses.length > 0">
           <i class="bi bi-send-fill"></i> Envoyer à tous
         </button>
-        <button class="btn-danger-sm" (click)="supprimerToutesReponsesSection()" *ngIf="reponses.length > 0">
+        <button class="btn-danger-sm" (click)="supprimerToutesReponsesSection()" *ngIf="reponses.length > 0 && canDeleteReponse()">
           <i class="bi bi-trash3-fill"></i> Supprimer tout
         </button>
       </div>
@@ -327,6 +327,15 @@
         <div class="reponses-summary">
           <span class="summary-chip"><i class="bi bi-people"></i> <strong>{{ clientsReponses.length }}</strong> client{{ clientsReponses.length > 1 ? 's' : '' }} ont répondu</span>
           <span class="summary-chip"><i class="bi bi-chat-dots"></i> <strong>{{ clientsReponses.length }}</strong> réponse{{ clientsReponses.length > 1 ? 's' : '' }} au total</span>
+          <span class="summary-chip fraud-chip-high" *ngIf="fraudHighCount > 0">
+            <i class="bi bi-shield-exclamation"></i> <strong>{{ fraudHighCount }}</strong> fraude{{ fraudHighCount > 1 ? 's' : '' }} HIGH
+          </span>
+          <span class="summary-chip fraud-chip-medium" *ngIf="fraudMediumCount > 0">
+            <i class="bi bi-exclamation-triangle"></i> <strong>{{ fraudMediumCount }}</strong> suspect{{ fraudMediumCount > 1 ? 's' : '' }} MEDIUM
+          </span>
+          <span class="summary-chip fraud-chip-ok" *ngIf="fraudHighCount === 0 && fraudMediumCount === 0 && clientsReponses.length > 0">
+            <i class="bi bi-shield-check"></i> Aucune fraude détectée
+          </span>
         </div>
 
         <!-- Participation chart -->
@@ -354,7 +363,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let entry of clientsReponses"
+              <tr *ngFor="let entry of clientsReponsesSorted"
+                  [class.row-fraud-high]="anomalyResults[entry.client?.id]?.risk_level === 'HIGH'"
+                  [class.row-fraud-medium]="anomalyResults[entry.client?.id]?.risk_level === 'MEDIUM'"
                   [class.row-suspect]="anomalyResults[entry.client?.id]?.is_anomaly">
                 <td>
                   <div class="client-cell">
@@ -383,7 +394,7 @@
                 </td>
                 <td style="display:flex;gap:8px;align-items:center;">
                   <button class="btn-voir" (click)="voirReponsesClient(entry)"><i class="bi bi-eye"></i> Voir</button>
-                  <button class="btn-danger-sm" (click)="supprimerReponseClientSection(entry.client?.id)"><i class="bi bi-trash-fill"></i> Supprimer</button>
+                  <button class="btn-danger-sm" *ngIf="canDeleteReponse()" (click)="supprimerReponseClientSection(entry.client?.id)"><i class="bi bi-trash-fill"></i> Supprimer</button>
                 </td>
               </tr>
             </tbody>

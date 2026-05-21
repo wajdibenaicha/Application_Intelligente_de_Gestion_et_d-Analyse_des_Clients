@@ -7,7 +7,7 @@ import subprocess, sys
 
 training_bp = Blueprint("training", __name__)
 
-ALLOWED_MODELS = {"clustering", "churn", "anomaly", "sentiment"}
+ALLOWED_MODELS = {"clustering", "anomaly", "sentiment", "xgboost"}
 
 
 @training_bp.route("/<model_name>", methods=["POST"])

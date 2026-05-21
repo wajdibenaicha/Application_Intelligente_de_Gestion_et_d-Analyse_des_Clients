@@ -14,12 +14,13 @@ SENTIMENT_VECTORIZER_PATH= MODELS_DIR / "sentiment_vectorizer.pkl"
 RECOMMENDATION_MODEL_PATH = MODELS_DIR / "recommendation_model.pkl"
 RECOMMENDATION_SCALER_PATH= MODELS_DIR / "recommendation_scaler.pkl"
 
-CHURN_MODEL_PATH     = MODELS_DIR / "churn_model.pkl"
-CHURN_SCALER_PATH    = MODELS_DIR / "churn_scaler.pkl"
-CHURN_EXPLAINER_PATH = MODELS_DIR / "churn_shap_explainer.pkl"
 
 ANOMALY_MODEL_PATH  = MODELS_DIR / "anomaly_model.pkl"
 ANOMALY_SCALER_PATH = MODELS_DIR / "anomaly_scaler.pkl"
+
+XGBOOST_MODEL_PATH  = MODELS_DIR / "xgboost_fraud_model.pkl"
+XGBOOST_SCALER_PATH = MODELS_DIR / "xgboost_fraud_scaler.pkl"
+XGBOOST_META_PATH   = MODELS_DIR / "xgboost_fraud_meta.json"
 
 CLUSTERING_MODEL_PATH    = MODELS_DIR / "clustering_model.pkl"
 CLUSTERING_SCALER_PATH   = MODELS_DIR / "clustering_scaler.pkl"
@@ -36,8 +37,6 @@ DB_URL = f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{D
 SENTIMENT_POSITIF_THRESHOLD = 70
 SENTIMENT_NEUTRE_THRESHOLD  = 40
 
-CHURN_HIGH_RISK_THRESHOLD   = 0.70
-CHURN_MEDIUM_RISK_THRESHOLD = 0.40
 
 ANOMALY_CONTAMINATION        = 0.10
 ANOMALY_MIN_DURATION_SECONDS = 10

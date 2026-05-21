@@ -12,12 +12,10 @@ import { Api } from '../services/api';
 import Swal from 'sweetalert2';
 import { environment } from '../../environments/environment';
 import { PERMISSIONS } from '../shared/permissions.constants';
-import { ClusteringSectionComponent } from './components/clustering-section/clustering-section.component';
-
 @Component({
   selector: 'app-dashboard-gestionnaire',
   standalone: true,
-  imports: [CommonModule, FormsModule, ClusteringSectionComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard-gestionnaire.html',
   styleUrl: './dashboard-gestionnaire.css'
 })
@@ -145,10 +143,14 @@ export class DashboardGestionnaire implements OnInit {
     // Questionnaires changed → refresh stats + all charts (updateStats triggers renderAllCharts)
     this.wsService.questionnaires$.subscribe(data => {
       const all = data.map((q: any) => this.mapStatut(q));
-      // Directeur sees all; regular gestionnaire sees only their own
-      this.questionnaires = this.canManageAll()
-        ? all
-        : all.filter((q: any) => q.gestionnaire?.id === this.gestionnaire.id);
+      if (this.canManageAll()) {
+        // Directeur : seulement les questionnaires de son équipe
+        this.questionnaires = this.teamMemberIds.size > 0
+          ? all.filter((q: any) => this.teamMemberIds.has(q.gestionnaire?.id))
+          : all; // fallback pendant le chargement initial de l'équipe
+      } else {
+        this.questionnaires = all.filter((q: any) => q.gestionnaire?.id === this.gestionnaire.id);
+      }
       this.updateStats();
       this.cdr.detectChanges();
     });
@@ -201,34 +203,37 @@ export class DashboardGestionnaire implements OnInit {
     });
   }
 
-  canManageAll(): boolean {
+  isDirecteur(): boolean {
     return this.roleName?.toUpperCase() === 'DIRECTEUR';
   }
 
+  canManageAll(): boolean {
+    return this.isDirecteur();
+  }
+
   hasPermission(action: string): boolean {
-    return this.canManageAll() || this.permissions.includes(action);
+    return this.permissions.includes(action);
   }
 
   canAccessQuestionnaires(): boolean {
-    return this.canManageAll() || this.hasPermission(PERMISSIONS.VOIR_QUESTIONNAIRES) ||
-      this.hasPermission(PERMISSIONS.AJOUTER_QUESTIONNAIRE) || this.hasPermission(PERMISSIONS.MODIFIER_QUESTIONNAIRE) ||
-      this.hasPermission(PERMISSIONS.SUPPRIMER_QUESTIONNAIRE) || this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE);
+    // directeur toujours (pour valider/rejeter), sinon permission requise
+    return this.isDirecteur() || this.hasPermission(PERMISSIONS.GERER_QUESTIONNAIRES);
   }
 
   canAccessOffres(): boolean {
-    return this.canManageAll() || this.hasPermission(PERMISSIONS.CREER_OFFRE) ||
-      this.hasPermission(PERMISSIONS.MODIFIER_OFFRE) || this.hasPermission(PERMISSIONS.SUPPRIMER_OFFRE) ||
-      this.hasPermission(PERMISSIONS.ENVOYER_OFFRE);
+    return this.hasPermission(PERMISSIONS.GERER_OFFRES);
   }
 
   canAccessReponses(): boolean {
-    return this.canManageAll() || this.hasPermission(PERMISSIONS.VOIR_QUESTIONNAIRES) ||
-      this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE);
+    return true;
+  }
+
+  canDeleteReponse(): boolean {
+    return this.hasPermission(PERMISSIONS.SUPPRIMER_REPONSE);
   }
 
   canAccessClients(): boolean {
-    return this.canManageAll() || this.hasPermission(PERMISSIONS.VOIR_CLIENTS) ||
-      this.hasPermission(PERMISSIONS.GERER_CLIENTS);
+    return true;
   }
 
   canAccessHome(): boolean {
@@ -315,9 +320,8 @@ export class DashboardGestionnaire implements OnInit {
   }
 
   private updateStats() {
-    const mine = this.canManageAll()
-      ? this.questionnaires
-      : this.questionnaires.filter((q: any) => q.gestionnaire?.id === this.gestionnaire.id);
+    // this.questionnaires est déjà filtré (équipe pour directeur, propres pour gestionnaire)
+    const mine = this.questionnaires;
     const total     = mine.length;
     const pending   = mine.filter((q: any) => (q.statut||'').toUpperCase() === 'EN_ATTENTE').length;
     const published = mine.filter((q: any) => ['PUBLIE','APPROUVE'].includes((q.statut||'').toUpperCase())).length;
@@ -413,10 +417,8 @@ export class DashboardGestionnaire implements OnInit {
 
   renderStatutChart() {
 
-  // Scope to questionnaires visible to this user
-  const visible = this.canManageAll()
-    ? this.questionnaires
-    : this.questionnaires.filter(q => q.gestionnaire?.id === this.gestionnaire?.id);
+  // this.questionnaires est déjà filtré par rôle (équipe ou propres)
+  const visible = this.questionnaires;
 
   const brouillon = visible.filter(q => (q.statut||'').toUpperCase() === 'BROUILLON').length;
   const enAttente = visible.filter(q => (q.statut||'').toUpperCase() === 'EN_ATTENTE').length;
@@ -544,7 +546,12 @@ renderReponsesChart() {
       finalize(() => { this.isLoading = false; this.cdr.detectChanges(); })
     ).subscribe({
       next: (data) => {
-        this.questionnaires = (data || []).map((q: any) => this.mapStatut(q));
+        let all = (data || []).map((q: any) => this.mapStatut(q));
+        // Directeur : filtrer uniquement les questionnaires de son équipe
+        if (this.canManageAll() && this.teamMemberIds.size > 0) {
+          all = all.filter((q: any) => this.teamMemberIds.has(q.gestionnaire?.id));
+        }
+        this.questionnaires = all;
         this.updateStats();
         this.cdr.detectChanges();
       }
@@ -768,7 +775,7 @@ renderReponsesChart() {
   }
 
   canEdit(q: any): boolean {
-    return this.canManageAll() || (this.isMyQuestionnaire(q) && this.hasPermission(PERMISSIONS.MODIFIER_QUESTIONNAIRE));
+    return this.isMyQuestionnaire(q) && this.hasPermission(PERMISSIONS.GERER_QUESTIONNAIRES);
   }
 
   private statut(q: any): string {
@@ -776,30 +783,32 @@ renderReponsesChart() {
   }
 
   canDelete(q: any): boolean {
-    return this.canManageAll() || (this.isMyQuestionnaire(q) && this.hasPermission(PERMISSIONS.SUPPRIMER_QUESTIONNAIRE));
+    return this.isMyQuestionnaire(q) && this.hasPermission(PERMISSIONS.GERER_QUESTIONNAIRES);
   }
 
   canRequestPublication(q: any): boolean {
     const s = this.statut(q);
-    return !this.canManageAll() && this.isMyQuestionnaire(q) &&
-      this.hasPermission(PERMISSIONS.AJOUTER_QUESTIONNAIRE) &&
+    return !this.isDirecteur() && this.isMyQuestionnaire(q) &&
+      this.hasPermission(PERMISSIONS.GERER_QUESTIONNAIRES) &&
       (s === 'BROUILLON' || s === 'REJETE');
   }
 
   canWithdraw(q: any): boolean {
-    return !this.canManageAll() && this.isMyQuestionnaire(q) &&
-      this.hasPermission(PERMISSIONS.AJOUTER_QUESTIONNAIRE) &&
+    return !this.isDirecteur() && this.isMyQuestionnaire(q) &&
+      this.hasPermission(PERMISSIONS.GERER_QUESTIONNAIRES) &&
       this.statut(q) === 'EN_ATTENTE';
   }
 
   canApprove(q: any): boolean {
-    return this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE) && this.statut(q) === 'EN_ATTENTE';
+    // action réservée au directeur — aucune permission requise
+    return this.isDirecteur() && this.statut(q) === 'EN_ATTENTE';
   }
 
   canReject(q: any): boolean {
+    // action réservée au directeur — aucune permission requise
     const s = this.statut(q);
     const isDirecteurQuestionnaire = q?.gestionnaire?.role?.name?.toUpperCase() === 'DIRECTEUR';
-    return this.hasPermission(PERMISSIONS.VALIDER_QUESTIONNAIRE) && !isDirecteurQuestionnaire &&
+    return this.isDirecteur() && !isDirecteurQuestionnaire &&
       (s === 'EN_ATTENTE' || s === 'PUBLIE' || s === 'APPROUVE');
   }
 
@@ -907,6 +916,30 @@ renderReponsesChart() {
       entry.nbReponses++;
     }
     return Array.from(map.values());
+  }
+
+  get clientsReponsesSorted(): any[] {
+    const riskOrder = (id: number) => {
+      const level = this.anomalyResults[id]?.risk_level;
+      if (level === 'HIGH')   return 0;
+      if (level === 'MEDIUM') return 1;
+      return 2;
+    };
+    return [...this.clientsReponses].sort((a, b) =>
+      riskOrder(a.client?.id) - riskOrder(b.client?.id)
+    );
+  }
+
+  get fraudHighCount(): number {
+    return this.clientsReponses.filter(e =>
+      this.anomalyResults[e.client?.id]?.risk_level === 'HIGH'
+    ).length;
+  }
+
+  get fraudMediumCount(): number {
+    return this.clientsReponses.filter(e =>
+      this.anomalyResults[e.client?.id]?.risk_level === 'MEDIUM'
+    ).length;
   }
 
   voirReponsesClient(entry: any) {
@@ -1359,10 +1392,13 @@ renderReponsesChart() {
   loadRecommendations() {
     this.http.get<any[]>(this.apiUrl + '/recommendations').subscribe({
       next: (data) => {
-        // Regular gestionnaire only sees recommendations linked to their own clients
-        // DIRECTEUR sees all
+        // Directeur : seulement les recommandations des clients de son équipe
+        // Gestionnaire : seulement ses propres recommandations
         if (this.canManageAll()) {
-          this.recommendations = data;
+          // Filtrer par gestionnaires membres de l'équipe du directeur
+          this.recommendations = this.teamMemberIds.size > 0
+            ? data.filter((r: any) => this.teamMemberIds.has(r.gestionnaire?.id) || !r.gestionnaire)
+            : data;
         } else {
           const myQuestionnaireIds = new Set(
             this.questionnaires
@@ -2261,7 +2297,8 @@ renderReponsesChart() {
   
 
   myTeams: any[] = [];
-  questTab = 'mine';           
+  teamMemberIds: Set<number> = new Set();
+  questTab = 'mine';
   showDelegateModal = false;
   delegateform: any = { gestionnaireId: null, titreHint: '' };
 
@@ -2269,6 +2306,16 @@ renderReponsesChart() {
     this.api.getTeams().subscribe({
       next: (teams) => {
         this.myTeams = teams.filter((t: any) => t.directeur?.id === this.gestionnaire.id);
+        // Reconstruit le set des IDs membres de l'équipe du directeur
+        this.teamMemberIds = new Set<number>();
+        this.teamMemberIds.add(this.gestionnaire.id); // le directeur lui-même
+        for (const team of this.myTeams) {
+          for (const m of (team.members || [])) {
+            this.teamMemberIds.add(m.id);
+          }
+        }
+        // Recharge les questionnaires maintenant qu'on connaît l'équipe
+        this.loadQuestionnaires();
         this.cdr.detectChanges();
       },
       error: () => {}

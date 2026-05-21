@@ -458,10 +458,10 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Nom</th><th>Permission</th><th>Actions</th> </thead>
+              <tr><th>Nom du rôle</th><th>Permissions associées</th><th>Actions</th></tr>
+            </thead>
             <tbody>
               <tr *ngFor="let r of roles">
-                <td>{{ r.id }}</td>
                 <td>{{ r.name }}</td>
                 <td>
                   <span *ngFor="let p of (r.permissions || []); let last = last"
@@ -483,23 +483,30 @@
         </div>
 
         <div *ngIf="activeTab === 'permissions'" class="table-wrapper tab-panel">
-          <div class="section-toolbar" style="margin-bottom: 16px;">
-            <button class="btn-primary" (click)="openaddpermission()"><i class="bi bi-plus-lg"></i> Ajouter permission</button>
-          </div>
+          <p class="permissions-info-note">
+            <i class="bi bi-info-circle"></i>
+            Les permissions sont prédéfinies par le système. Assignez-les aux rôles via la section <strong>Rôles</strong>.
+          </p>
           <table class="data-table">
             <thead>
-              <tr><th>ID</th><th>Nom</th><th>Actions</th> </thead>
+              <tr><th>Permission</th><th>Domaine</th></tr>
+            </thead>
             <tbody>
               <tr *ngFor="let p of permissions">
-                <td>{{ p.id }}</td>
-                <td>{{ p.description }}</td>
-                <td class="actions-cell">
-                  <button class="btn-icon btn-edit" (click)="openeditpermission(p)"><i class="bi bi-pencil"></i></button>
-                  <button class="btn-icon btn-delete" (click)="deletepermission(p.id)"><i class="bi bi-trash"></i></button>
+                <td><i class="bi bi-shield-check" style="color:#6366f1;margin-right:6px;"></i>{{ p.description }}</td>
+                <td>
+                  <span class="perm-domain-badge"
+                        [class.perm-quest]="p.description.toLowerCase().includes('questionnaire')"
+                        [class.perm-offre]="p.description.toLowerCase().includes('offre')"
+                        [class.perm-reponse]="p.description.toLowerCase().includes('réponse') || p.description.toLowerCase().includes('reponse')">
+                    {{ p.description.toLowerCase().includes('questionnaire') ? 'Questionnaire' :
+                       p.description.toLowerCase().includes('offre') ? 'Offre' :
+                       'Réponse' }}
+                  </span>
                 </td>
               </tr>
               <tr *ngIf="permissions.length === 0">
-                <td colspan="3" class="empty-row">Aucune permission</td>
+                <td colspan="2" class="empty-row">Aucune permission — redémarrez le backend pour initialiser.</td>
               </tr>
             </tbody>
           </table>
